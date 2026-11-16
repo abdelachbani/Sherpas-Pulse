@@ -107,6 +107,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const isListeningRef = useRef(false);
   const stopTimeoutRef = useRef<any>(null);
   const hasProcessedRef = useRef(false);
+  const micBlockedRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -391,7 +392,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     if (SpeechRecognition) {
       try {
         if (recognitionRef.current) {
-          try { recognitionRef.current.abort(); } catch {}
+          try {
+            recognitionRef.current.onend = null;
+            recognitionRef.current.onerror = null;
+            recognitionRef.current.abort();
+          } catch {}
           recognitionRef.current = null;
         }
 
@@ -414,47 +419,50 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
         recognition.onerror = (e: any) => {
           console.warn('[speech error]', e.error);
-          if (e.error === 'not-allowed') {
-            setErrorNotice('Microphone access blocked. Tap any question below to ask!');
-            setShowSuggestions(true);
-            setVoiceState('idle');
-            isListeningRef.current = false;
+          if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+            micBlockedRef.current = true;
           }
         };
 
         recognition.onend = () => {
-          if (stopTimeoutRef.current) {
-            clearTimeout(stopTimeoutRef.current);
-            stopTimeoutRef.current = null;
-          }
-
           if (!isListeningRef.current && !hasProcessedRef.current) {
             hasProcessedRef.current = true;
+            if (stopTimeoutRef.current) {
+              clearTimeout(stopTimeoutRef.current);
+              stopTimeoutRef.current = null;
+            }
+
             const captured = transcriptBufferRef.current.trim();
             if (captured) {
               processQuestion(captured);
             } else {
               setVoiceState('idle');
               setShowSuggestions(true);
-              setErrorNotice("Didn't catch that. Tap any question below or try again:");
+              setErrorNotice(
+                micBlockedRef.current
+                  ? 'Microphone access blocked. Tap any question below to ask:'
+                  : "Didn't catch that. Tap any question below or try again:"
+              );
             }
           }
         };
 
-        recognition.start();
+        try {
+          recognition.start();
+        } catch (startErr: any) {
+          if (startErr.name !== 'InvalidStateError') {
+            console.warn('[speech start error]', startErr);
+            micBlockedRef.current = true;
+          }
+        }
+
         recognitionRef.current = recognition;
       } catch (err) {
-        console.warn('[speech start error]', err);
-        setErrorNotice('Voice recognition unavailable. Tap any question below to ask!');
-        setShowSuggestions(true);
-        setVoiceState('idle');
-        isListeningRef.current = false;
+        console.warn('[speech init error]', err);
+        micBlockedRef.current = true;
       }
     } else {
-      setErrorNotice('Voice input not supported in this browser. Tap any question below to ask!');
-      setShowSuggestions(true);
-      setVoiceState('idle');
-      isListeningRef.current = false;
+      micBlockedRef.current = true;
     }
   }, [voiceState, processQuestion]);
 
@@ -463,14 +471,16 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     isListeningRef.current = false;
 
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch {}
+      try {
+        recognitionRef.current.stop();
+      } catch {}
     }
 
     if (stopTimeoutRef.current) {
       clearTimeout(stopTimeoutRef.current);
     }
 
-    // Safety timeout: If recognition.onend takes more than 750ms to fire, flush buffer safely
+    // Safety timeout: If recognition.onend takes more than 600ms, finalize safely
     stopTimeoutRef.current = setTimeout(() => {
       if (!hasProcessedRef.current) {
         hasProcessedRef.current = true;
@@ -480,10 +490,14 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         } else {
           setVoiceState('idle');
           setShowSuggestions(true);
-          setErrorNotice("Didn't catch that. Tap any question below or try again:");
+          setErrorNotice(
+            micBlockedRef.current
+              ? 'Microphone access blocked. Tap any question below to ask:'
+              : "Didn't catch that. Tap any question below or try again:"
+          );
         }
       }
-    }, 750);
+    }, 600);
   }, [processQuestion]);
 
   const stopSpeaking = useCallback(() => {

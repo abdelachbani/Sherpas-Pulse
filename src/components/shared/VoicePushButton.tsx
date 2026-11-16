@@ -98,7 +98,7 @@ export function VoicePushButton({
   const isPressingRef = useRef(false);
   const sampleQuestions = HOUSEHOLD_QUESTIONS[caseId] || DEFAULT_QUESTIONS;
 
-  function handlePointerDown(e: React.PointerEvent) {
+  function handleStart(e: React.TouchEvent | React.MouseEvent) {
     if (disabled) return;
     e.stopPropagation();
 
@@ -110,31 +110,40 @@ export function VoicePushButton({
 
     if (isPressingRef.current) return;
     isPressingRef.current = true;
-
-    try {
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {}
-
     onPressStart();
   }
 
-  function handlePointerUp(e: React.PointerEvent) {
+  function handleEnd(e: React.TouchEvent | React.MouseEvent) {
     e.stopPropagation();
     if (!isPressingRef.current) return;
     isPressingRef.current = false;
-
-    try {
-      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {}
-
     onPressEnd();
   }
 
-  function handlePointerCancel(e: React.PointerEvent) {
-    e.stopPropagation();
-    if (!isPressingRef.current) return;
-    isPressingRef.current = false;
-    onPressEnd();
+  function handleTouchStart(e: React.TouchEvent) {
+    if (e.cancelable) e.preventDefault();
+    handleStart(e);
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (e.cancelable) e.preventDefault();
+    handleEnd(e);
+  }
+
+  function handleTouchCancel(e: React.TouchEvent) {
+    handleEnd(e);
+  }
+
+  function handleMouseDown(e: React.MouseEvent) {
+    handleStart(e);
+  }
+
+  function handleMouseUp(e: React.MouseEvent) {
+    handleEnd(e);
+  }
+
+  function handleMouseLeave(e: React.MouseEvent) {
+    handleEnd(e);
   }
 
   useEffect(() => {
@@ -273,20 +282,30 @@ export function VoicePushButton({
       <div className="relative flex items-center justify-center">
         {isListening && (
           <motion.div
-            className="absolute inset-0 rounded-full bg-rose-500/40"
+            className="absolute inset-0 rounded-full bg-rose-500/40 pointer-events-none"
             animate={{ scale: [1, 1.4, 1], opacity: [0.6, 0.1, 0.6] }}
             transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
           />
         )}
 
         <motion.button
-          whileTap={{ scale: 0.94 }}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerCancel}
+          animate={{ scale: isListening ? 0.94 : 1 }}
+          transition={{ duration: 0.12 }}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+          onContextMenu={(e) => e.preventDefault()}
           disabled={disabled}
-          style={{ touchAction: 'none' }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold shadow-xl border transition-all cursor-pointer ${
+          style={{
+            touchAction: 'none',
+            WebkitUserSelect: 'none',
+            userSelect: 'none',
+            WebkitTouchCallout: 'none',
+          }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold shadow-xl border transition-all cursor-pointer select-none ${
             isListening
               ? 'bg-rose-600 text-white border-rose-400 shadow-rose-600/40 ring-4 ring-rose-500/20'
               : isSpeaking
