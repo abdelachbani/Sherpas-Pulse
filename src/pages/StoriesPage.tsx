@@ -3,9 +3,9 @@
  *
  * Full mobile stories experience ("Financial Wrapped"):
  *  - 6 vertical swipeable story cards with 100% responsive bounds
- *  - Ergonomically placed Push-to-Ask voice interruption that NEVER blocks content
+ *  - Native, non-overlapping bottom action dock integrated into StoryContainer
  *  - Automatic voice term detection triggering micro-calibration
- *  - Graceful speech recognition fallback for all mobile browsers
+ *  - Live voice transcript bubble, sample question pills, and Boomerang Guardrail
  */
 
 import { useEffect } from 'react';
@@ -14,7 +14,6 @@ import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
 import { extractStoryData, extractCalibrationCards } from '../lib/mcp/extractor';
 import { StoryContainer } from '../components/stories/StoryContainer';
-import { VoicePushButton } from '../components/shared/VoicePushButton';
 import { useVoiceSession } from '../lib/voice/useVoiceSession';
 
 export default function StoriesPage() {
@@ -33,7 +32,7 @@ export default function StoriesPage() {
     }
   }, [caseId, currentCase, setCase]);
 
-  // Voice session for Push-to-Ask
+  // Voice session for Push-to-Ask & Zero-Prompt Assistant
   const voice = useVoiceSession(activeCase.id);
 
   const stories = extractStoryData(
@@ -64,25 +63,14 @@ export default function StoriesPage() {
   return (
     <div className="relative w-full h-dvh bg-slate-950 overflow-hidden flex flex-col justify-between">
       <StoryContainer
+        caseId={activeCase.id}
         stories={stories}
         calibrationCards={calibrationCards}
         pillars={activeCase.financialHealth.score.pillars}
+        voice={voice}
         onComplete={handleComplete}
         onNavigateBack={() => navigate('/')}
-        voiceDetectedTerm={voice.detectedTerm}
-        onClearVoiceTerm={voice.clearDetectedTerm}
       />
-
-      {/* Ergonomic Non-Intrusive Push-to-Ask Dock (Bottom Center with clean spacing) */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
-        <VoicePushButton
-          voiceState={voice.voiceState}
-          transcript={voice.transcript}
-          guardRedirect={voice.guardRedirect}
-          onPressStart={voice.startListening}
-          onPressEnd={voice.stopListening}
-        />
-      </div>
     </div>
   );
 }

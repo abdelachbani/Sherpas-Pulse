@@ -130,9 +130,9 @@ export function StoryCard({
   }
 
   return (
-    <div className="h-full flex flex-col justify-between px-5 pt-14 pb-24 select-none relative z-10 text-white overflow-hidden">
+    <div className="h-full flex flex-col justify-between px-4 pt-10 pb-2 select-none relative z-10 text-white overflow-hidden">
       {/* ── Top Header (Shrink-0 to avoid crushing) ─────────────────────────── */}
-      <div className="shrink-0 mb-2">
+      <div className="shrink-0 mb-1.5">
         <div className="flex items-center justify-between">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md text-[10px] font-semibold text-slate-200 border border-white/10">
             <span className="capitalize">{card.pillar.replace('-', ' ')}</span>
@@ -157,7 +157,7 @@ export function StoryCard({
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-xl font-black text-white mt-2 leading-tight tracking-tight"
+          className="text-lg sm:text-xl font-black text-white mt-1.5 leading-tight tracking-tight"
         >
           {card.title}
         </motion.h1>
@@ -171,7 +171,7 @@ export function StoryCard({
       <div className="flex-1 overflow-y-auto pr-1 no-scrollbar space-y-2">
         {/* Story 0: Vibe Check Style Picker */}
         {card.interactiveType === 'vibe_check' && (
-          <div className="space-y-2 pt-1">
+          <div className="space-y-2 pt-0.5">
             <div className="text-[11px] font-semibold text-slate-300">
               Select your viewing rhythm:
             </div>
@@ -199,7 +199,7 @@ export function StoryCard({
                   e.stopPropagation();
                   onSelectStyle?.(opt.id);
                 }}
-                className={`w-full p-3.5 rounded-2xl text-left border transition-all ${
+                className={`w-full p-2.5 sm:p-3 rounded-2xl text-left border transition-all ${
                   viewingStyle === opt.id
                     ? 'bg-indigo-600/40 border-indigo-400 text-white shadow-lg'
                     : 'bg-slate-900/70 border-slate-700/70 text-slate-300 hover:border-slate-500'
@@ -218,7 +218,7 @@ export function StoryCard({
             <ScoreRing
               score={Number(card.dataPoints.find((d) => d.label.includes('Health Score'))?.value || 60)}
               band="Stable"
-              size={110}
+              size={96}
             />
             <SuperpowerVsLeakViz
               superpowerLabel="Liquid Cash Cushion"
