@@ -97,13 +97,26 @@ export function StoryContainer({
     window.speechSynthesis.speak(utterance);
   }, [isVoiceNarrating]);
 
+  // Whether assistant is actively interacting with the user
+  const isAssistantActive =
+    voice.isListening ||
+    voice.isSpeaking ||
+    Boolean(voice.responseMessage) ||
+    Boolean(voice.guardRedirect) ||
+    voice.showSuggestions;
+
+  // Only trigger slide narration when changing slide or toggling Voice On,
+  // NEVER when releasing hold-to-ask or while assistant is answering!
   useEffect(() => {
-    if (!voice.isListening && !voice.isSpeaking && isVoiceNarrating && currentStory?.voiceScript) {
-      speakCurrentStory(currentStory.voiceScript);
-    } else if (!isVoiceNarrating && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+    if (!isVoiceNarrating) {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      return;
     }
-  }, [currentIndex, isVoiceNarrating, voice.isListening, voice.isSpeaking, currentStory?.voiceScript, speakCurrentStory]);
+
+    if (!isAssistantActive && currentStory?.voiceScript) {
+      speakCurrentStory(currentStory.voiceScript);
+    }
+  }, [currentIndex, isVoiceNarrating, speakCurrentStory]);
 
   // ── Navigation helpers ──────────────────────────────────────────────────────
   const goToNext = useCallback(() => {
@@ -125,8 +138,7 @@ export function StoryContainer({
   // ── 25-Second Progress Timer ────────────────────────────────────────────────
   const effectivelyPaused =
     isPaused ||
-    voice.isListening ||
-    voice.isSpeaking ||
+    isAssistantActive ||
     !!activeCalibration ||
     !!activeGrounding;
 
@@ -335,6 +347,8 @@ export function StoryContainer({
           onClosePopup={() => {
             voice.setShowSuggestions(false);
             voice.clearGuardRedirect();
+            voice.clearResponseMessage();
+            voice.stopSpeaking();
           }}
         />
       </div>

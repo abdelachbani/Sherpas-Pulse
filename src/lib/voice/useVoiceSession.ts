@@ -30,6 +30,7 @@ export interface VoiceSessionResult {
   stopSpeaking: () => void;
   pushToAsk: (question: string) => void;
   disconnect: () => void;
+  clearResponseMessage: () => void;
   clearGuardRedirect: () => void;
   clearDetectedTerm: () => void;
   clearErrorNotice: () => void;
@@ -284,7 +285,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         recognition.lang = navigator.language || 'en-US';
         recognition.interimResults = true;
         recognition.maxAlternatives = 1;
-        recognition.continuous = true;
+        recognition.continuous = false;
 
         recognition.onresult = (event: any) => {
           let current = '';
@@ -398,6 +399,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     stopSpeaking,
     pushToAsk,
     disconnect,
+    clearResponseMessage: () => setResponseMessage(null),
     clearGuardRedirect: () => setGuardRedirect(null),
     clearDetectedTerm: () => setDetectedTerm(null),
     clearErrorNotice: () => setErrorNotice(null),
