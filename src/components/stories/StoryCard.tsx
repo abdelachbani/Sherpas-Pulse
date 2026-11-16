@@ -3,6 +3,7 @@
  *
  * Full-screen individual story card:
  *  - Responsive vertical layout with scrollable center content to prevent ANY mobile overlap
+ *  - Generous bottom padding so floating Hold-to-Ask button NEVER covers CTAs or text
  *  - Underlined financial terms trigger instant micro-calibration
  *  - 4-second pause sensor triggers Zero-Prompt Calibration
  *  - Grounding Badge on metrics to inspect raw MCP JSON
@@ -130,9 +131,9 @@ export function StoryCard({
   }
 
   return (
-    <div className="h-full flex flex-col justify-between px-4 pt-10 pb-2 select-none relative z-10 text-white overflow-hidden">
+    <div className="h-full flex flex-col justify-between px-4 pt-11 pb-20 select-none relative z-10 text-white overflow-hidden">
       {/* ── Top Header (Shrink-0 to avoid crushing) ─────────────────────────── */}
-      <div className="shrink-0 mb-1.5">
+      <div className="shrink-0 mb-1">
         <div className="flex items-center justify-between">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md text-[10px] font-semibold text-slate-200 border border-white/10">
             <span className="capitalize">{card.pillar.replace('-', ' ')}</span>
@@ -167,8 +168,8 @@ export function StoryCard({
         </p>
       </div>
 
-      {/* ── Center Content Area: Scrollable with safe bounds so NO overlap happens ── */}
-      <div className="flex-1 overflow-y-auto pr-1 no-scrollbar space-y-2">
+      {/* ── Center Content Area: Scrollable with safe bounds (pb-20 ensures NO bottom overlap) ── */}
+      <div className="flex-1 overflow-y-auto pr-1 no-scrollbar space-y-2 pb-20">
         {/* Story 0: Vibe Check Style Picker */}
         {card.interactiveType === 'vibe_check' && (
           <div className="space-y-2 pt-0.5">
@@ -335,8 +336,8 @@ export function StoryCard({
         )}
       </div>
 
-      {/* ── Bottom Footer / Navigation Hint (Shrink-0) ──────────────────────── */}
-      <div className="shrink-0 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400">
+      {/* ── Bottom Subtle Navigation Hint (Shrink-0) ────────────────────────── */}
+      <div className="shrink-0 pt-1 pb-1 flex items-center justify-between text-[10px] text-slate-400">
         <span className="flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           Tap right to advance · Tap left to return
@@ -349,7 +350,7 @@ export function StoryCard({
           className="text-amber-300 hover:text-amber-200 underline underline-offset-2 flex items-center gap-0.5 font-medium"
         >
           <Info className="w-3 h-3" />
-          <span>Need help?</span>
+          <span>Calibrate</span>
         </button>
       </div>
     </div>

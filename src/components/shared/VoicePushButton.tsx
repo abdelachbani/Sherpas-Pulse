@@ -2,31 +2,77 @@
  * src/components/shared/VoicePushButton.tsx
  *
  * Push-to-Ask voice component for Sherpas Pulse:
- *  - Responsive bottom dock with safe margin
- *  - Touch & mouse hold-to-ask interactions
+ *  - Simple, elegant Hold-to-Ask bottom button
+ *  - Touch & mouse hold-to-ask interactions with touch-action: none
  *  - Live transcript bubble + Sherpas audio response
- *  - Quick suggestion chips if mic was quiet or quickly tapped
+ *  - Automatic 1-tap suggestions fallback if mic was quiet or quick-tapped
+ *  - 1-tap shortcut to open Calibration Micro-Card on detected terms
  */
 
 import { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, Square, Bot, AlertCircle, X, Sparkles } from 'lucide-react';
+import {
+  Mic,
+  Square,
+  Bot,
+  AlertCircle,
+  X,
+  Sparkles,
+  Volume2,
+  Lightbulb,
+  ArrowRight,
+  ShieldCheck,
+} from 'lucide-react';
 import type { VoiceState } from '../../lib/voice/useVoiceSession';
 
 interface Props {
+  caseId?: string;
   voiceState: VoiceState;
   transcript: string;
   responseMessage?: string | null;
   guardRedirect?: string | null;
+  detectedTerm?: string | null;
   showSuggestions?: boolean;
   onPressStart: () => void;
   onPressEnd: () => void;
+  onStopSpeaking?: () => void;
   onSelectSuggestion?: (question: string) => void;
+  onOpenCalibration?: (termKey: string) => void;
   onClosePopup?: () => void;
   disabled?: boolean;
 }
 
-const SAMPLE_QUESTIONS = [
+const HOUSEHOLD_QUESTIONS: Record<
+  string,
+  { icon: string; label: string; query: string }[]
+> = {
+  'timothy-melanie-weah': [
+    { icon: '💳', label: '18% Credit Card', query: 'Why pay off the 18% Chase card first?' },
+    { icon: '🛡️', label: 'Umbrella Liability', query: 'What is umbrella liability insurance?' },
+    { icon: '🎓', label: '529 College Plan', query: 'How does the 529 college plan work?' },
+    { icon: '🪙', label: 'What about Bitcoin?', query: 'Should I invest in Bitcoin or crypto?' },
+  ],
+  'daniel-emily-johnson': [
+    { icon: '🛡️', label: 'Life Insurance', query: 'Why increase our life insurance coverage?' },
+    { icon: '🎓', label: 'Oliver & Sophia 529', query: 'How much to fund college and retire at 62?' },
+    { icon: '💳', label: 'Cash Optimization', query: 'How should we allocate our cash surplus?' },
+    { icon: '🪙', label: 'Single Stock Picks', query: 'Should we buy Nvidia or tech stocks?' },
+  ],
+  'michael-carter': [
+    { icon: '🏡', label: '$550k Home in 2027', query: 'Can I afford to buy a $550,000 home in 2027?' },
+    { icon: '⏳', label: 'Retire at 58 vs 60', query: 'What is the impact of retiring at 58 vs 60?' },
+    { icon: '🛡️', label: 'Umbrella Liability', query: 'What is umbrella liability insurance?' },
+    { icon: '🪙', label: 'Crypto Allocation', query: 'Can I put 10% into Bitcoin or crypto?' },
+  ],
+  'samantha-lewis': [
+    { icon: '🎓', label: 'College Tuition Now', query: 'How do I fund college tuition starting this year?' },
+    { icon: '🏖️', label: 'Second Home in 2030', query: 'Can I buy a second home in 2030?' },
+    { icon: '🛡️', label: 'Income Protection', query: 'Is my life and disability insurance sufficient?' },
+    { icon: '🪙', label: 'Growth Stock Picks', query: 'What about high-growth stock picks?' },
+  ],
+};
+
+const DEFAULT_QUESTIONS = [
   { icon: '💳', label: '18% Credit Card', query: 'Why pay off the 18% credit card first?' },
   { icon: '🛡️', label: 'Umbrella Liability', query: 'What is umbrella liability insurance?' },
   { icon: '🎓', label: '529 College Plan', query: 'How does the 529 college plan work?' },
@@ -34,22 +80,34 @@ const SAMPLE_QUESTIONS = [
 ];
 
 export function VoicePushButton({
+  caseId = 'timothy-melanie-weah',
   voiceState,
   transcript,
   responseMessage,
   guardRedirect,
+  detectedTerm,
   showSuggestions = false,
   onPressStart,
   onPressEnd,
+  onStopSpeaking,
   onSelectSuggestion,
+  onOpenCalibration,
   onClosePopup,
   disabled,
 }: Props) {
   const isPressingRef = useRef(false);
+  const sampleQuestions = HOUSEHOLD_QUESTIONS[caseId] || DEFAULT_QUESTIONS;
 
   function handleStart(e: React.TouchEvent | React.MouseEvent) {
     if (disabled) return;
     e.stopPropagation();
+
+    // If currently speaking, a tap stops/mutes speech
+    if (voiceState === 'speaking') {
+      onStopSpeaking?.();
+      return;
+    }
+
     if (isPressingRef.current) return;
     isPressingRef.current = true;
     onPressStart();
@@ -86,7 +144,7 @@ export function VoicePushButton({
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="absolute bottom-full mb-3 w-[330px] p-3.5 rounded-3xl text-xs shadow-2xl backdrop-blur-xl border bg-slate-900/95 border-slate-700/80 text-white z-50 space-y-2.5"
+            className="absolute bottom-full mb-3 w-[340px] max-w-[92vw] p-3.5 rounded-3xl text-xs shadow-2xl backdrop-blur-xl border bg-slate-900/95 border-slate-700/80 text-white z-50 space-y-2.5"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -104,7 +162,7 @@ export function VoicePushButton({
                   </>
                 ) : isSpeaking ? (
                   <>
-                    <Bot className="w-3.5 h-3.5 text-indigo-400" />
+                    <Volume2 className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
                     <span className="text-indigo-300">Sherpas Voice Answer</span>
                   </>
                 ) : (
@@ -118,7 +176,7 @@ export function VoicePushButton({
               {onClosePopup && (
                 <button
                   onClick={onClosePopup}
-                  className="p-1 rounded-full text-slate-400 hover:text-white"
+                  className="p-1 rounded-full text-slate-400 hover:text-white transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -134,15 +192,37 @@ export function VoicePushButton({
 
             {/* AI Response Message or Guardrail Notice */}
             {!isListening && (responseMessage || guardRedirect) && (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {transcript && (
                   <div className="text-[10px] text-slate-400">
                     You asked: <span className="text-slate-200 italic">"{transcript}"</span>
                   </div>
                 )}
-                <p className="text-xs text-slate-100 leading-relaxed font-normal bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+                <div className="text-xs text-slate-100 leading-relaxed font-normal bg-slate-950/70 p-3 rounded-2xl border border-slate-800">
+                  <div className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold mb-1">
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>Plan Verified Numbers</span>
+                  </div>
                   {guardRedirect || responseMessage}
-                </p>
+                </div>
+
+                {/* 1-Tap shortcut to Calibration Micro-Card */}
+                {detectedTerm && onOpenCalibration && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenCalibration(detectedTerm);
+                      onClosePopup?.();
+                    }}
+                    className="w-full py-2 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 font-semibold text-xs flex items-center justify-between transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
+                      <span>View Everyday Analogy & MCP Data</span>
+                    </span>
+                    <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
+                  </button>
+                )}
               </div>
             )}
 
@@ -153,7 +233,7 @@ export function VoicePushButton({
                   Tap any question to ask instantly:
                 </span>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {SAMPLE_QUESTIONS.map((q) => (
+                  {sampleQuestions.map((q) => (
                     <button
                       key={q.label}
                       onClick={() => onSelectSuggestion?.(q.query)}
@@ -191,6 +271,7 @@ export function VoicePushButton({
           onMouseUp={handleEnd}
           onMouseLeave={handleEnd}
           disabled={disabled}
+          style={{ touchAction: 'none' }}
           className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold shadow-xl border transition-all cursor-pointer ${
             isListening
               ? 'bg-rose-600 text-white border-rose-400 shadow-rose-600/40 ring-4 ring-rose-500/20'
@@ -207,8 +288,8 @@ export function VoicePushButton({
             </>
           ) : isSpeaking ? (
             <>
-              <Bot className="w-3.5 h-3.5 text-indigo-300 animate-spin" />
-              <span>Speaking Answer...</span>
+              <Volume2 className="w-3.5 h-3.5 text-indigo-300 animate-pulse" />
+              <span>Sherpas Answering...</span>
             </>
           ) : (
             <>

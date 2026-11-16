@@ -281,7 +281,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     if (SpeechRecognition) {
       try {
         const recognition = new SpeechRecognition();
-        recognition.lang = 'en-US';
+        recognition.lang = navigator.language || 'en-US';
         recognition.interimResults = true;
         recognition.maxAlternatives = 1;
         recognition.continuous = true;
@@ -300,9 +300,21 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         recognition.onerror = (e: any) => {
           console.warn('[speech error]', e.error);
           if (e.error === 'not-allowed') {
-            setErrorNotice('Microphone access blocked. Tap any question below or type your question!');
-          } else if (e.error === 'no-speech') {
-            setErrorNotice('No speech detected. Hold mic closer and speak, or tap a question below!');
+            setErrorNotice('Microphone access blocked. Tap any question below to ask!');
+            setShowSuggestions(true);
+          }
+        };
+
+        recognition.onend = () => {
+          // If stopped listening and buffer exists, process it
+          if (!isListeningRef.current) {
+            const buf = transcriptBufferRef.current.trim();
+            if (buf) {
+              processQuestion(buf);
+            } else {
+              setVoiceState('idle');
+              setShowSuggestions(true);
+            }
           }
         };
 
@@ -310,12 +322,14 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         recognitionRef.current = recognition;
       } catch (err) {
         console.warn('[speech start error]', err);
-        setErrorNotice('Voice recognition unavailable. Tap any question below or type your question!');
+        setErrorNotice('Voice recognition unavailable. Tap any question below to ask!');
+        setShowSuggestions(true);
       }
     } else {
-      setErrorNotice('Voice input not supported in this browser. Tap any question below or type your question!');
+      setErrorNotice('Voice input not supported in this browser. Tap any question below to ask!');
+      setShowSuggestions(true);
     }
-  }, [voiceState]);
+  }, [voiceState, processQuestion]);
 
   // ── Stop Listening ──────────────────────────────────────────────────────────
   const stopListening = useCallback(() => {
@@ -323,24 +337,22 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch {}
-      recognitionRef.current = null;
     }
 
     const captured = transcriptBufferRef.current.trim();
     if (captured) {
       processQuestion(captured);
     } else {
-      // 150ms flush grace period
+      // 250ms flush grace period in case onend hasn't fired yet
       setTimeout(() => {
         const lateCaptured = transcriptBufferRef.current.trim();
         if (lateCaptured) {
           processQuestion(lateCaptured);
         } else {
           setVoiceState('idle');
-          setErrorNotice("Didn't catch any words. Hold the mic to speak, or tap any question below!");
           setShowSuggestions(true);
         }
-      }, 150);
+      }, 250);
     }
   }, [processQuestion]);
 

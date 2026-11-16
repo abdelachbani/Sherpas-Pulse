@@ -3,24 +3,15 @@
  *
  * Full-screen Instagram / Spotify Wrapped story swiper:
  *  - 6 segments progress bar with 25s auto-advance
- *  - Independent Story Canvas touch tap/hold navigation (left=prev, right=next, hold=pause)
- *  - Dedicated Bottom Action Bar with Prev, Ask Sherpas Voice, and Next controls (never overlaps content)
- *  - Integrated VoiceAssistantModal for Push-to-Ask, speech recognition, and instant questions
+ *  - Native left/right tap to navigate, hold anywhere to pause
+ *  - Simple, elegant Hold-to-Ask voice button at the bottom center
  *  - Micro-calibration bottom sheet overlay & Grounding Inspector modal
  *  - Pauses automatically when voice is listening/speaking or calibration is open
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Volume2,
-  VolumeX,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Mic,
-  Lightbulb,
-} from 'lucide-react';
+import { Volume2, VolumeX, X, Lightbulb } from 'lucide-react';
 import type {
   StoryCard as StoryCardType,
   CalibrationCard,
@@ -32,7 +23,7 @@ import type { VoiceSessionResult } from '../../lib/voice/useVoiceSession';
 import { StoryCard } from './StoryCard';
 import { CalibrationMicroCard } from '../calibration/CalibrationMicroCard';
 import { GroundingInspector } from '../calibration/GroundingInspector';
-import { VoiceAssistantModal } from '../voice/VoiceAssistantModal';
+import { VoicePushButton } from '../shared/VoicePushButton';
 
 interface Props {
   caseId: string;
@@ -62,7 +53,6 @@ export function StoryContainer({
   const [activeCalibration, setActiveCalibration] = useState<CalibrationCard | null>(null);
   const [activeGrounding, setActiveGrounding] = useState<GroundingRef | null>(null);
   const [isVoiceNarrating, setIsVoiceNarrating] = useState(false);
-  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [checklistState, setChecklistState] = useState([false, false, false]);
 
   const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -108,12 +98,12 @@ export function StoryContainer({
   }, [isVoiceNarrating]);
 
   useEffect(() => {
-    if (!isVoiceModalOpen && !voice.isListening && !voice.isSpeaking && isVoiceNarrating && currentStory?.voiceScript) {
+    if (!voice.isListening && !voice.isSpeaking && isVoiceNarrating && currentStory?.voiceScript) {
       speakCurrentStory(currentStory.voiceScript);
     } else if (!isVoiceNarrating && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
-  }, [currentIndex, isVoiceNarrating, isVoiceModalOpen, voice.isListening, voice.isSpeaking, currentStory?.voiceScript, speakCurrentStory]);
+  }, [currentIndex, isVoiceNarrating, voice.isListening, voice.isSpeaking, currentStory?.voiceScript, speakCurrentStory]);
 
   // ── Navigation helpers ──────────────────────────────────────────────────────
   const goToNext = useCallback(() => {
@@ -135,7 +125,6 @@ export function StoryContainer({
   // ── 25-Second Progress Timer ────────────────────────────────────────────────
   const effectivelyPaused =
     isPaused ||
-    isVoiceModalOpen ||
     voice.isListening ||
     voice.isSpeaking ||
     !!activeCalibration ||
@@ -167,7 +156,6 @@ export function StoryContainer({
 
   // ── Story Canvas Tap / Hold Handlers ─────────────────────────────────────────
   function handleCanvasPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    // If target is an interactive button or link, do not trigger canvas tap
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('input') || target.closest('a')) {
       return;
@@ -329,80 +317,27 @@ export function StoryContainer({
         </AnimatePresence>
       </div>
 
-      {/* ── Dedicated Bottom Action Bar (Shrink-0, Never Overlaps Content) ───── */}
-      <div className="shrink-0 h-14 border-t border-white/10 bg-slate-950/85 backdrop-blur-md px-3 flex items-center justify-between z-30">
-        {/* Previous Story */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            goToPrev();
+      {/* ── Clean, Ergonomic Hold-to-Ask Button (Centered at Bottom) ───────── */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
+        <VoicePushButton
+          caseId={caseId}
+          voiceState={voice.voiceState}
+          transcript={voice.transcript}
+          responseMessage={voice.responseMessage}
+          guardRedirect={voice.guardRedirect}
+          detectedTerm={voice.detectedTerm}
+          showSuggestions={voice.showSuggestions}
+          onPressStart={voice.startListening}
+          onPressEnd={voice.stopListening}
+          onStopSpeaking={voice.stopSpeaking}
+          onSelectSuggestion={(q) => voice.pushToAsk(q)}
+          onOpenCalibration={(termKey) => handleCalibrationOpen(termKey)}
+          onClosePopup={() => {
+            voice.setShowSuggestions(false);
+            voice.clearGuardRedirect();
           }}
-          disabled={currentIndex === 0}
-          className={`p-2 rounded-full border transition-all ${
-            currentIndex === 0
-              ? 'opacity-20 border-transparent text-slate-600 cursor-not-allowed'
-              : 'bg-white/10 text-white hover:bg-white/20 border-white/10 cursor-pointer active:scale-95'
-          }`}
-          aria-label="Previous story"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-
-        {/* Central Push-to-Ask / Voice Assistant Trigger */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsVoiceModalOpen(true);
-          }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold shadow-xl transition-all active:scale-95 cursor-pointer ${
-            voice.voiceState === 'listening'
-              ? 'bg-rose-600 text-white shadow-rose-600/40 ring-4 ring-rose-500/20 animate-pulse'
-              : voice.voiceState === 'speaking'
-              ? 'bg-indigo-600 text-white shadow-indigo-600/30 animate-pulse'
-              : 'bg-gradient-to-r from-indigo-600 to-sky-600 hover:opacity-95 text-white shadow-indigo-600/25'
-          }`}
-          aria-label="Ask Sherpas Voice Assistant"
-        >
-          <Mic className="w-3.5 h-3.5 text-white" />
-          <span>
-            {voice.voiceState === 'listening'
-              ? 'Listening...'
-              : voice.voiceState === 'speaking'
-              ? 'Speaking...'
-              : 'Ask Sherpas 🎙️'}
-          </span>
-        </button>
-
-        {/* Next Story / Finish */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            goToNext();
-          }}
-          className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 border border-white/10 transition-all cursor-pointer active:scale-95"
-          aria-label="Next story"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
+        />
       </div>
-
-      {/* ── Voice Assistant Modal / Bottom Sheet ─────────────────────────────── */}
-      <VoiceAssistantModal
-        isOpen={isVoiceModalOpen}
-        caseId={caseId}
-        voiceState={voice.voiceState}
-        transcript={voice.transcript}
-        responseMessage={voice.responseMessage}
-        guardRedirect={voice.guardRedirect}
-        detectedTerm={voice.detectedTerm}
-        errorNotice={voice.errorNotice}
-        onStartListening={voice.startListening}
-        onStopListening={voice.stopListening}
-        onAskQuestion={voice.pushToAsk}
-        onStopSpeaking={voice.stopSpeaking}
-        onOpenCalibration={(termKey) => handleCalibrationOpen(termKey)}
-        onClose={() => setIsVoiceModalOpen(false)}
-      />
 
       {/* ── Implicit Calibration Micro-Card Overlay ─────────────────────────── */}
       <AnimatePresence>
