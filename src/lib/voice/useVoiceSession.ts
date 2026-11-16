@@ -7,7 +7,8 @@
  *  - Household-specific plan grounding (Timothy & Melanie, Daniel & Emily, Michael, Samantha)
  *  - Automatic Boomerang Guardrail (intercepts crypto/bitcoin/stock picks)
  *  - Automatic financial term detection triggering micro-calibration
- *  - Browser SpeechSynthesis narration with clear UI status and error recovery
+ *  - Browser SpeechSynthesis narration with Chrome garbage-collection protection
+ *  - Instant fallback answer if microphone is quiet or fast-tapped (NEVER stays silent)
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -67,6 +68,9 @@ const TERM_PATTERNS: { regex: RegExp; key: string }[] = [
   { regex: /upro|leveraged|etf|volatilit|apalancad/i, key: 'leveraged-etf' },
   { regex: /withdraw|withdrawal|safe rate|tasa de retiro/i, key: 'withdrawal-rate' },
 ];
+
+// Retain active utterance to prevent Chrome's premature garbage collection bug
+let activeUtteranceRef: SpeechSynthesisUtterance | null = null;
 
 export function useVoiceSession(caseId: string): VoiceSessionResult {
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
@@ -207,32 +211,51 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     };
   }, [caseId]);
 
-  // ── Text-to-speech speaker ──────────────────────────────────────────────────
+  // ── Text-to-speech speaker (Rock-solid with Chrome pause wake-up) ─────────────
   function speakResponse(text: string, onDone?: () => void) {
     if (!('speechSynthesis' in window)) {
       onDone?.();
       return;
     }
-    window.speechSynthesis.cancel();
+
+    try {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.resume();
+    } catch {}
+
     setVoiceState('speaking');
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.05;
     utterance.pitch = 1.0;
-    utterance.lang = 'en-US';
+
+    // Pick best available voice (English or default)
+    try {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        const engVoice = voices.find((v) => v.lang.startsWith('en')) || voices[0];
+        if (engVoice) utterance.voice = engVoice;
+      }
+    } catch {}
 
     utterance.onend = () => {
       setVoiceState('idle');
+      activeUtteranceRef = null;
       onDone?.();
     };
-    utterance.onerror = () => {
+    utterance.onerror = (e) => {
+      console.warn('SpeechSynthesis error', e);
       setVoiceState('idle');
+      activeUtteranceRef = null;
       onDone?.();
     };
 
+    activeUtteranceRef = utterance;
+
     try {
       window.speechSynthesis.speak(utterance);
-    } catch {
+    } catch (err) {
+      console.warn('Speak error', err);
       setVoiceState('idle');
       onDone?.();
     }
@@ -265,7 +288,12 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   // ── Start Listening ─────────────────────────────────────────────────────────
   const startListening = useCallback(() => {
     if (voiceState === 'listening') return;
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
 
     transcriptBufferRef.current = '';
     setTranscript('');
@@ -281,6 +309,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
     if (SpeechRecognition) {
       try {
+        if (recognitionRef.current) {
+          try { recognitionRef.current.abort(); } catch {}
+          recognitionRef.current = null;
+        }
+
         const recognition = new SpeechRecognition();
         recognition.lang = navigator.language || 'en-US';
         recognition.interimResults = true;
@@ -302,19 +335,14 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
           console.warn('[speech error]', e.error);
           if (e.error === 'not-allowed') {
             setErrorNotice('Microphone access blocked. Tap any question below to ask!');
-            setShowSuggestions(true);
           }
         };
 
         recognition.onend = () => {
-          // If stopped listening and buffer exists, process it
           if (!isListeningRef.current) {
             const buf = transcriptBufferRef.current.trim();
             if (buf) {
               processQuestion(buf);
-            } else {
-              setVoiceState('idle');
-              setShowSuggestions(true);
             }
           }
         };
@@ -324,15 +352,13 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       } catch (err) {
         console.warn('[speech start error]', err);
         setErrorNotice('Voice recognition unavailable. Tap any question below to ask!');
-        setShowSuggestions(true);
       }
     } else {
       setErrorNotice('Voice input not supported in this browser. Tap any question below to ask!');
-      setShowSuggestions(true);
     }
   }, [voiceState, processQuestion]);
 
-  // ── Stop Listening ──────────────────────────────────────────────────────────
+  // ── Stop Listening (Guaranteed response: NEVER stays silent) ────────────────
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
 
@@ -340,28 +366,35 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       try { recognitionRef.current.stop(); } catch {}
     }
 
-    const captured = transcriptBufferRef.current.trim();
-    if (captured) {
-      processQuestion(captured);
-    } else {
-      // 250ms flush grace period in case onend hasn't fired yet
-      setTimeout(() => {
-        const lateCaptured = transcriptBufferRef.current.trim();
-        if (lateCaptured) {
-          processQuestion(lateCaptured);
-        } else {
-          setVoiceState('idle');
-          setShowSuggestions(true);
-        }
-      }, 250);
-    }
-  }, [processQuestion]);
+    // 250ms grace period to allow SpeechRecognition buffer to flush
+    setTimeout(() => {
+      const captured = transcriptBufferRef.current.trim();
+      if (captured) {
+        processQuestion(captured);
+      } else {
+        // Fallback: If microphone was quiet, fast-tapped, or blocked:
+        // Automatically answer the household's top priority so it NEVER stays silent!
+        const fallbackQuery =
+          caseId === 'michael-carter'
+            ? 'Can I buy a $550k home in 2027?'
+            : caseId === 'samantha-lewis'
+            ? 'How do I fund college tuition now?'
+            : caseId === 'daniel-emily-johnson'
+            ? 'Why increase our life insurance coverage?'
+            : 'Why pay off the 18% credit card first?';
+
+        processQuestion(fallbackQuery);
+        setShowSuggestions(true);
+      }
+    }, 250);
+  }, [processQuestion, caseId]);
 
   const stopSpeaking = useCallback(() => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
     setVoiceState('idle');
+    activeUtteranceRef = null;
   }, []);
 
   const pushToAsk = useCallback(
@@ -381,6 +414,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       window.speechSynthesis.cancel();
     }
     setVoiceState('idle');
+    activeUtteranceRef = null;
   }, []);
 
   return {

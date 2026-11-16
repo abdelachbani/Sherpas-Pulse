@@ -98,7 +98,7 @@ export function VoicePushButton({
   const isPressingRef = useRef(false);
   const sampleQuestions = HOUSEHOLD_QUESTIONS[caseId] || DEFAULT_QUESTIONS;
 
-  function handleStart(e: React.TouchEvent | React.MouseEvent) {
+  function handlePointerDown(e: React.PointerEvent) {
     if (disabled) return;
     e.stopPropagation();
 
@@ -110,10 +110,27 @@ export function VoicePushButton({
 
     if (isPressingRef.current) return;
     isPressingRef.current = true;
+
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {}
+
     onPressStart();
   }
 
-  function handleEnd(e: React.TouchEvent | React.MouseEvent) {
+  function handlePointerUp(e: React.PointerEvent) {
+    e.stopPropagation();
+    if (!isPressingRef.current) return;
+    isPressingRef.current = false;
+
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
+
+    onPressEnd();
+  }
+
+  function handlePointerCancel(e: React.PointerEvent) {
     e.stopPropagation();
     if (!isPressingRef.current) return;
     isPressingRef.current = false;
@@ -264,12 +281,9 @@ export function VoicePushButton({
 
         <motion.button
           whileTap={{ scale: 0.94 }}
-          onTouchStart={handleStart}
-          onTouchEnd={handleEnd}
-          onTouchCancel={handleEnd}
-          onMouseDown={handleStart}
-          onMouseUp={handleEnd}
-          onMouseLeave={handleEnd}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
           disabled={disabled}
           style={{ touchAction: 'none' }}
           className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold shadow-xl border transition-all cursor-pointer ${
