@@ -154,11 +154,47 @@ export interface CalibrationCard {
   groundingRefs: GroundingRef[];
 }
 
-export interface TelemetryEvent {
-  type: 'term_tap' | 'pause' | 'voice_ask' | 'allocation_set' | 'story_complete' | 'style_select' | 'grounding_view';
-  payload: Record<string, unknown>;
+export type TelemetryEventType =
+  | 'term_tap'
+  | 'tap_to_define'
+  | 'pause'
+  | 'voice_ask'
+  | 'tradeoff_change'
+  | 'allocation_change'
+  | 'allocation_set'
+  | 'story_complete'
+  | 'style_select'
+  | 'grounding_view';
+
+export interface TermConsultationPayload {
+  term: string;
+  termKey: string;
+  [key: string]: unknown;
+}
+
+export interface TelemetryEvent<
+  TType extends TelemetryEventType = TelemetryEventType,
+  TPayload extends Record<string, unknown> = Record<string, unknown>,
+> {
+  type: TType;
+  payload: TPayload;
   timestamp: number;
   storyId?: string;
+}
+
+export interface TelemetrySummary {
+  eventCount: number;
+  termConsultations: {
+    count: number;
+    uniqueTerms: string[];
+    uniqueTermCount: number;
+  };
+  interactions: {
+    tradeoffChanges: number;
+    allocationChanges: number;
+    voiceAsks: number;
+  };
+  shouldSuggestCalibration: boolean;
 }
 
 export interface CashStrategyOption {

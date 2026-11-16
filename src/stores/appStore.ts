@@ -4,8 +4,19 @@
  */
 
 import { create } from 'zustand';
-import type { CaseData, CoupleAllocation, TelemetryEvent, ViewingStyle } from '../types';
+import type {
+  CaseData,
+  CoupleAllocation,
+  TelemetryEvent,
+  TelemetrySummary,
+  ViewingStyle,
+} from '../types';
 import { CASES } from '../lib/mcp/cases';
+import {
+  getTelemetrySummary as summarizeTelemetry,
+  mkEvent,
+  mkTermConsultationEvent,
+} from '../lib/telemetry';
 
 interface AppStore {
   // ── State ────────────────────────────────────────────────────────────────
@@ -22,11 +33,17 @@ interface AppStore {
   setViewingStyle(s: ViewingStyle): void;
   setPartner(p: 'primary' | 'secondary'): void;
   addTelemetryEvent(e: TelemetryEvent): void;
+  trackTermConsulted(term: string, storyId?: string): void;
+  trackTradeoffChange(payload: Record<string, unknown>, storyId?: string): void;
+  trackAllocationChange(payload: Record<string, unknown>, storyId?: string): void;
+  trackVoiceAsk(payload: Record<string, unknown>, storyId?: string): void;
+  getTelemetrySummary(): TelemetrySummary;
+  shouldSuggestCalibration(): boolean;
   setAllocation(partner: 'primary' | 'secondary', alloc: CoupleAllocation): void;
   reset(): void;
 }
 
-export const useAppStore = create<AppStore>((set) => ({
+export const useAppStore = create<AppStore>((set, get) => ({
   // ── Initial state ────────────────────────────────────────────────────────
   currentCase:        null,
   currentStoryIndex:  0,
@@ -49,6 +66,30 @@ export const useAppStore = create<AppStore>((set) => ({
 
   addTelemetryEvent: (e) =>
     set((state) => ({ telemetryEvents: [...state.telemetryEvents, e] })),
+
+  trackTermConsulted: (term, storyId) =>
+    set((state) => ({
+      telemetryEvents: [...state.telemetryEvents, mkTermConsultationEvent(term, storyId)],
+    })),
+
+  trackTradeoffChange: (payload, storyId) =>
+    set((state) => ({
+      telemetryEvents: [...state.telemetryEvents, mkEvent('tradeoff_change', payload, storyId)],
+    })),
+
+  trackAllocationChange: (payload, storyId) =>
+    set((state) => ({
+      telemetryEvents: [...state.telemetryEvents, mkEvent('allocation_change', payload, storyId)],
+    })),
+
+  trackVoiceAsk: (payload, storyId) =>
+    set((state) => ({
+      telemetryEvents: [...state.telemetryEvents, mkEvent('voice_ask', payload, storyId)],
+    })),
+
+  getTelemetrySummary: () => summarizeTelemetry(get().telemetryEvents),
+
+  shouldSuggestCalibration: () => summarizeTelemetry(get().telemetryEvents).shouldSuggestCalibration,
 
   setAllocation: (partner, alloc) =>
     set((state) => ({
