@@ -1,0 +1,379 @@
+/**
+ * src/components/stories/StoryDataViz.tsx
+ *
+ * Animated data visualizations for the 6 Financial Wrapped story cards.
+ * Uses SVG, Framer Motion, and Tailwind CSS for mobile tactile animations.
+ */
+
+import { motion } from 'framer-motion';
+import {
+  TrendingUp,
+  AlertTriangle,
+  GraduationCap,
+  Home,
+  Car,
+  Palmtree,
+  Sparkles,
+  ShieldCheck,
+  CheckCircle2,
+  Droplets,
+} from 'lucide-react';
+import type { PillarScore, ChartGoal } from '../../types';
+
+// ─── 1. Health Score Animated Ring ──────────────────────────────────────────
+
+export function ScoreRing({
+  score,
+  band,
+  colour = 'yellow',
+}: {
+  score: number;
+  band: string;
+  colour?: string;
+}) {
+  const size = 180;
+  const strokeWidth = 14;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - score / 100);
+
+  const ringColor =
+    colour === 'green' || score >= 80
+      ? '#10b981'
+      : colour === 'yellow' || score >= 60
+      ? '#f59e0b'
+      : '#ef4444';
+
+  return (
+    <div className="relative flex flex-col items-center justify-center my-4">
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="rgba(255, 255, 255, 0.1)"
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={ringColor}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1.6, ease: 'easeOut' }}
+          strokeLinecap="round"
+          fill="none"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <motion.span
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="text-5xl font-black text-white tracking-tight"
+        >
+          {score}
+        </motion.span>
+        <span className="text-xs uppercase tracking-widest text-slate-300 font-bold mt-1">
+          {band}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── 2. Pillar Scores Progress Bars ─────────────────────────────────────────
+
+export function PillarBars({ pillars }: { pillars: PillarScore[] }) {
+  return (
+    <div className="w-full space-y-2.5 my-3">
+      {pillars.map((p, idx) => {
+        const isStrong = p.score >= 80;
+        const isModerate = p.score >= 60 && p.score < 80;
+        const barColor = isStrong ? 'bg-emerald-400' : isModerate ? 'bg-amber-400' : 'bg-rose-400';
+
+        return (
+          <div key={p.pillar} className="space-y-1">
+            <div className="flex justify-between text-xs font-medium">
+              <span className="text-slate-200 truncate pr-2">{p.pillar}</span>
+              <span className="text-white font-bold">{p.score}/100</span>
+            </div>
+            <div className="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden border border-slate-700/50">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${p.score}%` }}
+                transition={{ duration: 1.0, delay: idx * 0.15, ease: 'easeOut' }}
+                className={`h-full rounded-full ${barColor}`}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── 3. Superpower vs. Silent Leak Dual Gauge ────────────────────────────────
+
+export function SuperpowerVsLeakViz({
+  superpowerLabel,
+  superpowerVal,
+  superpowerSub,
+  leakLabel,
+  leakVal,
+  leakSub,
+  onInspectLeak,
+}: {
+  superpowerLabel: string;
+  superpowerVal: string;
+  superpowerSub: string;
+  leakLabel: string;
+  leakVal: string;
+  leakSub: string;
+  onInspectLeak?: () => void;
+}) {
+  return (
+    <div className="w-full grid grid-cols-1 gap-3 my-3">
+      {/* Superpower Card */}
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5 }}
+        className="p-4 rounded-2xl bg-gradient-to-br from-emerald-950/60 to-slate-900 border border-emerald-500/40 relative overflow-hidden"
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5" />
+            Superpower
+          </span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold">
+            Strength
+          </span>
+        </div>
+        <div className="text-3xl font-black text-white mt-1">{superpowerVal}</div>
+        <div className="text-xs text-slate-300 mt-0.5 font-medium">{superpowerLabel}</div>
+        <div className="text-[11px] text-slate-400 mt-1">{superpowerSub}</div>
+      </motion.div>
+
+      {/* Silent Leak Card */}
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="p-4 rounded-2xl bg-gradient-to-br from-rose-950/60 to-slate-900 border border-rose-500/40 relative overflow-hidden cursor-pointer"
+        onClick={onInspectLeak}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            Silent Leak
+          </span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-semibold flex items-center gap-1">
+            <ShieldCheck className="w-3 h-3" />
+            18% APR
+          </span>
+        </div>
+        <div className="text-3xl font-black text-rose-200 mt-1">{leakVal}</div>
+        <div className="text-xs text-slate-300 mt-0.5 font-medium">{leakLabel}</div>
+        <div className="text-[11px] text-slate-400 mt-1">{leakSub}</div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── 4. Real-Life Translator Graphic ─────────────────────────────────────────
+
+export function RealLifeTranslatorViz({
+  annualCost,
+  equivalentMilestone,
+  explanation,
+}: {
+  annualCost: string;
+  equivalentMilestone: string;
+  explanation: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="w-full p-4 rounded-3xl bg-slate-900/90 border border-indigo-500/30 my-3 space-y-4"
+    >
+      <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+        <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
+          Life-Unit Translation
+        </span>
+        <span className="text-[11px] text-slate-400">Equal Value</span>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 text-center">
+        <div className="flex-1 p-3 rounded-2xl bg-rose-950/30 border border-rose-500/20">
+          <div className="text-[11px] text-slate-400">Interest Burned</div>
+          <div className="text-2xl font-black text-rose-300 mt-1">{annualCost}</div>
+          <div className="text-[10px] text-rose-400/80 mt-0.5">Every single year</div>
+        </div>
+
+        <div className="text-lg font-black text-slate-400">≈</div>
+
+        <div className="flex-1 p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/30">
+          <div className="text-[11px] text-slate-400">Child's Future</div>
+          <div className="text-sm font-bold text-indigo-300 mt-1 leading-tight">
+            {equivalentMilestone}
+          </div>
+          <div className="text-[10px] text-indigo-400/80 mt-0.5">Fully Funded</div>
+        </div>
+      </div>
+
+      <p className="text-xs text-slate-300 leading-relaxed bg-slate-800/60 p-3 rounded-xl">
+        {explanation}
+      </p>
+    </motion.div>
+  );
+}
+
+// ─── 5. Liquidity Tank Preview ───────────────────────────────────────────────
+
+export function LiquidityTankPreview({
+  totalCash = '$150,000',
+  surplusCash = '$60,222',
+  strategiesCount = 4,
+}: {
+  totalCash?: string;
+  surplusCash?: string;
+  strategiesCount?: number;
+}) {
+  return (
+    <div className="w-full p-4 rounded-3xl bg-slate-900/80 border border-sky-500/30 my-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-sky-400 font-semibold text-xs">
+          <Droplets className="w-4 h-4" />
+          <span>Available Liquidity Reservoir</span>
+        </div>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-bold">
+          {totalCash} Total
+        </span>
+      </div>
+
+      {/* Visual reservoir bar */}
+      <div className="h-6 w-full bg-slate-950 rounded-xl overflow-hidden p-1 border border-slate-800 flex gap-1">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: '60%' }}
+          transition={{ duration: 1.2, ease: 'easeOut' }}
+          className="h-full bg-gradient-to-r from-sky-500 to-indigo-500 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shadow-inner"
+        >
+          {surplusCash} Surplus
+        </motion.div>
+        <div className="h-full bg-slate-800 rounded-lg flex-1 flex items-center justify-center text-[9px] text-slate-400 font-medium">
+          Emergency Reserve
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+        <span>{strategiesCount} strategies competing for this cash</span>
+        <span className="text-indigo-400 font-semibold">Ready to prioritize →</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── 6. Living Map Milestone Timeline ────────────────────────────────────────
+
+export function TimelineMini({
+  retirementAge = 62,
+  goals = [],
+}: {
+  retirementAge?: number;
+  goals?: ChartGoal[];
+}) {
+  const milestones = [
+    { label: 'Today', year: 2026, icon: Sparkles, color: 'text-sky-400 bg-sky-950/60' },
+    { label: 'Vehicle', year: 2028, icon: Car, color: 'text-amber-400 bg-amber-950/60' },
+    { label: 'Home Upgrade', year: 2030, icon: Home, color: 'text-indigo-400 bg-indigo-950/60' },
+    { label: 'College', year: 2038, icon: GraduationCap, color: 'text-purple-400 bg-purple-950/60' },
+    { label: `Retire (${retirementAge})`, year: 2048, icon: Palmtree, color: 'text-emerald-400 bg-emerald-950/60' },
+  ];
+
+  return (
+    <div className="w-full my-3 p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+      <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+        <span>Milestone Horizon</span>
+        <span className="text-[11px] text-slate-400">2026 → 2048+</span>
+      </div>
+
+      <div className="flex items-center justify-between relative pt-2">
+        {/* Horizontal connecting line */}
+        <div className="absolute top-5 left-3 right-3 h-0.5 bg-slate-700/80 -z-0" />
+
+        {milestones.map((m, idx) => {
+          const Icon = m.icon;
+          return (
+            <motion.div
+              key={m.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              className="flex flex-col items-center z-10 text-center"
+            >
+              <div className={`w-8 h-8 rounded-full border border-slate-700 flex items-center justify-center ${m.color}`}>
+                <Icon className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-bold text-white mt-1">{m.year}</span>
+              <span className="text-[9px] text-slate-400 max-w-[50px] truncate">{m.label}</span>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── 7. 5-Minute Win Action Checklist ────────────────────────────────────────
+
+export function DominoChecklist({
+  steps,
+  completed,
+  onToggleStep,
+}: {
+  steps: string[];
+  completed: boolean[];
+  onToggleStep: (idx: number) => void;
+}) {
+  return (
+    <div className="w-full space-y-2.5 my-3">
+      {steps.map((step, idx) => {
+        const isDone = completed[idx] ?? false;
+        return (
+          <motion.div
+            key={idx}
+            initial={{ opacity: 0, x: -15 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: idx * 0.15 }}
+            onClick={() => onToggleStep(idx)}
+            className={`p-3.5 rounded-2xl border flex items-start gap-3 cursor-pointer transition-all active:scale-[0.98] ${
+              isDone
+                ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-100'
+                : 'bg-slate-900/80 border-slate-700/70 text-slate-200'
+            }`}
+          >
+            <div
+              className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs transition-colors ${
+                isDone
+                  ? 'bg-emerald-500 text-slate-950'
+                  : 'bg-slate-800 border border-slate-600 text-slate-400'
+              }`}
+            >
+              {isDone ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
+            </div>
+            <div className="flex-1 text-xs leading-relaxed font-medium">
+              <span className={isDone ? 'line-through opacity-70' : ''}>{step}</span>
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
