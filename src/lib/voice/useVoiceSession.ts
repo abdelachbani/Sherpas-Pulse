@@ -58,15 +58,36 @@ const OFF_PLAN_TERMS = [
   /options.?trading/i,
 ];
 
-// Term patterns mapped to calibration keys (English & Spanish keywords)
+// Term patterns mapped to calibration keys (Comprehensive English & Spanish keywords)
 const TERM_PATTERNS: { regex: RegExp; key: string }[] = [
-  { regex: /roth|ira|cuenta de retiro/i, key: 'roth-ira' },
-  { regex: /18%|credit card|card|chase|revolving|interest|tarjeta|deuda|interes|interés/i, key: 'revolving-apr' },
-  { regex: /umbrella|liability|shield|lawsuit|seguro de responsabilidad|responsabilidad civil|demanda/i, key: 'umbrella-liability' },
-  { regex: /mortality|life cover|insurance|parachute|seguro de vida|cobertura de vida/i, key: 'mortality-ratio' },
-  { regex: /529|college|education|tuition|liam|josh|oliver|sophia|universidad|estudios|colegio/i, key: '529-plan' },
-  { regex: /upro|leveraged|etf|volatilit|apalancad/i, key: 'leveraged-etf' },
-  { regex: /withdraw|withdrawal|safe rate|tasa de retiro/i, key: 'withdrawal-rate' },
+  {
+    regex: /(?:roth|ira|cuenta.?de.?retiro)/i,
+    key: 'roth-ira',
+  },
+  {
+    regex: /(?:18%|credit.?card|card|chase|revolving|interest|tarjeta|deuda|interes|interés|pago.?tarjeta)/i,
+    key: 'revolving-apr',
+  },
+  {
+    regex: /(?:umbrella|liability|shield|lawsuit|seguro.?de.?responsabilidad|responsabilidad.?civil|demanda|proteccion.?legal|protección)/i,
+    key: 'umbrella-liability',
+  },
+  {
+    regex: /(?:mortality|life.?cover|insurance|parachute|seguro.?de.?vida|cobertura.?de.?vida|fallecimiento|poliza.?vida|póliza)/i,
+    key: 'mortality-ratio',
+  },
+  {
+    regex: /(?:529|college|education|tuition|liam|josh|oliver|sophia|ethan|ava|universidad|estudios|colegio|matricula|matrícula|hijos)/i,
+    key: '529-plan',
+  },
+  {
+    regex: /(?:upro|leveraged|etf|volatilit|apalancad|fondo.?apalancado)/i,
+    key: 'leveraged-etf',
+  },
+  {
+    regex: /(?:withdraw|withdrawal|safe.?rate|tasa.?de.?retiro|retiro.?seguro|regla.?del.?4%|longevidad)/i,
+    key: 'withdrawal-rate',
+  },
 ];
 
 // Retain active utterance to prevent Chrome's premature garbage collection bug
@@ -84,9 +105,14 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const recognitionRef = useRef<any>(null);
   const transcriptBufferRef = useRef<string>('');
   const isListeningRef = useRef(false);
+  const stopTimeoutRef = useRef<any>(null);
+  const hasProcessedRef = useRef(false);
 
   useEffect(() => {
     return () => {
+      if (stopTimeoutRef.current) {
+        clearTimeout(stopTimeoutRef.current);
+      }
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch {}
       }
@@ -110,49 +136,84 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
     // 2. Household-specific queries
     if (caseId === 'michael-carter') {
-      if (/home|house|casa|buy|550|2027/i.test(q)) {
+      if (/home|house|casa|buy|comprar|vivienda|550|2027/i.test(q)) {
         return {
           reply: "Your Sherpas plan models purchasing a $550,000 home in Austin in 2027 with $110,000 (20%) down from cash, preserving a full 6-month liquid cushion.",
         };
       }
-      if (/retir|58|60|jubil|age/i.test(q)) {
+      if (/retir|58|60|jubil|age|edad|pension|pensión/i.test(q)) {
         return {
           reply: "Retiring at 58 requires a safe withdrawal rate of 4.1% on your $1.4M projected portfolio, compared to 3.6% at age 60. Both scenarios maintain healthy portfolio longevity.",
           termKey: 'withdrawal-rate',
         };
       }
+      if (/cash|dinero|ahorro|saldo|liquidez|savings|reservoir|fondo/i.test(q)) {
+        return {
+          reply: "You earn $180,000 in Austin, but your savings score is currently low. Your plan automates $1,500 monthly into a high-yield account to accumulate $54,000 for your 2027 down payment.",
+        };
+      }
     }
 
     if (caseId === 'samantha-lewis') {
-      if (/college|tuition|universidad|teen|kids/i.test(q)) {
+      if (/college|tuition|universidad|estudios|colegio|ethan|ava|teen|kids|hijos/i.test(q)) {
         return {
-          reply: "Funding college tuition starting now requires $18,400 annually, which balances cleanly against your $240,000 cash flow and 529 projections.",
+          reply: "Funding college tuition starting now for Ethan and Ava requires $18,400 annually, which balances cleanly against your $240,000 cash flow and 529 projections.",
           termKey: '529-plan',
         };
       }
-      if (/second home|segunda casa|2030|vacation/i.test(q)) {
+      if (/second home|segunda casa|2030|vacation|playa|vacaciones/i.test(q)) {
         return {
           reply: "Purchasing a $620,000 second home in 2030 is fully viable if scheduled after initial college contributions stabilize in 2029.",
+        };
+      }
+      if (/deuda|debt|cash|dinero|ahorro|saldo|liquidez|fortress/i.test(q)) {
+        return {
+          reply: "You have a flawless 100/100 debt-free fortress and strong liquidity on a $250,000 salary, allowing you to fund college debt-free while keeping your 2030 second home on track.",
         };
       }
     }
 
     if (caseId === 'daniel-emily-johnson') {
-      if (/life|insurance|mortality|seguro/i.test(q)) {
+      if (/life|insurance|mortality|seguro|vida|fallecimiento|cobertura/i.test(q)) {
         return {
           reply: "Your life insurance coverage ratio is currently at 45%. Adding $350,000 in term protection shields Oliver and Sophia fully and raises your health score.",
           termKey: 'mortality-ratio',
         };
       }
-      if (/oliver|sophia|college|529|universidad/i.test(q)) {
+      if (/oliver|sophia|college|529|universidad|colegio|estudios|hijos/i.test(q)) {
         return {
           reply: "Funding college for Oliver and Sophia requires $6,200 annually, which preserves your age 62 retirement milestone without reducing living expenses.",
           termKey: '529-plan',
         };
       }
+      if (/casa|home|housing|mortgage|hipoteca|denver|560/i.test(q)) {
+        return {
+          reply: "Your $560,000 home in Denver provides a stable housing foundation with a strong 76/100 debt management score.",
+        };
+      }
+      if (/retir|jubil|edad|62|64|age/i.test(q)) {
+        return {
+          reply: "Balancing $400 a month into 529 college savings ensures you reach your target retirement age of 62 instead of delaying to 64.",
+          termKey: 'withdrawal-rate',
+        };
+      }
     }
 
-    // 3. General financial terms match with exact MCP numbers
+    // 3. Cash / Liquidity / Savings queries (English & Spanish)
+    if (/cu[aá]nto.*dinero|ahorro|saldo|liquidez|efectivo|cash|savings|money|cushion|liquidity|surplus|reserva|cuanto.*tengo/i.test(q)) {
+      return {
+        reply: "Your household has $150,800 in total liquid cash reserves, which is 16 months of living expenses. That is $60,222 above your safety target, ready to fund debt elimination and college goals.",
+      };
+    }
+
+    // 4. Score / Health Overview / General Guidance (English & Spanish)
+    if (/score|puntuaci[oó]n|salud|health|resumen|overview|prioridad|priority|qu[eé] hago|qu[eé] debo hacer|consejo|recommend/i.test(q)) {
+      return {
+        reply: "Your financial health score is 60 out of 100, in the stable band. Your top recommended move is paying $6,800 on your 18% Chase card from cash surplus, which immediately unlocks your score from 60 to 62 and saves $1,224 a year.",
+      };
+    }
+
+    // 5. General financial terms match with exact MCP numbers
     for (const item of TERM_PATTERNS) {
       if (item.regex.test(q)) {
         if (item.key === 'revolving-apr') {
@@ -175,7 +236,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         }
         if (item.key === '529-plan') {
           return {
-            reply: "You currently have $0 saved in 529 accounts against a projected $113,508 college gap. Contributing $4,609 a year covers tuition without touching retirement funds.",
+            reply: "You currently have $0 saved in 529 accounts against a projected $113,508 college gap for Liam and Josh. Contributing $4,609 a year covers tuition without touching retirement funds.",
             termKey: item.key,
           };
         }
@@ -193,7 +254,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         }
         if (item.key === 'withdrawal-rate') {
           return {
-            reply: "Your safe withdrawal rate in retirement is modeled at 3.8%, well within the safe 4% threshold for a 30-year horizon.",
+            reply: "Timothy is modeled to retire at 62 and Melanie at 60. Your safe withdrawal rate in retirement is 3.8%, well within the safe 4% threshold for a 30-year horizon.",
             termKey: item.key,
           };
         }
@@ -204,10 +265,24 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       }
     }
 
-    // Default plan summary answer
+    // 6. Contextual plan overview fallback (NEVER forces the credit card by default!)
+    if (caseId === 'michael-carter') {
+      return {
+        reply: "Your Sherpas plan focuses on high-yield cash accumulation to reach your $550,000 home purchase in 2027. You can ask me about buying a home, retiring at 58 vs 60, or your cash flow.",
+      };
+    }
+    if (caseId === 'samantha-lewis') {
+      return {
+        reply: "Your Sherpas plan coordinates college tuition with purchasing a $620,000 second home in 2030. You can ask me about college tuition, your 2030 home goal, or umbrella insurance.",
+      };
+    }
+    if (caseId === 'daniel-emily-johnson') {
+      return {
+        reply: "Your Sherpas plan protects Oliver and Sophia's education while securing your age 62 retirement milestone. You can ask me about 529 college savings, life insurance coverage, or cash allocation.",
+      };
+    }
     return {
-      reply: "Your Sherpas plan is strong in liquid cash ($150,000). Your highest-impact immediate move is eliminating the 18% credit card interest, which frees up $270 a month for your goals.",
-      termKey: 'revolving-apr',
+      reply: "Your Sherpas plan is backed by $150,800 in liquid cash reserves. Key priorities include paying down high-interest debt, adding umbrella liability, and funding college. Feel free to ask about any of these topics.",
     };
   }, [caseId]);
 
@@ -289,6 +364,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const startListening = useCallback(() => {
     if (voiceState === 'listening') return;
 
+    if (stopTimeoutRef.current) {
+      clearTimeout(stopTimeoutRef.current);
+      stopTimeoutRef.current = null;
+    }
+
     if ('speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
@@ -296,6 +376,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     }
 
     transcriptBufferRef.current = '';
+    hasProcessedRef.current = false;
     setTranscript('');
     setResponseMessage(null);
     setGuardRedirect(null);
@@ -335,14 +416,27 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
           console.warn('[speech error]', e.error);
           if (e.error === 'not-allowed') {
             setErrorNotice('Microphone access blocked. Tap any question below to ask!');
+            setShowSuggestions(true);
+            setVoiceState('idle');
+            isListeningRef.current = false;
           }
         };
 
         recognition.onend = () => {
-          if (!isListeningRef.current) {
-            const buf = transcriptBufferRef.current.trim();
-            if (buf) {
-              processQuestion(buf);
+          if (stopTimeoutRef.current) {
+            clearTimeout(stopTimeoutRef.current);
+            stopTimeoutRef.current = null;
+          }
+
+          if (!isListeningRef.current && !hasProcessedRef.current) {
+            hasProcessedRef.current = true;
+            const captured = transcriptBufferRef.current.trim();
+            if (captured) {
+              processQuestion(captured);
+            } else {
+              setVoiceState('idle');
+              setShowSuggestions(true);
+              setErrorNotice("Didn't catch that. Tap any question below or try again:");
             }
           }
         };
@@ -352,13 +446,19 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       } catch (err) {
         console.warn('[speech start error]', err);
         setErrorNotice('Voice recognition unavailable. Tap any question below to ask!');
+        setShowSuggestions(true);
+        setVoiceState('idle');
+        isListeningRef.current = false;
       }
     } else {
       setErrorNotice('Voice input not supported in this browser. Tap any question below to ask!');
+      setShowSuggestions(true);
+      setVoiceState('idle');
+      isListeningRef.current = false;
     }
   }, [voiceState, processQuestion]);
 
-  // ── Stop Listening (Guaranteed response: NEVER stays silent) ────────────────
+  // ── Stop Listening ──────────────────────────────────────────────────────────
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
 
@@ -366,28 +466,25 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       try { recognitionRef.current.stop(); } catch {}
     }
 
-    // 250ms grace period to allow SpeechRecognition buffer to flush
-    setTimeout(() => {
-      const captured = transcriptBufferRef.current.trim();
-      if (captured) {
-        processQuestion(captured);
-      } else {
-        // Fallback: If microphone was quiet, fast-tapped, or blocked:
-        // Automatically answer the household's top priority so it NEVER stays silent!
-        const fallbackQuery =
-          caseId === 'michael-carter'
-            ? 'Can I buy a $550k home in 2027?'
-            : caseId === 'samantha-lewis'
-            ? 'How do I fund college tuition now?'
-            : caseId === 'daniel-emily-johnson'
-            ? 'Why increase our life insurance coverage?'
-            : 'Why pay off the 18% credit card first?';
+    if (stopTimeoutRef.current) {
+      clearTimeout(stopTimeoutRef.current);
+    }
 
-        processQuestion(fallbackQuery);
-        setShowSuggestions(true);
+    // Safety timeout: If recognition.onend takes more than 750ms to fire, flush buffer safely
+    stopTimeoutRef.current = setTimeout(() => {
+      if (!hasProcessedRef.current) {
+        hasProcessedRef.current = true;
+        const captured = transcriptBufferRef.current.trim();
+        if (captured) {
+          processQuestion(captured);
+        } else {
+          setVoiceState('idle');
+          setShowSuggestions(true);
+          setErrorNotice("Didn't catch that. Tap any question below or try again:");
+        }
       }
-    }, 250);
-  }, [processQuestion, caseId]);
+    }, 750);
+  }, [processQuestion]);
 
   const stopSpeaking = useCallback(() => {
     if ('speechSynthesis' in window) {
@@ -406,6 +503,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
   const disconnect = useCallback(() => {
     isListeningRef.current = false;
+    hasProcessedRef.current = true;
+    if (stopTimeoutRef.current) {
+      clearTimeout(stopTimeoutRef.current);
+      stopTimeoutRef.current = null;
+    }
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch {}
       recognitionRef.current = null;
