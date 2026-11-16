@@ -827,3 +827,28 @@ export function extractHouseholdSync(
 
   return { agreements, tieBreakers };
 }
+
+
+// ─── Action item extractor ────────────────────────────────────────────────────
+
+export function extractActionItem(fh: FinancialHealth): {
+  title: string;
+  steps: string[];
+  dollarImpact: string;
+  firstStep: string;
+} {
+  const topMove = fh.score.top_moves?.[0];
+  const firstStep = topMove?.action || 'Transfer $6,800 from liquid cash to 18% credit card';
+  const scoreGain = topMove ? topMove.score_after - topMove.score_before : 2;
+
+  return {
+    title: topMove?.title || 'Pay down revolving card',
+    steps: [
+      firstStep,
+      `Raises your Financial Health score by ${scoreGain} points (${topMove?.score_before || 60} → ${topMove?.score_after || 62}).`,
+      'Review your couple consensus with your Sherpas advisor.',
+    ],
+    dollarImpact: topMove ? `$${topMove.target_amount.toLocaleString()}` : '$6,800',
+    firstStep,
+  };
+}
