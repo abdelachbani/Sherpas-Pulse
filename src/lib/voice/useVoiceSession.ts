@@ -108,6 +108,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const stopTimeoutRef = useRef<any>(null);
   const hasProcessedRef = useRef(false);
   const micBlockedRef = useRef(false);
+  const networkErrorRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -378,6 +379,8 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
     transcriptBufferRef.current = '';
     hasProcessedRef.current = false;
+    micBlockedRef.current = false;
+    networkErrorRef.current = false;
     setTranscript('');
     setResponseMessage(null);
     setGuardRedirect(null);
@@ -422,6 +425,9 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
           if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
             micBlockedRef.current = true;
           }
+          if (e.error === 'network') {
+            networkErrorRef.current = true;
+          }
         };
 
         recognition.onend = () => {
@@ -439,9 +445,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
               setVoiceState('idle');
               setShowSuggestions(true);
               setErrorNotice(
-                micBlockedRef.current
-                  ? 'Microphone access blocked. Tap any question below to ask:'
-                  : "Didn't catch that. Tap any question below or try again:"
+                networkErrorRef.current
+                  ? 'Edge Speech API network error. Open in Google Chrome for voice mic, or type/tap below:'
+                  : micBlockedRef.current
+                  ? 'Microphone access blocked. Tap or type any question below:'
+                  : "Didn't catch that. Tap or type any question below:"
               );
             }
           }
@@ -491,9 +499,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
           setVoiceState('idle');
           setShowSuggestions(true);
           setErrorNotice(
-            micBlockedRef.current
-              ? 'Microphone access blocked. Tap any question below to ask:'
-              : "Didn't catch that. Tap any question below or try again:"
+            networkErrorRef.current
+              ? 'Edge Speech API network error. Open in Google Chrome for voice mic, or type/tap below:'
+              : micBlockedRef.current
+              ? 'Microphone access blocked. Tap or type any question below:'
+              : "Didn't catch that. Tap or type any question below:"
           );
         }
       }

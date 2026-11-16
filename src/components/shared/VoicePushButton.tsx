@@ -9,7 +9,7 @@
  *  - 1-tap shortcut to open Calibration Micro-Card on detected terms
  */
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic,
@@ -95,8 +95,17 @@ export function VoicePushButton({
   onClosePopup,
   disabled,
 }: Props) {
+  const [customText, setCustomText] = useState('');
   const isPressingRef = useRef(false);
   const sampleQuestions = HOUSEHOLD_QUESTIONS[caseId] || DEFAULT_QUESTIONS;
+
+  function handleSubmitCustom(e: React.FormEvent) {
+    e.preventDefault();
+    const clean = customText.trim();
+    if (!clean) return;
+    onSelectSuggestion?.(clean);
+    setCustomText('');
+  }
 
   function handleStart(e: React.TouchEvent | React.MouseEvent) {
     if (disabled) return;
@@ -272,6 +281,24 @@ export function VoicePushButton({
                     </button>
                   ))}
                 </div>
+
+                {/* Direct text input for any browser (Edge/Safari/Chrome) */}
+                <form onSubmit={handleSubmitCustom} className="flex gap-1.5 pt-1">
+                  <input
+                    type="text"
+                    value={customText}
+                    onChange={(e) => setCustomText(e.target.value)}
+                    placeholder="Or type a question (e.g. ¿cuánto dinero tengo?)..."
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!customText.trim()}
+                    className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    Ask
+                  </button>
+                </form>
               </div>
             )}
           </motion.div>
