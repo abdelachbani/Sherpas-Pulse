@@ -48,3 +48,16 @@ _This document is a mandatory submission requirement documenting the technical h
 - **Hypothesis:** Use traditional Tailwind v3 configuration files (`tailwind.config.js` with `content: [...]` and `@tailwind base;`).
 - **What Failed:** In modern Vite with `@tailwindcss/vite` 4.x, legacy `@tailwind` directives throw build-time syntax errors, and TypeScript flags missing module declarations.
 - **The Solution:** Cleanly migrated to the native Tailwind v4 `@import "tailwindcss";` pipeline in `src/index.css` paired with the `@tailwindcss/vite` plugin.
+
+
+---
+
+## 6. Mobile Vertical Viewports & Voice Engine Bridge
+
+- **Hypothesis:** Place a floating round 72px "Hold to Ask" button centered at the bottom of the screen (`fixed bottom-8`), and rely on Vite's default dev server to relay WebSocket voice connections.
+- **What Failed:** 
+  1. On mobile vertical viewports (iPhone/Android screens ~667–844px), a 72px floating button in the center covered the bottom story navigation hints, footer links, and the critical "Continue to Consensus & Advisor Prep" button in Story 5. Additionally, large 180px SVG circles and stacked cards caused vertical collisions and clipping.
+  2. The Vite dev server running on port 5173 does not relay WebSockets to the Node relay server on port 3001 without an explicit Vite `server.proxy` mapping. In addition, when developers test without their Sherpas `TEAM_KEY` or in offline browser environments, WebSocket attempts failed silently.
+- **The Solution:** 
+  1. We redesigned the Push-to-Ask trigger into an ergonomic, docked bottom pill with reserved bottom spacing (`pb-24` on story cards and internal scrolling on middle containers) so no element ever overlaps or hides a CTA.
+  2. We configured the Vite dev proxy for `/voice` and `/api` to port 3001, and upgraded `useVoiceSession` with an automatic **native Web Speech API bridge (`webkitSpeechRecognition` + `SpeechSynthesis`)**. This ensures Push-to-Ask voice interruption works out of the box on every browser, detects financial terms to trigger micro-calibration, and enforces the Boomerang Guardrail even if external AI proxy keys are unconfigured.

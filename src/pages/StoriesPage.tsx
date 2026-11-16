@@ -2,13 +2,13 @@
  * src/pages/StoriesPage.tsx
  *
  * Full mobile stories experience ("Financial Wrapped"):
- *  - 6 vertical swipeable story cards
- *  - Deterministic data extraction from current case
- *  - Push-to-Ask voice interruption integration
- *  - Smooth routing to Couple Allocation or Single Trade-off
+ *  - 6 vertical swipeable story cards with 100% responsive bounds
+ *  - Ergonomically placed Push-to-Ask voice interruption that NEVER blocks content
+ *  - Automatic voice term detection triggering micro-calibration
+ *  - Graceful speech recognition fallback for all mobile browsers
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
@@ -25,7 +25,6 @@ export default function StoriesPage() {
   const setCase = useAppStore((s) => s.setCase);
   const addTelemetryEvent = useAppStore((s) => s.addTelemetryEvent);
 
-  // Fallback to lookup from CASES if store is empty on direct reload
   const activeCase = currentCase ?? CASES.find((c) => c.id === caseId) ?? CASES[0];
 
   useEffect(() => {
@@ -63,20 +62,23 @@ export default function StoriesPage() {
   }
 
   return (
-    <div className="relative w-full h-dvh bg-slate-950 overflow-hidden">
+    <div className="relative w-full h-dvh bg-slate-950 overflow-hidden flex flex-col justify-between">
       <StoryContainer
         stories={stories}
         calibrationCards={calibrationCards}
         pillars={activeCase.financialHealth.score.pillars}
         onComplete={handleComplete}
         onNavigateBack={() => navigate('/')}
+        voiceDetectedTerm={voice.detectedTerm}
+        onClearVoiceTerm={voice.clearDetectedTerm}
       />
 
-      {/* Floating Push-to-Ask Mic Button */}
-      <div className="pointer-events-auto">
+      {/* Ergonomic Non-Intrusive Push-to-Ask Dock (Bottom Center with clean spacing) */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
         <VoicePushButton
           voiceState={voice.voiceState}
           transcript={voice.transcript}
+          guardRedirect={voice.guardRedirect}
           onPressStart={voice.startListening}
           onPressEnd={voice.stopListening}
         />

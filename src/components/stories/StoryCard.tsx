@@ -2,21 +2,20 @@
  * src/components/stories/StoryCard.tsx
  *
  * Full-screen individual story card:
- *  - Bold typographic numbers and tailored layout per pillar
- *  - Clickable underlined financial terms → opens CalibrationMicroCard
- *  - 4-second pause sensor → triggers implicit calibration automatically
- *  - Grounding Badge on metrics → inspects raw MCP data
+ *  - Responsive vertical layout with scrollable center content to prevent ANY mobile overlap
+ *  - Underlined financial terms trigger instant micro-calibration
+ *  - 4-second pause sensor triggers Zero-Prompt Calibration
+ *  - Grounding Badge on metrics to inspect raw MCP JSON
  */
 
 import { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   ShieldCheck,
   Sparkles,
   Info,
   ChevronRight,
   TrendingUp,
-  Volume2,
 } from 'lucide-react';
 import type { StoryCard as StoryCardType, GroundingRef, ViewingStyle, PillarScore } from '../../types';
 import {
@@ -68,7 +67,7 @@ export function StoryCard({
   const pauseTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasTriggeredPauseRef = useRef(false);
 
-  // ── 4-Second Pause Sensor ("Zero-Prompt Calibration") ───────────────────────
+  // ── 4-Second Inactivity Sensor ("Zero-Prompt Calibration") ──────────────────
   useEffect(() => {
     if (!isActive) {
       if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
@@ -76,7 +75,6 @@ export function StoryCard({
       return;
     }
 
-    // Default term to calibrate for this card
     const defaultTerms: Record<string, string> = {
       'story-vibe': 'roth-ira',
       'story-overview': 'revolving-apr',
@@ -93,7 +91,7 @@ export function StoryCard({
         hasTriggeredPauseRef.current = true;
         onCalibrationOpen(termKey);
       }
-    }, 4500); // 4.5 seconds pause detection
+    }, 4500);
 
     return () => {
       if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
@@ -132,11 +130,11 @@ export function StoryCard({
   }
 
   return (
-    <div className="h-full flex flex-col justify-between p-6 select-none relative z-10 text-white">
-      {/* ── Top Header ──────────────────────────────────────────────────────── */}
-      <div className="pt-8">
+    <div className="h-full flex flex-col justify-between px-5 pt-14 pb-24 select-none relative z-10 text-white overflow-hidden">
+      {/* ── Top Header (Shrink-0 to avoid crushing) ─────────────────────────── */}
+      <div className="shrink-0 mb-2">
         <div className="flex items-center justify-between">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[11px] font-semibold text-slate-200 border border-white/10">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md text-[10px] font-semibold text-slate-200 border border-white/10">
             <span className="capitalize">{card.pillar.replace('-', ' ')}</span>
             <span className="text-white/40">·</span>
             <span className="text-emerald-400">Pillar {card.storyIndex + 1}/6</span>
@@ -148,33 +146,33 @@ export function StoryCard({
                 e.stopPropagation();
                 onInspectGrounding(card.grounding!);
               }}
-              className="inline-flex items-center gap-1 text-[11px] text-emerald-400 hover:text-emerald-300 px-2 py-0.5 rounded-full bg-emerald-950/40 border border-emerald-500/30 transition-colors"
+              className="inline-flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 px-2 py-0.5 rounded-full bg-emerald-950/40 border border-emerald-500/30 transition-colors"
             >
-              <ShieldCheck className="w-3.5 h-3.5" />
+              <ShieldCheck className="w-3 h-3" />
               <span>Grounding Badge</span>
             </button>
           )}
         </div>
 
         <motion.h1
-          initial={{ opacity: 0, y: 15 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-2xl font-black text-white mt-3 leading-tight tracking-tight"
+          className="text-xl font-black text-white mt-2 leading-tight tracking-tight"
         >
           {card.title}
         </motion.h1>
 
-        <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+        <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
           {renderClickableText(card.subtitle)}
         </p>
       </div>
 
-      {/* ── Center Content / Interactive Visualization ──────────────────────── */}
-      <div className="my-auto py-2">
+      {/* ── Center Content Area: Scrollable with safe bounds so NO overlap happens ── */}
+      <div className="flex-1 overflow-y-auto pr-1 no-scrollbar space-y-2">
         {/* Story 0: Vibe Check Style Picker */}
         {card.interactiveType === 'vibe_check' && (
-          <div className="space-y-3">
-            <div className="text-xs font-semibold text-slate-300 mb-1">
+          <div className="space-y-2 pt-1">
+            <div className="text-[11px] font-semibold text-slate-300">
               Select your viewing rhythm:
             </div>
             {[
@@ -201,14 +199,14 @@ export function StoryCard({
                   e.stopPropagation();
                   onSelectStyle?.(opt.id);
                 }}
-                className={`w-full p-4 rounded-2xl text-left border transition-all ${
+                className={`w-full p-3.5 rounded-2xl text-left border transition-all ${
                   viewingStyle === opt.id
                     ? 'bg-indigo-600/40 border-indigo-400 text-white shadow-lg'
                     : 'bg-slate-900/70 border-slate-700/70 text-slate-300 hover:border-slate-500'
                 }`}
               >
-                <div className="font-bold text-sm text-white">{opt.title}</div>
-                <div className="text-xs text-slate-400 mt-0.5">{opt.desc}</div>
+                <div className="font-bold text-xs text-white">{opt.title}</div>
+                <div className="text-[10px] text-slate-400 mt-0.5 leading-tight">{opt.desc}</div>
               </motion.button>
             ))}
           </div>
@@ -220,14 +218,15 @@ export function StoryCard({
             <ScoreRing
               score={Number(card.dataPoints.find((d) => d.label.includes('Health Score'))?.value || 60)}
               band="Stable"
+              size={110}
             />
             <SuperpowerVsLeakViz
               superpowerLabel="Liquid Cash Cushion"
               superpowerVal={String(card.dataPoints[0]?.value || '$150,000')}
-              superpowerSub="16 months of living expenses ready to work"
-              leakLabel="18% Revolving Card Interest"
+              superpowerSub="16 months expenses ready to work"
+              leakLabel="18% Revolving Card"
               leakVal={String(card.dataPoints[1]?.value || '$3,240/yr')}
-              leakSub="Burned on Chase balance — tap for breakdown"
+              leakSub="Interest burned — tap to calibrate"
               onInspectLeak={() => onCalibrationOpen('revolving-apr')}
             />
           </div>
@@ -253,15 +252,15 @@ export function StoryCard({
               surplusCash="$60,222"
               strategiesCount={4}
             />
-            <div className="space-y-2 mt-2">
+            <div className="space-y-1.5 mt-2">
               {card.dataPoints.map((dp, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between p-3 rounded-xl bg-slate-900/70 border border-slate-800 text-xs"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/70 border border-slate-800 text-xs"
                 >
-                  <span className="text-slate-300 font-medium">{dp.label}</span>
+                  <span className="text-slate-300 font-medium text-[11px]">{dp.label}</span>
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-white">{dp.value}</span>
+                    <span className="font-bold text-white text-[11px]">{dp.value}</span>
                     {dp.grounding && (
                       <button
                         onClick={(e) => {
@@ -270,7 +269,7 @@ export function StoryCard({
                         }}
                         className="text-emerald-400 p-0.5 hover:text-emerald-300"
                       >
-                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <ShieldCheck className="w-3 h-3" />
                       </button>
                     )}
                   </div>
@@ -284,13 +283,13 @@ export function StoryCard({
         {card.interactiveType === 'time_machine' && (
           <div>
             <TimelineMini retirementAge={62} />
-            <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 text-xs space-y-2 mt-3">
-              <div className="font-semibold text-indigo-300 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-indigo-400" />
+            <div className="p-3.5 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 text-xs space-y-1.5 mt-2">
+              <div className="font-semibold text-indigo-300 flex items-center gap-1.5 text-xs">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Zero-Hallucination Grounding</span>
               </div>
-              <p className="text-slate-300 leading-relaxed">
-                All milestones are deterministically mapped to your Sherpas Living Map. If you ask about off-plan investments (like crypto), our Guardrail Router guides you right back to your life goals.
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                All milestones are deterministically mapped to your Sherpas Living Map. If you ask about off-plan investments (like crypto), our Boomerang Guardrail guides you right back to your life goals.
               </p>
             </div>
           </div>
@@ -298,15 +297,15 @@ export function StoryCard({
 
         {/* Story 5: 5-Minute Win Action */}
         {card.interactiveType === 'wrapped_summary' && (
-          <div className="space-y-3">
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/80 to-slate-900 border border-emerald-500/50">
-              <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block mb-1">
+          <div className="space-y-2.5">
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-950/80 to-slate-900 border border-emerald-500/50">
+              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block mb-0.5">
                 The First Domino
               </span>
-              <div className="text-xl font-black text-white leading-tight">
+              <div className="text-base font-black text-white leading-tight">
                 Transfer $6,800 to 18% Chase Card
               </div>
-              <div className="text-xs text-emerald-300 font-semibold mt-1">
+              <div className="text-[11px] text-emerald-300 font-semibold mt-0.5">
                 Saves $1,224/yr + Lifts health score 60 → 62
               </div>
             </div>
@@ -321,12 +320,13 @@ export function StoryCard({
               onToggleStep={onToggleStep}
             />
 
+            {/* Clear, unblocked Next Button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onActionComplete?.();
               }}
-              className="w-full py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+              className="w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-xl flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer mt-2"
             >
               <span>Continue to Consensus & Advisor Prep</span>
               <ChevronRight className="w-4 h-4" />
@@ -335,18 +335,18 @@ export function StoryCard({
         )}
       </div>
 
-      {/* ── Bottom Footer / Navigation Hint ─────────────────────────────────── */}
-      <div className="pb-4 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
+      {/* ── Bottom Footer / Navigation Hint (Shrink-0) ──────────────────────── */}
+      <div className="shrink-0 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400">
         <span className="flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          Tap right to advance · Hold to pause
+          Tap right to advance · Tap left to return
         </span>
         <button
           onClick={(e) => {
             e.stopPropagation();
             onCalibrationOpen('revolving-apr');
           }}
-          className="text-amber-300 hover:text-amber-200 underline underline-offset-2 flex items-center gap-1"
+          className="text-amber-300 hover:text-amber-200 underline underline-offset-2 flex items-center gap-0.5 font-medium"
         >
           <Info className="w-3 h-3" />
           <span>Need help?</span>

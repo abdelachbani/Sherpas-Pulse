@@ -3,15 +3,15 @@
  *
  * Full-screen Instagram / Spotify Wrapped story swiper:
  *  - 6 segments progress bar with 25s auto-advance
- *  - Left-tap (previous), right-tap (next), hold-to-pause (touch/mouse)
+ *  - Left-tap (previous), right-tap (next), hold-to-pause
  *  - Micro-calibration bottom sheet overlay
  *  - Grounding Inspector modal
- *  - Voice speech narration toggle
+ *  - Automatic voice-triggered calibration response
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Volume2, VolumeX, Sparkles, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Volume2, VolumeX, X } from 'lucide-react';
 import type {
   StoryCard as StoryCardType,
   CalibrationCard,
@@ -29,6 +29,8 @@ interface Props {
   pillars?: PillarScore[];
   onComplete: () => void;
   onNavigateBack: () => void;
+  voiceDetectedTerm?: string | null;
+  onClearVoiceTerm?: () => void;
 }
 
 const STORY_DURATION_MS = 25000; // 25 seconds per story
@@ -39,6 +41,8 @@ export function StoryContainer({
   pillars = [],
   onComplete,
   onNavigateBack,
+  voiceDetectedTerm,
+  onClearVoiceTerm,
 }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0); // 0 to 100 for current story
@@ -54,6 +58,18 @@ export function StoryContainer({
   const isHoldingRef = useRef(false);
 
   const currentStory = stories[currentIndex] ?? stories[0];
+
+  // If voice detects a financial term, automatically open its calibration card!
+  useEffect(() => {
+    if (voiceDetectedTerm) {
+      const card = calibrationCards[voiceDetectedTerm];
+      if (card) {
+        setActiveCalibration(card);
+        setIsPaused(true);
+      }
+      onClearVoiceTerm?.();
+    }
+  }, [voiceDetectedTerm, calibrationCards, onClearVoiceTerm]);
 
   // ── Background gradients per story ──────────────────────────────────────────
   const gradients = [
@@ -145,7 +161,6 @@ export function StoryContainer({
     setIsPaused(false);
 
     if (!isHoldingRef.current) {
-      // Tap detected! Determine left or right side
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const isLeftSide = x < rect.width * 0.35;
@@ -174,7 +189,7 @@ export function StoryContainer({
       onPointerUp={handlePointerUp}
     >
       {/* ── Top Progress Segments (Instagram-style) ─────────────────────────── */}
-      <div className="absolute top-0 inset-x-0 z-30 pt-3 px-4 flex gap-1.5 pointer-events-none">
+      <div className="absolute top-0 inset-x-0 z-30 pt-2.5 px-4 flex gap-1.5 pointer-events-none">
         {stories.map((s, idx) => {
           let segFill = 0;
           if (idx < currentIndex) segFill = 100;
@@ -195,13 +210,13 @@ export function StoryContainer({
       </div>
 
       {/* ── Top Floating Action Bar ─────────────────────────────────────────── */}
-      <div className="absolute top-6 inset-x-0 z-30 px-4 flex items-center justify-between pointer-events-auto">
+      <div className="absolute top-5 inset-x-0 z-30 px-4 flex items-center justify-between pointer-events-auto">
         <button
           onClick={(e) => {
             e.stopPropagation();
             onNavigateBack();
           }}
-          className="p-2 rounded-full bg-black/40 text-white/80 hover:text-white backdrop-blur-md border border-white/10"
+          className="p-1.5 rounded-full bg-black/40 text-white/80 hover:text-white backdrop-blur-md border border-white/10"
           aria-label="Back to case selection"
         >
           <X className="w-4 h-4" />
@@ -236,14 +251,14 @@ export function StoryContainer({
       </div>
 
       {/* ── Active Story Card ───────────────────────────────────────────────── */}
-      <div className="relative flex-1 w-full h-full">
+      <div className="relative flex-1 w-full h-full overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStory.id}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.28, ease: 'easeInOut' }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
             className="w-full h-full"
           >
             <StoryCard

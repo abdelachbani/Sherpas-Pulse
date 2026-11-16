@@ -1,147 +1,153 @@
 /**
  * src/components/shared/VoicePushButton.tsx
  *
- * Push-to-Ask mic button for Sherpas Pulse.
- * - 72px round button, fixed bottom-center
- * - Hold (touchstart/mousedown) → listening; release → AI responds
- * - State colours: idle=slate, listening=red+pulsing ring, speaking=blue+wave
- * - Transcript bubble above button while speaking
+ * Push-to-Ask voice button for Sherpas Pulse:
+ *  - Ergonomic mobile dock design (non-intrusive, never covers story CTAs)
+ *  - Touch & mouse hold-to-ask interactions
+ *  - Real-time pulse animation while listening
+ *  - Speech feedback bubble with guardrail notice
  */
 
-import { useEffect, useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Mic, MicOff, Square, Bot, Sparkles, AlertCircle } from 'lucide-react';
 import type { VoiceState } from '../../lib/voice/useVoiceSession';
 
 interface Props {
   voiceState: VoiceState;
   transcript: string;
+  guardRedirect?: string | null;
   onPressStart: () => void;
   onPressEnd: () => void;
   disabled?: boolean;
 }
 
-export function VoicePushButton({ voiceState, transcript, onPressStart, onPressEnd, disabled }: Props) {
-  const pressRef = useRef(false);
+export function VoicePushButton({
+  voiceState,
+  transcript,
+  guardRedirect,
+  onPressStart,
+  onPressEnd,
+  disabled,
+}: Props) {
+  const isPressingRef = useRef(false);
 
-  function handlePressStart(e: React.TouchEvent | React.MouseEvent) {
+  function handleStart(e: React.TouchEvent | React.MouseEvent) {
     if (disabled) return;
-    e.preventDefault();
-    if (pressRef.current) return;
-    pressRef.current = true;
+    e.stopPropagation();
+    if (isPressingRef.current) return;
+    isPressingRef.current = true;
     onPressStart();
   }
 
-  function handlePressEnd(e: React.TouchEvent | React.MouseEvent) {
-    e.preventDefault();
-    if (!pressRef.current) return;
-    pressRef.current = false;
+  function handleEnd(e: React.TouchEvent | React.MouseEvent) {
+    e.stopPropagation();
+    if (!isPressingRef.current) return;
+    isPressingRef.current = false;
     onPressEnd();
   }
 
-  // Safety: release on window blur
   useEffect(() => {
-    const release = () => {
-      if (pressRef.current) {
-        pressRef.current = false;
+    const handleWindowBlur = () => {
+      if (isPressingRef.current) {
+        isPressingRef.current = false;
         onPressEnd();
       }
     };
-    window.addEventListener('blur', release);
-    return () => window.removeEventListener('blur', release);
+    window.addEventListener('blur', handleWindowBlur);
+    return () => window.removeEventListener('blur', handleWindowBlur);
   }, [onPressEnd]);
 
   const isListening = voiceState === 'listening';
   const isSpeaking = voiceState === 'speaking';
-  const isConnecting = voiceState === 'connecting';
-
-  const buttonBg = isListening
-    ? 'bg-red-500'
-    : isSpeaking
-    ? 'bg-blue-500'
-    : isConnecting
-    ? 'bg-slate-400'
-    : 'bg-slate-700';
-
-  const icon = isListening ? '⏹️' : isSpeaking ? '🤖' : isConnecting ? '⏳' : '🎙️';
 
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-3 select-none">
-      {/* Transcript bubble */}
+    <div className="relative flex flex-col items-center select-none">
+      {/* Transcript or Guardrail Notification Bubble */}
       <AnimatePresence>
-        {isSpeaking && transcript && (
+        {(transcript || guardRedirect) && (
           <motion.div
-            key="bubble"
-            initial={{ opacity: 0, y: 8, scale: 0.95 }}
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            className="max-w-[280px] bg-slate-800 text-white text-sm rounded-2xl px-4 py-2 shadow-lg border border-slate-600"
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            className={`absolute bottom-full mb-3 max-w-[280px] p-3 rounded-2xl text-xs shadow-2xl backdrop-blur-md border ${
+              guardRedirect
+                ? 'bg-amber-950/90 text-amber-200 border-amber-500/50'
+                : isListening
+                ? 'bg-rose-950/90 text-rose-200 border-rose-500/50'
+                : 'bg-slate-900/90 text-slate-100 border-slate-700'
+            }`}
           >
-            {transcript}
+            <div className="flex items-center gap-1.5 font-bold mb-0.5 text-[10px] uppercase tracking-wider">
+              {guardRedirect ? (
+                <>
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Guardrail Redirect</span>
+                </>
+              ) : isListening ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                  <span>Listening...</span>
+                </>
+              ) : (
+                <>
+                  <Bot className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Sherpas Voice</span>
+                </>
+              )}
+            </div>
+            <p className="leading-snug">{guardRedirect || transcript}</p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Pulsing ring when listening */}
+      {/* Tactile Push-to-Ask Button Pill */}
       <div className="relative flex items-center justify-center">
+        {/* Pulsing ring while listening */}
         {isListening && (
-          <>
-            <motion.span
-              className="absolute rounded-full bg-red-500 opacity-30"
-              style={{ width: 72, height: 72 }}
-              animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0, 0.3] }}
-              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-            />
-            <motion.span
-              className="absolute rounded-full bg-red-500 opacity-20"
-              style={{ width: 72, height: 72 }}
-              animate={{ scale: [1, 1.9, 1], opacity: [0.2, 0, 0.2] }}
-              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
-            />
-          </>
+          <motion.div
+            className="absolute inset-0 rounded-full bg-rose-500/30"
+            animate={{ scale: [1, 1.4, 1], opacity: [0.6, 0.1, 0.6] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+          />
         )}
 
-        {/* Wave rings when speaking */}
-        {isSpeaking && (
-          <>
-            {[0, 0.3, 0.6].map((delay) => (
-              <motion.span
-                key={delay}
-                className="absolute rounded-full bg-blue-500 opacity-25"
-                style={{ width: 72, height: 72 }}
-                animate={{ scale: [1, 1.6], opacity: [0.25, 0] }}
-                transition={{ duration: 1.0, repeat: Infinity, ease: 'easeOut', delay }}
-              />
-            ))}
-          </>
-        )}
-
-        {/* Main button */}
         <motion.button
-          className={`w-[72px] h-[72px] rounded-full ${buttonBg} text-white text-2xl flex items-center justify-center shadow-xl transition-colors duration-200 touch-none cursor-pointer`}
-          whileTap={{ scale: 0.9 }}
-          onTouchStart={handlePressStart}
-          onTouchEnd={handlePressEnd}
-          onTouchCancel={handlePressEnd}
-          onMouseDown={handlePressStart}
-          onMouseUp={handlePressEnd}
-          onMouseLeave={handlePressEnd}
-          disabled={disabled || isConnecting}
-          aria-label={isListening ? 'Stop listening' : 'Hold to ask'}
+          whileTap={{ scale: 0.94 }}
+          onTouchStart={handleStart}
+          onTouchEnd={handleEnd}
+          onTouchCancel={handleEnd}
+          onMouseDown={handleStart}
+          onMouseUp={handleEnd}
+          onMouseLeave={handleEnd}
+          disabled={disabled}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold shadow-lg border transition-all cursor-pointer ${
+            isListening
+              ? 'bg-rose-600 text-white border-rose-400 shadow-rose-600/40 ring-4 ring-rose-500/20'
+              : isSpeaking
+              ? 'bg-indigo-600 text-white border-indigo-400 shadow-indigo-600/30 animate-pulse'
+              : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:border-slate-500 hover:text-white backdrop-blur-md'
+          }`}
+          aria-label={isListening ? 'Release to ask' : 'Hold to ask'}
         >
-          {icon}
+          {isListening ? (
+            <>
+              <Square className="w-3.5 h-3.5 fill-white text-white" />
+              <span>Release to Send</span>
+            </>
+          ) : isSpeaking ? (
+            <>
+              <Bot className="w-3.5 h-3.5 text-indigo-300" />
+              <span>Responding...</span>
+            </>
+          ) : (
+            <>
+              <Mic className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Hold to Ask</span>
+            </>
+          )}
         </motion.button>
       </div>
-
-      {/* Label */}
-      <span className="text-xs text-slate-400 pointer-events-none">
-        {isListening
-          ? 'Release to send'
-          : isSpeaking
-          ? 'Responding...'
-          : isConnecting
-          ? 'Connecting...'
-          : 'Hold to ask'}
-      </span>
     </div>
   );
 }
