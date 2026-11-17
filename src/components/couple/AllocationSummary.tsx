@@ -36,7 +36,7 @@ export function AllocationSummary({ totalCash, surplusCash, allocatedAmount }: P
           <span>Surplus Cash Tank</span>
         </div>
         <div className="text-right">
-          <span className="text-[10px] text-slate-400 uppercase font-semibold block">Total Liquid Cash</span>
+          <span className="text-xs text-slate-400 uppercase font-semibold block">Total Liquid Cash</span>
           <span className="text-xs font-bold text-white">${totalCash.toLocaleString()}</span>
         </div>
       </div>
@@ -52,12 +52,12 @@ export function AllocationSummary({ totalCash, surplusCash, allocatedAmount }: P
       {/* Metrics breakdown */}
       <div className="flex items-center justify-between text-xs pt-1">
         <div>
-          <span className="text-[10px] text-slate-400 block">Allocated to Date</span>
+          <span className="text-xs text-slate-400 block">Allocated to Date</span>
           <span className="font-bold text-white">${allocatedAmount.toLocaleString()}</span>
         </div>
 
         <div className="text-right">
-          <span className="text-[10px] text-slate-400 block">Surplus Available</span>
+          <span className="text-xs text-slate-400 block">Surplus Available</span>
           <span className={`font-bold ${isWithinSurplus ? 'text-emerald-400' : 'text-rose-400'}`}>
             ${remainingSurplus.toLocaleString()}
           </span>
@@ -65,7 +65,7 @@ export function AllocationSummary({ totalCash, surplusCash, allocatedAmount }: P
       </div>
 
       {/* Safety status pill */}
-      <div className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-300">
+      <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-300">
         {isWithinSurplus ? (
           <>
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />

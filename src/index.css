@@ -88,3 +88,27 @@ input[type="checkbox"] { accent-color: #4565d6; }
 .app-toolbar { flex-shrink: 0; }
 .app-content { flex: 1; min-height: 0; overflow: auto; }
 @media (hover: hover) { button[class*="bg-indigo-600"]:hover, button[class*="bg-[#4565d6]"]:hover { background-color: #3650b3; } }
+
+/* Application screens: readable content and predictable targets at every viewport. */
+.session-page { width: 100%; min-height: 100%; padding-bottom: max(32px, env(safe-area-inset-bottom)); }
+.session-page h1 { font-size: clamp(26px, 4vw, 38px); line-height: 1.2; }
+.session-page p { line-height: 1.65; }
+.session-page [class*="text-[9px]"], .session-page [class*="text-[10px]"] { font-size: 12px; line-height: 1.5; }
+.session-page [class*="text-[11px]"] { font-size: 13px; line-height: 1.5; }
+.session-page button, .story-shell button, .session-page a { min-height: 44px; }
+.session-page input { min-height: 44px; }
+.session-page :is(button, a, input):focus-visible, .story-shell :is(button, a, input):focus-visible { outline: 2px solid #a5b7ff; outline-offset: 3px; box-shadow: 0 0 0 5px #161827; }
+.story-shell { max-width: 1040px; box-shadow: none; }
+.story-shell > header { padding-block: 16px 0; }
+.story-shell > main { scrollbar-gutter: stable; }
+.story-card { height: 100%; }
+.story-shell > footer { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+@media (min-width: 1024px) { .story-shell { border-inline: 1px solid #ffffff0d; } .story-card > div { max-width: 720px; padding-block: 32px; } }
+@media (max-width: 639px) { .session-page { padding-inline: 20px; } .story-card { padding-inline: 20px; } .story-card h1 { font-size: 28px; } }
+
+.session-page button, .story-shell button { min-width: 44px; }
+.app-wordmark { min-height: 44px; }
+
+.app-toolbar button { min-width: 44px; }
+.session-page summary { min-height: 44px; }
+.app-toolbar button { min-width: 44px; }

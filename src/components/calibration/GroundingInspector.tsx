@@ -7,9 +7,11 @@
  * Assures judges of 100% Zero-Hallucination & Grounding fidelity (20 pts).
  */
 
+import { useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, X, FileCode, CheckCircle2, Database } from 'lucide-react';
+import { ShieldCheck, X, FileCode, Database } from 'lucide-react';
 import type { GroundingRef } from '../../types';
+import { useDialogFocus } from '../shared/useDialogFocus';
 
 interface Props {
   grounding: GroundingRef | null;
@@ -17,32 +19,40 @@ interface Props {
 }
 
 export function GroundingInspector({ grounding, onClose }: Props) {
+  const titleId = useId();
+  const dialogRef = useDialogFocus(Boolean(grounding), onClose);
   if (!grounding) return null;
 
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm p-4">
         <motion.div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          tabIndex={-1}
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 40 }}
-          className="w-full max-w-[400px] max-h-[calc(100dvh-2rem)] overflow-y-auto bg-slate-900 border border-emerald-500/40 rounded-3xl p-5 text-white  relative"
+          className="w-full max-w-[400px] max-h-[calc(100dvh-2rem)] overflow-y-auto bg-slate-900 border border-blue-500/40 rounded-3xl p-5 text-white  relative"
         >
           {/* Header */}
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-400">
+              <span className="p-1.5 rounded-xl bg-blue-500/20 text-blue-300">
                 <ShieldCheck className="w-5 h-5" />
               </span>
               <div>
-                <h3 className="font-semibold text-sm text-emerald-300">
-                  Grounding Inspector
+                <h3 id={titleId} className="font-semibold text-base text-blue-200">
+                  Plan source
                 </h3>
-                <p className="text-[11px] text-slate-400">100% Deterministic MCP Source</p>
+                <p className="text-xs text-slate-400">Source details</p>
               </div>
             </div>
             <button
               onClick={onClose}
+              aria-label="Close plan source"
               className="min-w-11 min-h-11 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white"
             >
               <X className="w-4 h-4" />
@@ -61,15 +71,15 @@ export function GroundingInspector({ grounding, onClose }: Props) {
 
           {/* JSON path details */}
           <div className="mt-3 space-y-2 text-xs">
-            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 font-mono text-[11px] text-emerald-400">
+            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 font-mono text-xs text-blue-300">
               <FileCode className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
               <div className="break-all">
                 <span className="text-slate-400">File: </span>
-                <span className="text-emerald-300 font-semibold">{grounding.sourceFile}</span>
+                <span className="text-blue-300 font-semibold">{grounding.sourceFile}</span>
               </div>
             </div>
 
-            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 font-mono text-[11px] text-blue-400">
+            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 font-mono text-xs text-blue-400">
               <Database className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
               <div className="break-all">
                 <span className="text-slate-400">Path: </span>
@@ -78,16 +88,10 @@ export function GroundingInspector({ grounding, onClose }: Props) {
             </div>
 
             {grounding.description && (
-              <p className="text-slate-300 text-xs leading-relaxed pt-1">
+              <p className="text-slate-300 text-sm leading-relaxed pt-1">
                 {grounding.description}
               </p>
             )}
-          </div>
-
-          {/* Guarantee badge */}
-          <div className="mt-4 flex items-center gap-2 p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-800/50 text-emerald-300 text-xs">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-            <span>Zero LLM calculations. Deterministically injected from plan.</span>
           </div>
 
           <button

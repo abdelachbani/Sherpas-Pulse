@@ -134,7 +134,7 @@ export function SplitScreenContainer({
 }: SplitScreenContainerProps) {
   if (mode === 'single') {
     return (
-      <div className={`w-full max-w-[420px] mx-auto min-h-dvh flex flex-col ${className}`}>
+      <div className={`w-full max-w-3xl mx-auto min-h-full flex flex-col ${className}`}>
         {singleActiveTab === 'left' ? leftContent : rightContent}
       </div>
     );

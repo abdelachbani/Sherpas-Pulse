@@ -1,7 +1,7 @@
 /**
  * src/pages/AllocationPage.tsx
  *
- * Tactile Cash Allocator ("Advice Tank"):
+ * Your priorities ("Advice Tank"):
  *  - Responsive vertical mobile design with scrollable strategies list (zero overlap)
  *  - Each partner drags and orders strategies competing for their cash
  *  - Real-time liquidity tank level drainage
@@ -21,11 +21,18 @@ import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
 import { extractCashAllocationOptions } from '../lib/mcp/extractor';
 import { CashAllocatorChip } from '../components/couple/CashAllocatorChip';
-import { AllocationSummary } from '../components/couple/AllocationSummary';
 import { GroundingInspector } from '../components/calibration/GroundingInspector';
 import type { CashStrategyOption, GroundingRef, CoupleAllocation } from '../types';
 
 export default function AllocationPage() {
+  const { caseId } = useParams<{ caseId: string }>();
+  if (!CASES.some((item) => item.id === caseId)) {
+    return <main className="session-page min-h-dvh bg-[#171827] text-white p-8"><div className="max-w-3xl mx-auto"><h1 className="text-2xl font-semibold">Household not found</h1><p className="mt-3 text-sm text-slate-300">This household link is unavailable. Choose a household to continue.</p><a className="inline-flex min-h-11 items-center mt-6 text-indigo-300 underline" href="/">Choose a household</a></div></main>;
+  }
+  return <AllocationPageContent key={caseId} />;
+}
+
+function AllocationPageContent() {
   const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
 
@@ -35,7 +42,7 @@ export default function AllocationPage() {
   const setAllocation = useAppStore((s) => s.setAllocation);
   const addTelemetryEvent = useAppStore((s) => s.addTelemetryEvent);
 
-  const activeCase = currentCase ?? CASES.find((c) => c.id === caseId) ?? CASES[0];
+  const activeCase = (currentCase?.id === caseId ? currentCase : CASES.find((c) => c.id === caseId))!;
 
   useEffect(() => {
     if (caseId && (!currentCase || currentCase.id !== caseId)) {
@@ -58,7 +65,6 @@ export default function AllocationPage() {
     partner === 'primary' ? coClient?.first_name || 'Melanie' : client?.first_name || 'Timothy';
 
   // Total cash numbers
-  const totalCash = 150000;
   const surplusCash = 60222;
 
   // Sum top 2 prioritized strategy amounts
@@ -118,13 +124,13 @@ export default function AllocationPage() {
   }
 
   return (
-    <div className="h-full min-h-[420px] bg-[#171827] text-white max-w-[420px] mx-auto p-5 flex flex-col justify-between select-none relative overflow-hidden">
+    <div className="session-page min-h-dvh bg-[#171827] text-white max-w-3xl mx-auto p-5 sm:p-8 flex flex-col gap-6 relative">
       {/* ── Top Header (Shrink-0) ────────────────────────────────────────────── */}
       <div className="shrink-0 pt-1">
         <div className="flex items-center justify-between">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[11px] font-semibold border border-indigo-500/30">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold border border-indigo-500/30">
             <Sliders className="w-3.5 h-3.5" />
-            <span>Tactile Cash Allocator</span>
+            <span>Your priorities</span>
           </div>
 
           <span
@@ -139,15 +145,15 @@ export default function AllocationPage() {
         </div>
 
         <h1 className="text-xl font-semibold tracking-tight text-white mt-3 leading-tight">
-          Prioritize Your $150,000 Cash
+          Order your priorities
         </h1>
         <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-          Order strategies by dragging or tapping arrows. What should your cash tackle first?
+          Use the arrows to choose which recommendations matter most to you.
         </p>
       </div>
 
       {/* ── Strategies Scroll Area (Scrollable with max height to avoid crushing) ── */}
-      <div className="flex-1 overflow-y-auto pr-1 my-2 space-y-2 no-scrollbar">
+      <div className="flex-1 my-2 space-y-3">
         <AnimatePresence>
           {strategies.map((strategy, idx) => (
             <CashAllocatorChip
@@ -168,11 +174,7 @@ export default function AllocationPage() {
 
       {/* ── Liquidity Tank Summary (Shrink-0 at bottom) ────────────────────── */}
       <div className="shrink-0 space-y-2.5 pt-1 border-t border-slate-700/70 bg-[#171827]">
-        <AllocationSummary
-          totalCash={totalCash}
-          surplusCash={surplusCash}
-          allocatedAmount={allocatedAmount}
-        />
+        <p className="text-sm leading-relaxed text-slate-300">This exercise orders your priorities. It does not calculate an available budget or confirm affordability.</p>
 
         {/* Lock-in action or Simulate Partner 2 modal */}
         {!hasLockedIn ? (

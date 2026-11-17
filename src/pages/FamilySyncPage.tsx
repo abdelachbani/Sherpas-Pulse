@@ -7,7 +7,7 @@
  *  - Renders Green Zone cards and Amber Zone cards using extractHouseholdSync from src/lib/mcp/extractor.ts
  *  - "Continue to Your Action Plan" button -> navigates to /case/:caseId/action
  *  - "Review Cash Allocator" back button -> navigates to /case/:caseId/allocate
- *  - Mobile-first (max-w-[420px] mx-auto), dark slate theme matching existing pages.
+ *  - Mobile-first (max-w-3xl mx-auto), dark slate theme matching existing pages.
  */
 
 import { useEffect, useState } from 'react';
@@ -32,6 +32,14 @@ import type { GroundingRef } from '../types';
 
 export default function FamilySyncPage() {
   const { caseId } = useParams<{ caseId: string }>();
+  if (!CASES.some((item) => item.id === caseId)) {
+    return <main className="session-page min-h-dvh bg-[#171827] text-white p-8"><div className="max-w-3xl mx-auto"><h1 className="text-2xl font-semibold">Household not found</h1><p className="mt-3 text-sm text-slate-300">This household link is unavailable. Choose a household to continue.</p><a className="inline-flex min-h-11 items-center mt-6 text-indigo-300 underline" href="/">Choose a household</a></div></main>;
+  }
+  return <FamilySyncPageContent key={caseId} />;
+}
+
+function FamilySyncPageContent() {
+  const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
 
   const currentCase = useAppStore((s) => s.currentCase);
@@ -42,7 +50,7 @@ export default function FamilySyncPage() {
   const [activeGrounding, setActiveGrounding] = useState<GroundingRef | null>(null);
 
   // Fallback to lookup from CASES if direct reload occurs
-  const activeCase = currentCase ?? CASES.find((c) => c.id === caseId) ?? CASES[0];
+  const activeCase = (currentCase?.id === caseId ? currentCase : CASES.find((c) => c.id === caseId))!;
 
   useEffect(() => {
     if (caseId && (!currentCase || currentCase.id !== caseId)) {
@@ -73,6 +81,7 @@ export default function FamilySyncPage() {
     coupleAllocations.secondary
   );
 
+  const bothReviewed = Boolean(coupleAllocations.primary && coupleAllocations.secondary);
   const agreementsCount = agreements.length;
   const tieBreakersCount = tieBreakers.length;
 
@@ -81,7 +90,7 @@ export default function FamilySyncPage() {
   } · ${tieBreakersCount} Advisor Discussion Point${tieBreakersCount === 1 ? '' : 's'}`;
 
   return (
-    <div className="min-h-dvh bg-[#171827] text-white max-w-[420px] mx-auto p-5 sm:p-6 flex flex-col justify-between select-none relative">
+    <div className="session-page min-h-dvh bg-[#171827] text-white max-w-3xl mx-auto p-5 sm:p-6 flex flex-col justify-between select-none relative">
       {/* ── Top Header ──────────────────────────────────────────────────────── */}
       <div className="pt-2">
         {/* Category Pill & Status */}
@@ -91,9 +100,9 @@ export default function FamilySyncPage() {
             <span>Family Alignment</span>
           </div>
 
-          <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/30">
+          <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Consensus Ready</span>
+            <span>{bothReviewed ? 'Reviews compared' : 'Waiting for both reviews'}</span>
           </div>
         </div>
 
@@ -113,7 +122,7 @@ export default function FamilySyncPage() {
           Two Paces, One Aligned Plan
         </h1>
         <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-          Here is where your priorities aligned instantly — and what we’ve teed up for your human advisor.
+          Compare your choices and identify the priorities you may want to discuss together.
         </p>
       </div>
 
@@ -130,25 +139,25 @@ export default function FamilySyncPage() {
           </span>
           <div>
             <h2 className="text-sm font-semibold text-white tracking-wide">
-              {summaryBannerText}
+              {bothReviewed ? summaryBannerText : 'Both reviews are needed to compare priorities'}
             </h2>
             <p className="text-xs text-slate-300 mt-0.5 leading-snug">
-              Instant action on debt & liability. 1 productive trade-off queued for your meeting.
+              {bothReviewed ? 'These results reflect the priorities saved in this session.' : 'Each partner can save their order in the priorities screen.'}
             </p>
           </div>
         </div>
       </motion.div>
 
       {/* ── Cards Scroll Area ───────────────────────────────────────────────── */}
-      <div className="flex-1 space-y-4 my-1 overflow-y-auto pr-0.5 pb-3">
+      <div className="flex-1 space-y-4 my-4 pb-3">
         {/* ── Green Zone Section ── */}
         <div className="space-y-2.5">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 uppercase tracking-wider">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Green Zone: Ready-to-Act</span>
+              <span>Shared priorities</span>
             </div>
-            <span className="text-[10px] font-semibold text-slate-400">
+            <span className="text-xs font-semibold text-slate-400">
               {agreements.length} agreed
             </span>
           </div>
@@ -158,6 +167,7 @@ export default function FamilySyncPage() {
               <SyncCard
                 key={agreement.strategyId}
                 item={agreement}
+                priority={coupleAllocations.primary?.allocations.find((a) => a.strategyId === agreement.strategyId)?.priority}
                 partner1Name={p1Name}
                 partner2Name={p2Name}
                 index={idx}
@@ -172,9 +182,9 @@ export default function FamilySyncPage() {
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Amber Zone: Advisor Tie-Breaker</span>
+              <span>Priorities to discuss</span>
             </div>
-            <span className="text-[10px] font-semibold text-slate-400">
+            <span className="text-xs font-semibold text-slate-400">
               {tieBreakers.length} discussion topic
             </span>
           </div>
@@ -212,7 +222,7 @@ export default function FamilySyncPage() {
           className="w-full py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-900/60 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Review Cash Allocator</span>
+          <span>Review priorities</span>
         </button>
       </div>
 

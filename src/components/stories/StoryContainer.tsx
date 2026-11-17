@@ -1,25 +1,10 @@
-/**
- * src/components/stories/StoryContainer.tsx
- *
- * Full-screen Instagram / Spotify Wrapped story swiper:
- *  - 6 segments progress bar with 25s auto-advance
- *  - Native left/right tap to navigate, hold anywhere to pause
- *  - Simple, elegant Hold-to-Ask voice button at the bottom center
- *  - Micro-calibration bottom sheet overlay & Grounding Inspector modal
- *  - Pauses automatically when voice is listening/speaking or calibration is open
- */
-
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Volume2, VolumeX, X, Lightbulb } from 'lucide-react';
-import type {
-  StoryCard as StoryCardType,
-  CalibrationCard,
-  GroundingRef,
-  ViewingStyle,
-  PillarScore,
-} from '../../types';
+import type { StoryCard as StoryCardType, CalibrationCard, GroundingRef, ViewingStyle, PillarScore } from '../../types';
 import type { VoiceSessionResult } from '../../lib/voice/useVoiceSession';
+import { useAppStore } from '../../stores/appStore';
+import { nextStory, previousStory, shouldAdvancePlayback, voiceBlocksPlayback } from '../../lib/storyPlayback';
 import { StoryCard } from './StoryCard';
 import { CalibrationMicroCard } from '../calibration/CalibrationMicroCard';
 import { GroundingInspector } from '../calibration/GroundingInspector';
@@ -35,335 +20,132 @@ interface Props {
   onNavigateBack: () => void;
 }
 
-const STORY_DURATION_MS = 25000; // 25 seconds per story
+const STORY_DURATION_MS = 25000;
 
-export function StoryContainer({
-  caseId,
-  stories,
-  calibrationCards,
-  pillars = [],
-  voice,
-  onComplete,
-  onNavigateBack,
-}: Props) {
+export function StoryContainer({ caseId, stories, calibrationCards, pillars = [], voice, onComplete, onNavigateBack }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [progress, setProgress] = useState(0); // 0 to 100 for current story
-  const [isPaused, setIsPaused] = useState(false);
-  const [viewingStyle, setViewingStyle] = useState<ViewingStyle>('visual');
+  const [progress, setProgress] = useState(0);
+  const [voicePanelOpen, setVoicePanelOpen] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [hidden, setHidden] = useState(() => document.hidden);
+  const preferredStyle = useAppStore((state) => state.viewingStyle);
+  const [viewingStyle, setViewingStyle] = useState<ViewingStyle>(preferredStyle ?? 'visual');
   const [activeCalibration, setActiveCalibration] = useState<CalibrationCard | null>(null);
   const [activeGrounding, setActiveGrounding] = useState<GroundingRef | null>(null);
   const [isVoiceNarrating, setIsVoiceNarrating] = useState(false);
   const [checklistState, setChecklistState] = useState([false, false, false]);
+  const currentStory = stories[currentIndex];
+  const isAssistantActive = voiceBlocksPlayback(voice, voicePanelOpen);
+  const modalOpen = Boolean(activeCalibration || activeGrounding);
+  const advancing = shouldAdvancePlayback(playing, hidden, modalOpen, isAssistantActive);
 
-  const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const isHoldingRef = useRef(false);
+  useEffect(() => {
+    const update = () => setHidden(document.hidden);
+    document.addEventListener('visibilitychange', update);
+    return () => document.removeEventListener('visibilitychange', update);
+  }, []);
 
-  const currentStory = stories[currentIndex] ?? stories[0];
-
-  // If voice detects a financial term, automatically open its calibration card!
   useEffect(() => {
     if (voice.detectedTerm) {
       const card = calibrationCards[voice.detectedTerm];
-      if (card) {
-        setActiveCalibration(card);
-        setIsPaused(true);
-      }
+      if (card) setActiveCalibration(card);
       voice.clearDetectedTerm();
     }
   }, [voice.detectedTerm, calibrationCards, voice]);
 
-  // ── Voice narration using Web Speech API fallback ───────────────────────────
-  const speakCurrentStory = useCallback((text: string) => {
+  useEffect(() => {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-    if (!isVoiceNarrating) return;
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.05;
-    utterance.pitch = 1.0;
-    utterance.lang = 'en-US';
-    window.speechSynthesis.speak(utterance);
-  }, [isVoiceNarrating]);
-
-  // Whether assistant is actively interacting with the user
-  const isAssistantActive =
-    voice.isListening ||
-    voice.isSpeaking ||
-    Boolean(voice.responseMessage) ||
-    Boolean(voice.guardRedirect) ||
-    voice.showSuggestions;
-
-  // Only trigger slide narration when changing slide or toggling Voice On,
-  // NEVER when releasing hold-to-ask or while assistant is answering!
-  useEffect(() => {
-    if (!isVoiceNarrating) {
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-      return;
+    if (isVoiceNarrating && !isAssistantActive && !hidden && !modalOpen && currentStory?.voiceScript) {
+      const utterance = new SpeechSynthesisUtterance(currentStory.voiceScript);
+      utterance.rate = 1.05;
+      utterance.lang = 'en-US';
+      window.speechSynthesis.speak(utterance);
     }
+    return () => window.speechSynthesis.cancel();
+  }, [currentIndex, currentStory?.voiceScript, isVoiceNarrating, isAssistantActive, hidden, modalOpen]);
 
-    if (!isAssistantActive && currentStory?.voiceScript) {
-      speakCurrentStory(currentStory.voiceScript);
-    }
-  }, [currentIndex, isVoiceNarrating, speakCurrentStory]);
-
-  // ── Navigation helpers ──────────────────────────────────────────────────────
   const goToNext = useCallback(() => {
-    if (currentIndex < stories.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-      setProgress(0);
-    } else {
+    const result = nextStory(currentIndex, stories.length);
+    if (result.complete) {
+      setPlaying(false);
       onComplete();
+    } else {
+      setCurrentIndex(result.index);
+      setProgress(0);
     }
   }, [currentIndex, stories.length, onComplete]);
 
   const goToPrev = useCallback(() => {
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
-      setProgress(0);
-    }
+    setCurrentIndex(previousStory(currentIndex).index);
+    setProgress(0);
   }, [currentIndex]);
 
-  // ── 25-Second Progress Timer ────────────────────────────────────────────────
-  const effectivelyPaused =
-    isPaused ||
-    isAssistantActive ||
-    !!activeCalibration ||
-    !!activeGrounding;
+  useEffect(() => {
+    if (!advancing) return;
+    const timer = window.setInterval(() => setProgress((value) => Math.min(100, value + 50 / STORY_DURATION_MS * 100)), 50);
+    return () => window.clearInterval(timer);
+  }, [advancing]);
 
   useEffect(() => {
-    if (effectivelyPaused) {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-      return;
-    }
+    if (advancing && progress >= 100) goToNext();
+  }, [advancing, progress, goToNext]);
 
-    const intervalMs = 50;
-    const step = (intervalMs / STORY_DURATION_MS) * 100;
-
-    progressIntervalRef.current = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          goToNext();
-          return 0;
-        }
-        return prev + step;
-      });
-    }, intervalMs);
-
-    return () => {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || modalOpen || isAssistantActive ||
+          target?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="dialog"]')) return;
+      if (event.key === 'ArrowRight') { event.preventDefault(); goToNext(); }
+      if (event.key === 'ArrowLeft') { event.preventDefault(); goToPrev(); }
     };
-  }, [effectivelyPaused, goToNext]);
-
-  // ── Story Canvas Tap / Hold Handlers ─────────────────────────────────────────
-  function handleCanvasPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    const target = e.target as HTMLElement;
-    if (target.closest('button') || target.closest('input') || target.closest('a')) {
-      return;
-    }
-
-    isHoldingRef.current = false;
-    holdTimeoutRef.current = setTimeout(() => {
-      isHoldingRef.current = true;
-      setIsPaused(true);
-    }, 250);
-  }
-
-  function handleCanvasPointerUp(e: React.PointerEvent<HTMLDivElement>) {
-    const target = e.target as HTMLElement;
-    if (target.closest('button') || target.closest('input') || target.closest('a')) {
-      return;
-    }
-
-    if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
-    setIsPaused(false);
-
-    if (!isHoldingRef.current) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const isLeftSide = x < rect.width * 0.35;
-
-      if (isLeftSide) {
-        goToPrev();
-      } else {
-        goToNext();
-      }
-    }
-    isHoldingRef.current = false;
-  }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [goToNext, goToPrev, modalOpen, isAssistantActive]);
 
   function handleCalibrationOpen(termKey: string) {
     const card = calibrationCards[termKey] ?? calibrationCards['roth-ira'];
-    if (card) {
-      setActiveCalibration(card);
-      setIsPaused(true);
-    }
+    if (card) setActiveCalibration(card);
   }
 
+  if (!currentStory) return null;
+
   return (
-    <div
-      className="story-shell relative w-full max-w-[420px] h-full mx-auto flex flex-col justify-between overflow-hidden bg-[#171827] select-none shadow-2xl"
-    >
-      {/* ── Top Progress Segments (Instagram-style) ─────────────────────────── */}
-      <div className="absolute top-0 inset-x-0 z-30 pt-2 px-3 flex gap-1 pointer-events-none">
-        {stories.map((s, idx) => {
-          let segFill = 0;
-          if (idx < currentIndex) segFill = 100;
-          else if (idx === currentIndex) segFill = progress;
-
-          return (
-            <div
-              key={s.id}
-              className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm"
-            >
-              <div
-                className="h-full bg-white rounded-full transition-all duration-75"
-                style={{ width: `${segFill}%` }}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── Top Floating Action Bar ─────────────────────────────────────────── */}
-      <div className="absolute top-3 inset-x-0 z-30 px-3 flex items-center justify-between pointer-events-auto">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onNavigateBack();
-          }}
-          className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 text-white/80 hover:text-white border border-white/10 cursor-pointer"
-          aria-label="Back to case selection"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        <div className="flex items-center gap-2">
-          {/* Quick calibration helper button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCalibrationOpen('revolving-apr');
-            }}
-            className="flex items-center gap-1.5 min-h-11 px-3 rounded-xl text-[11px] font-semibold bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            <Lightbulb className="w-3.5 h-3.5 text-[#91a5ff]" />
-            <span>Calibrate</span>
-          </button>
-
-          {/* Voice Narrator Toggle */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsVoiceNarrating((prev) => !prev);
-            }}
-            className={`flex items-center gap-1.5 min-h-11 px-3 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer ${
-              isVoiceNarrating
-                ? 'bg-[#4565d6]/25 text-white border-[#6380ff]/50'
-                : 'bg-white/5 text-slate-300 border-white/10'
-            }`}
-          >
-            {isVoiceNarrating ? (
-              <>
-                <Volume2 className="w-3.5 h-3.5 text-[#91a5ff]" />
-                <span>Voice On</span>
-              </>
-            ) : (
-              <>
-                <VolumeX className="w-3.5 h-3.5 text-slate-400" />
-                <span>Voice Off</span>
-              </>
-            )}
-          </button>
+    <div className="story-shell relative w-full max-w-[960px] h-full mx-auto flex flex-col bg-[#171827] shadow-2xl overflow-hidden">
+      <header className="shrink-0 px-4 pt-3 sm:px-6">
+        <div className="flex items-center justify-between gap-2">
+          <button onClick={onNavigateBack} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 text-white/80 border border-white/10" aria-label="Back to case selection"><X className="w-4 h-4" /></button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => handleCalibrationOpen('withdrawal-rate')} className="flex items-center gap-1.5 min-h-11 px-3 rounded-xl text-xs font-semibold bg-white/5 text-slate-200 border border-white/10"><Lightbulb className="w-4 h-4 text-[#91a5ff]" />Terms</button>
+            <button onClick={() => setIsVoiceNarrating((value) => !value)} aria-pressed={isVoiceNarrating} className="flex items-center gap-1.5 min-h-11 px-3 rounded-xl text-xs font-semibold bg-white/5 text-slate-200 border border-white/10">{isVoiceNarrating ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}{isVoiceNarrating ? 'Voice On' : 'Voice Off'}</button>
+          </div>
         </div>
-      </div>
-
-      {/* ── Active Story Canvas (Flex-1, Safe Bounds, Touch-friendly) ───────── */}
-      <div
-        className="relative flex-1 min-h-0 w-full overflow-hidden"
-        onPointerDown={handleCanvasPointerDown}
-        onPointerUp={handleCanvasPointerUp}
-      >
+        <nav aria-label="Story steps" className="flex gap-1 sm:gap-2 mt-2">
+          {stories.map((story, index) => (
+            <button key={story.id} onClick={() => { setCurrentIndex(index); setProgress(0); }} aria-label={`Step ${index + 1} of ${stories.length}: ${story.title}`} aria-current={index === currentIndex ? 'step' : undefined} className="group flex-1 min-w-0 min-h-11 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded">
+              <span className="block h-1 rounded-full bg-white/20 overflow-hidden"><span className="block h-full bg-white transition-all duration-75" style={{ width: `${index < currentIndex ? 100 : index === currentIndex ? progress : 0}%` }} /></span>
+              <span className={`hidden sm:block truncate mt-1 text-xs ${index === currentIndex ? 'text-white font-semibold' : 'text-slate-400'}`}>{story.title}</span>
+            </button>
+          ))}
+        </nav>
+      </header>
+      <main className="relative flex-1 min-h-0 overflow-y-auto">
         <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStory.id}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.22, ease: 'easeInOut' }}
-            className="w-full h-full"
-          >
-            <StoryCard
-              card={currentStory}
-              isActive={!effectivelyPaused}
-              pillars={pillars}
-              viewingStyle={viewingStyle}
-              onCalibrationOpen={handleCalibrationOpen}
-              onInspectGrounding={(ref) => {
-                setActiveGrounding(ref);
-                setIsPaused(true);
-              }}
-              onSelectStyle={(s) => setViewingStyle(s)}
-              onActionComplete={onComplete}
-              stepChecklist={checklistState}
-              onToggleStep={(i) => {
-                setChecklistState((prev) => {
-                  const copy = [...prev];
-                  copy[i] = !copy[i];
-                  return copy;
-                });
-              }}
-            />
+          <motion.div key={currentStory.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.22 }} className="w-full h-full">
+            <StoryCard card={currentStory} isActive={!modalOpen && !isAssistantActive && !hidden} pillars={pillars} viewingStyle={viewingStyle} onCalibrationOpen={handleCalibrationOpen} onInspectGrounding={setActiveGrounding} onSelectStyle={(style) => { setViewingStyle(style); useAppStore.getState().setViewingStyle(style); }} onActionComplete={onComplete} stepChecklist={checklistState} onToggleStep={(i) => setChecklistState((prev) => prev.map((value, index) => index === i ? !value : value))} />
           </motion.div>
         </AnimatePresence>
-      </div>
-
-      {/* ── Clean, Ergonomic Hold-to-Ask Button (Centered at Bottom) ───────── */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
-        <VoicePushButton
-          caseId={caseId}
-          voiceState={voice.voiceState}
-          transcript={voice.transcript}
-          responseMessage={voice.responseMessage}
-          guardRedirect={voice.guardRedirect}
-          detectedTerm={voice.detectedTerm}
-          showSuggestions={voice.showSuggestions}
-          onPressStart={voice.startListening}
-          onPressEnd={voice.stopListening}
-          onStopSpeaking={voice.stopSpeaking}
-          onSelectSuggestion={(q) => voice.pushToAsk(q)}
-          onOpenCalibration={(termKey) => handleCalibrationOpen(termKey)}
-          onClosePopup={() => {
-            voice.setShowSuggestions(false);
-            voice.clearGuardRedirect();
-            voice.clearResponseMessage();
-            voice.stopSpeaking();
-          }}
-        />
-      </div>
-
-      {/* ── Implicit Calibration Micro-Card Overlay ─────────────────────────── */}
-      <AnimatePresence>
-        {activeCalibration && (
-          <CalibrationMicroCard
-            card={activeCalibration}
-            onDismiss={() => {
-              setActiveCalibration(null);
-              setIsPaused(false);
-            }}
-            onInspectGrounding={(ref) => setActiveGrounding(ref)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ── Grounding Inspector Modal ───────────────────────────────────────── */}
-      <GroundingInspector
-        grounding={activeGrounding}
-        onClose={() => {
-          setActiveGrounding(null);
-          setIsPaused(false);
-        }}
-      />
+      </main>
+      <footer className="relative z-40 shrink-0 px-4 pb-3 pt-2 sm:px-6 bg-[#171827] border-t border-white/10">
+        <div className="flex justify-center mb-2"><VoicePushButton onOverlayChange={setVoicePanelOpen} caseId={caseId} voiceState={voice.voiceState} transcript={voice.transcript} responseMessage={voice.responseMessage} guardRedirect={voice.guardRedirect} detectedTerm={voice.detectedTerm} showSuggestions={voice.showSuggestions} onPressStart={voice.startListening} onPressEnd={voice.stopListening} onStopSpeaking={voice.stopSpeaking} onSelectSuggestion={(q) => voice.pushToAsk(q)} onOpenCalibration={handleCalibrationOpen} onClosePopup={() => { voice.setShowSuggestions(false); voice.clearGuardRedirect(); voice.clearResponseMessage(); voice.stopSpeaking(); }} /></div>
+        <div className="flex items-center justify-between gap-2">
+          <button onClick={goToPrev} disabled={currentIndex === 0} className="min-h-11 px-4 rounded-xl border border-white/15 text-white disabled:opacity-40">Previous</button>
+          <button onClick={() => setPlaying((value) => !value)} aria-pressed={playing} className="min-h-11 px-4 rounded-xl border border-white/15 text-white">{playing ? 'Pause' : 'Play'}</button>
+          <button onClick={goToNext} className="min-h-11 px-4 rounded-xl bg-[#4565d6] text-white font-semibold">{currentIndex === stories.length - 1 ? 'Finish' : 'Next'}</button>
+        </div>
+      </footer>
+      <AnimatePresence>{activeCalibration && <CalibrationMicroCard card={activeCalibration} onDismiss={() => setActiveCalibration(null)} onInspectGrounding={setActiveGrounding} />}</AnimatePresence>
+      <GroundingInspector grounding={activeGrounding} onClose={() => setActiveGrounding(null)} />
     </div>
   );
 }

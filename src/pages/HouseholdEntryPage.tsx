@@ -28,6 +28,14 @@ import type { ViewingStyle } from '../types';
 
 export default function HouseholdEntryPage() {
   const { caseId } = useParams<{ caseId: string }>();
+  if (!CASES.some((item) => item.id === caseId)) {
+    return <main className="session-page min-h-dvh bg-[#171827] text-white p-8"><div className="max-w-3xl mx-auto"><h1 className="text-2xl font-semibold">Household not found</h1><p className="mt-3 text-sm text-slate-300">This household link is unavailable. Choose a household to continue.</p><a className="inline-flex min-h-11 items-center mt-6 text-indigo-300 underline" href="/">Choose a household</a></div></main>;
+  }
+  return <HouseholdEntryPageContent key={caseId} />;
+}
+
+function HouseholdEntryPageContent() {
+  const { caseId } = useParams<{ caseId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -41,7 +49,7 @@ export default function HouseholdEntryPage() {
   const [selectedStyle, setSelectedStyle] = useState<ViewingStyle>('visual');
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const activeCase = currentCase ?? CASES.find((c) => c.id === caseId) ?? CASES[0];
+  const activeCase = (currentCase?.id === caseId ? currentCase : CASES.find((c) => c.id === caseId))!;
 
   useEffect(() => {
     if (caseId && (!currentCase || currentCase.id !== caseId)) {
@@ -98,7 +106,7 @@ export default function HouseholdEntryPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#f4f5f6] text-[#141419] flex flex-col justify-between max-w-2xl mx-auto px-5 py-8 sm:px-10 sm:py-12 select-none relative overflow-y-auto">
+    <div className="session-page min-h-dvh bg-[#f4f5f6] text-[#141419] flex flex-col justify-between max-w-2xl mx-auto px-5 py-8 sm:px-10 sm:py-12 select-none relative overflow-y-auto">
 
       {/* ── Top Header ──────────────────────────────────────────────────────── */}
       <div className="pt-2 relative z-10 shrink-0">
@@ -114,7 +122,7 @@ export default function HouseholdEntryPage() {
             {isCouple ? <Users className="w-5 h-5" /> : <User className="w-5 h-5" />}
           </span>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
               {isCouple ? 'Two Paces, One Plan' : 'Single Trade-off Simulator'}
             </span>
             <h1 className="text-2xl font-semibold text-slate-900 leading-tight">
@@ -128,7 +136,7 @@ export default function HouseholdEntryPage() {
         <p className="text-sm text-slate-600 mt-4 leading-relaxed">
           {isCouple
             ? 'Each partner explores on their own phone at their own pace. We bring your choices together into a Family Consensus.'
-            : 'Explore your customized plan milestones and simulate trade-offs with 100% deterministic plan grounding.'}
+            : 'Explore your plan milestones and compare the choices that matter to you.'}
         </p>
       </div>
 
@@ -139,13 +147,14 @@ export default function HouseholdEntryPage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
               <span>1. Who is reviewing now?</span>
-              <span className="text-[11px] text-slate-500">Select partner</span>
+              <span className="text-xs text-slate-500">Select partner</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               {/* Partner 1 (Timothy) */}
               <button
                 onClick={() => setSelectedPartner('primary')}
+                aria-pressed={selectedPartner === 'primary'}
                 className={`p-3.5 rounded-2xl border text-left transition-all ${
                   selectedPartner === 'primary'
                     ? 'bg-indigo-50 border-indigo-500 text-slate-900'
@@ -153,7 +162,7 @@ export default function HouseholdEntryPage() {
                 }`}
               >
                 <div className="text-sm font-bold text-slate-900">{client?.first_name}</div>
-                <div className="text-[10px] text-slate-500 mt-0.5">
+                <div className="text-xs text-slate-500 mt-0.5">
                   Age {client?.age} · {client?.risk_profile}
                 </div>
               </button>
@@ -161,6 +170,7 @@ export default function HouseholdEntryPage() {
               {/* Partner 2 (Melanie) */}
               <button
                 onClick={() => setSelectedPartner('secondary')}
+                aria-pressed={selectedPartner === 'secondary'}
                 className={`p-3.5 rounded-2xl border text-left transition-all ${
                   selectedPartner === 'secondary'
                     ? 'bg-indigo-50 border-indigo-500 text-slate-900'
@@ -168,7 +178,7 @@ export default function HouseholdEntryPage() {
                 }`}
               >
                 <div className="text-sm font-bold text-slate-900">{coClient?.first_name}</div>
-                <div className="text-[10px] text-slate-500 mt-0.5">
+                <div className="text-xs text-slate-500 mt-0.5">
                   Age {coClient?.age} · {coClient?.risk_profile}
                 </div>
               </button>
@@ -184,7 +194,7 @@ export default function HouseholdEntryPage() {
                       : client?.first_name || 'partner'
                   )
                 }
-                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white border border-slate-200 text-[11px] text-slate-600 hover:text-indigo-600 transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-600 hover:text-indigo-600 transition-colors"
               >
                 {copiedLink ? (
                   <>
@@ -206,15 +216,17 @@ export default function HouseholdEntryPage() {
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
             <span>{isCouple ? '2. Pick your viewing rhythm' : 'Choose your viewing rhythm'}</span>
-            <span className="text-[11px] text-slate-500">Customized experience</span>
+            <span className="text-xs text-slate-500">Customized experience</span>
           </div>
 
           <div className="space-y-2">
             {/* Visual / Peace of Mind */}
-            <motion.div
+            <motion.button
+              type="button"
               whileTap={{ scale: 0.98 }}
               onClick={() => setSelectedStyle('visual')}
-              className={`p-3 rounded-2xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+              aria-pressed={selectedStyle === 'visual'}
+              className={`w-full text-left p-5 rounded-2xl border flex items-start gap-3 cursor-pointer transition-all ${
                 selectedStyle === 'visual'
                   ? 'bg-indigo-50 border-indigo-500 text-slate-900'
                   : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300'
@@ -228,17 +240,19 @@ export default function HouseholdEntryPage() {
                   <span>Peace of Mind & Family</span>
                   {selectedStyle === 'visual' && <Check className="w-3.5 h-3.5 text-emerald-700" />}
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                <div className="text-xs text-slate-500 mt-0.5 leading-snug">
                   Focus on protecting the kids, peace of mind, and life milestones. Simple terms, no financial jargon.
                 </div>
               </div>
-            </motion.div>
+            </motion.button>
 
             {/* Analytical */}
-            <motion.div
+            <motion.button
+              type="button"
               whileTap={{ scale: 0.98 }}
               onClick={() => setSelectedStyle('analytical')}
-              className={`p-3 rounded-2xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+              aria-pressed={selectedStyle === 'analytical'}
+              className={`w-full text-left p-5 rounded-2xl border flex items-start gap-3 cursor-pointer transition-all ${
                 selectedStyle === 'analytical'
                   ? 'bg-indigo-50 border-indigo-500 text-slate-900'
                   : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300'
@@ -252,24 +266,24 @@ export default function HouseholdEntryPage() {
                   <span>Analytical & Direct Numbers</span>
                   {selectedStyle === 'analytical' && <Check className="w-3.5 h-3.5 text-indigo-600" />}
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5 leading-snug">
-                  Deep dive into 18% APR savings, ROI on cash, tax deductions, and portfolio volatility analysis.
+                <div className="text-xs text-slate-500 mt-0.5 leading-snug">
+                  Explore the numbers behind your choices, including savings, taxes, and investment risk.
                 </div>
               </div>
-            </motion.div>
+            </motion.button>
           </div>
         </div>
 
         {/* Plan health snapshot banner */}
         <div className="p-4 rounded-2xl bg-white border border-slate-200 flex items-center justify-between text-xs">
           <div>
-            <div className="text-[9px] text-slate-500 uppercase font-semibold">Published Health Score</div>
+            <div className="text-xs text-slate-500 uppercase font-semibold">Published Health Score</div>
             <div className="text-base font-bold text-slate-900 mt-0.5">
               {fh.score.published_score}/100 <span className="text-xs text-amber-700 font-medium">({fh.score.band})</span>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-[9px] text-slate-500 uppercase font-semibold">Pillars Analyzed</div>
+            <div className="text-xs text-slate-500 uppercase font-semibold">Pillars Analyzed</div>
             <div className="text-xs font-bold text-emerald-700 mt-0.5">{fh.score.pillars.length} Pillars Verified</div>
           </div>
         </div>
@@ -281,7 +295,7 @@ export default function HouseholdEntryPage() {
           onClick={handleStart}
           className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
         >
-          <span>Launch Wrapped Experience</span>
+          <span>Explore your plan</span>
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>

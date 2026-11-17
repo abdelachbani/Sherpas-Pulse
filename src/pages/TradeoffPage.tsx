@@ -11,7 +11,7 @@
  *  - Living Map Timeline Scrubber (2026 to 2050) showing milestone impact
  *  - Grounding Badge integration (opens GroundingInspector modal)
  *  - "Continue to Your Action Plan" navigation to /case/:caseId/action
- *  - Mobile-first (max-w-[420px] mx-auto), dark slate theme matching existing pages
+ *  - Mobile-first (max-w-3xl mx-auto), dark slate theme matching existing pages
  */
 
 import { useState, useEffect, useMemo } from 'react';
@@ -43,6 +43,14 @@ import type { WhatIfScenario, GroundingRef } from '../types';
 
 export default function TradeoffPage() {
   const { caseId } = useParams<{ caseId: string }>();
+  if (!CASES.some((item) => item.id === caseId)) {
+    return <main className="session-page min-h-dvh bg-[#171827] text-white p-8"><div className="max-w-3xl mx-auto"><h1 className="text-2xl font-semibold">Household not found</h1><p className="mt-3 text-sm text-slate-300">This household link is unavailable. Choose a household to continue.</p><a className="inline-flex min-h-11 items-center mt-6 text-indigo-300 underline" href="/">Choose a household</a></div></main>;
+  }
+  return <TradeoffPageContent key={caseId} />;
+}
+
+function TradeoffPageContent() {
+  const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
 
   const currentCase = useAppStore((s) => s.currentCase);
@@ -51,10 +59,7 @@ export default function TradeoffPage() {
 
   // Active case resolution: prefer URL param, then appStore, then default to Michael Carter
   const activeCase =
-    CASES.find((c) => c.id === caseId) ??
-    currentCase ??
-    CASES.find((c) => c.householdType === 'single') ??
-    CASES[2];
+    (currentCase?.id === caseId ? currentCase : CASES.find((c) => c.id === caseId))!;
 
   useEffect(() => {
     if (caseId && (!currentCase || currentCase.id !== caseId)) {
@@ -437,7 +442,7 @@ export default function TradeoffPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#171827] text-white max-w-[420px] mx-auto p-5 pb-8 flex flex-col justify-between select-none relative overflow-x-hidden font-sans">
+    <div className="session-page min-h-dvh bg-[#171827] text-white max-w-3xl mx-auto p-5 pb-8 flex flex-col justify-between select-none relative overflow-x-hidden font-sans">
       {/* ── Top Header Bar ──────────────────────────────────────────────────── */}
       <div className="pt-2 relative z-10">
         <div className="flex items-center justify-between mb-2">
@@ -450,7 +455,7 @@ export default function TradeoffPage() {
           </button>
 
           {/* Quick Case Switcher for Hackathon Judges */}
-          <div className="inline-flex rounded-xl bg-slate-900 border border-slate-800 p-0.5 text-[11px]">
+          <div className="inline-flex rounded-xl bg-slate-900 border border-slate-800 p-0.5 text-xs">
             <button
               onClick={() => handleSwitchSingleCase('michael-carter')}
               className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
@@ -483,9 +488,9 @@ export default function TradeoffPage() {
             <div>
               <div className="flex items-center gap-1.5">
                 <h1 className="text-xl font-semibold tracking-tight text-white leading-tight">
-                  {clientName} Carter
+                  {clientName}
                 </h1>
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   Single
                 </span>
               </div>
@@ -528,22 +533,21 @@ export default function TradeoffPage() {
       <div className="py-6 space-y-5 relative z-10">
         {/* Scenario Selector (if multiple exist, e.g. Home vs Retire vs Umbrella) */}
         {scenarios.length > 1 && (
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {scenarios.map((sc) => (
               <button
                 key={sc.id}
                 onClick={() => {
                   setActiveScenarioId(sc.id);
-                  if (sc.grounding) setActiveGrounding(sc.grounding);
                 }}
-                className={`flex-1 p-2.5 rounded-2xl text-left border text-xs transition-all ${
+                className={`min-w-0 min-h-11 p-3 rounded-2xl text-left border text-xs transition-all ${
                   activeScenario.id === sc.id
                     ? 'bg-indigo-600/30 border-indigo-400 text-white shadow-md'
                     : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-white'
                 }`}
               >
-                <div className="font-bold truncate">{sc.title}</div>
-                <div className="text-[10px] text-indigo-300 mt-0.5">{sc.tag}</div>
+                <div className="font-bold break-words">{sc.title}</div>
+                <div className="text-xs text-indigo-300 mt-0.5">{sc.tag}</div>
               </button>
             ))}
           </div>
@@ -552,17 +556,17 @@ export default function TradeoffPage() {
         {/* ── Interactive What-If Chips Card ─────────────────────────────────── */}
         <div className="p-4 rounded-2xl bg-[#202237] border border-slate-700/70 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider">
+            <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
               Competing Priorities
             </span>
             {activeScenario.grounding && (
               <button
                 type="button"
                 onClick={() => setActiveGrounding(activeScenario.grounding!)}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-semibold hover:bg-emerald-500/25 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition-colors cursor-pointer"
               >
                 <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                <span>MCP Grounded</span>
+                <span>Scenario estimate</span>
               </button>
             )}
           </div>
@@ -570,7 +574,7 @@ export default function TradeoffPage() {
           {/* The Two What-If Interactive Chips */}
           <div className="grid grid-cols-1 gap-2.5">
             {/* Option A Chip */}
-            <motion.div
+            <motion.button type="button" aria-pressed={activeChoice === 'A'}
               whileTap={{ scale: 0.98 }}
               onClick={() => handleSelectChip('A')}
               className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
@@ -589,7 +593,7 @@ export default function TradeoffPage() {
                     )}
                   </span>
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-indigo-300 tracking-wider">
+                    <span className="text-xs font-bold uppercase text-indigo-300 tracking-wider">
                       Option A
                     </span>
                     <h3 className="text-xs font-bold text-white">
@@ -601,9 +605,9 @@ export default function TradeoffPage() {
                 </div>
 
                 <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  className={`text-xs px-2 py-0.5 rounded-full font-bold ${
                     activeChoice === 'A'
-                      ? 'bg-indigo-500 text-white'
+                      ? 'bg-indigo-600 text-white'
                       : 'bg-slate-800 text-slate-400'
                   }`}
                 >
@@ -614,10 +618,10 @@ export default function TradeoffPage() {
               <p className="text-xs text-slate-300 mt-2 leading-relaxed">
                 {activeScenario.optionA.impact}
               </p>
-            </motion.div>
+            </motion.button>
 
             {/* Option B Chip */}
-            <motion.div
+            <motion.button type="button" aria-pressed={activeChoice === 'B'}
               whileTap={{ scale: 0.98 }}
               onClick={() => handleSelectChip('B')}
               className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
@@ -636,7 +640,7 @@ export default function TradeoffPage() {
                     )}
                   </span>
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-emerald-400 tracking-wider">
+                    <span className="text-xs font-bold uppercase text-emerald-400 tracking-wider">
                       Option B
                     </span>
                     <h3 className="text-xs font-bold text-white">
@@ -648,7 +652,7 @@ export default function TradeoffPage() {
                 </div>
 
                 <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  className={`text-xs px-2 py-0.5 rounded-full font-bold ${
                     activeChoice === 'B'
                       ? 'bg-emerald-500 text-slate-950 font-black'
                       : 'bg-slate-800 text-slate-400'
@@ -661,12 +665,12 @@ export default function TradeoffPage() {
               <p className="text-xs text-slate-300 mt-2 leading-relaxed">
                 {activeScenario.optionB.impact}
               </p>
-            </motion.div>
+            </motion.button>
           </div>
 
           {/* ── Priority Balance Bar ────────────────────────────────────────── */}
           <div className="pt-1 space-y-1.5">
-            <div className="flex items-center justify-between text-[11px] font-medium text-slate-300">
+            <div className="flex items-center justify-between text-xs font-medium text-slate-300">
               <span className="text-indigo-300 font-semibold">
                 Option A: {weightA}%
               </span>
@@ -689,7 +693,7 @@ export default function TradeoffPage() {
             </div>
 
             {/* Quick Balance Presets */}
-            <div className="flex items-center justify-between pt-1 text-[10px]">
+            <div className="flex items-center justify-between pt-1 text-xs">
               <button
                 onClick={() => applyPreset('favorA')}
                 className="px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-slate-300 transition-colors"
@@ -719,7 +723,7 @@ export default function TradeoffPage() {
               <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
               <span>Priority Importance Sliders</span>
             </h3>
-            <span className="text-[10px] text-slate-400">1 to 5 Stars</span>
+            <span className="text-xs text-slate-400">1 to 5 Stars</span>
           </div>
 
           {/* Slider for Option A */}
@@ -728,19 +732,21 @@ export default function TradeoffPage() {
               <span className="font-semibold text-indigo-300 truncate">
                 {isMichael ? 'Austin Home in 2027' : 'College Tuition Now'}
               </span>
-              <span className="text-[11px] font-bold text-amber-300">
+              <span className="text-xs font-bold text-amber-300">
                 {starsA} / 5 Stars
               </span>
             </div>
 
             {/* Interactive Stars Row */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-y-2">
               <div className="flex gap-1.5">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
                     type="button"
                     onClick={() => setStarsA(star)}
+                    aria-pressed={starsA === star}
+                    aria-label={`Rate option A ${star} out of 5`}
                     className="p-1 hover:scale-110 transition-transform cursor-pointer"
                   >
                     <Star
@@ -753,7 +759,7 @@ export default function TradeoffPage() {
                   </button>
                 ))}
               </div>
-              <span className="text-[10px] text-slate-400 italic">
+              <span className="text-xs text-slate-400 italic">
                 {getStarLabel(starsA)}
               </span>
             </div>
@@ -765,6 +771,7 @@ export default function TradeoffPage() {
               max={5}
               step={1}
               value={starsA}
+              aria-label="Importance of option A"
               onChange={(e) => setStarsA(Number(e.target.value))}
               className="w-full accent-indigo-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none mt-1"
             />
@@ -776,19 +783,21 @@ export default function TradeoffPage() {
               <span className="font-semibold text-emerald-300 truncate">
                 {isMichael ? 'Retire at 58' : 'Second Home in 2030'}
               </span>
-              <span className="text-[11px] font-bold text-amber-300">
+              <span className="text-xs font-bold text-amber-300">
                 {starsB} / 5 Stars
               </span>
             </div>
 
             {/* Interactive Stars Row */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-y-2">
               <div className="flex gap-1.5">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
                     type="button"
                     onClick={() => setStarsB(star)}
+                    aria-pressed={starsB === star}
+                    aria-label={`Rate option B ${star} out of 5`}
                     className="p-1 hover:scale-110 transition-transform cursor-pointer"
                   >
                     <Star
@@ -801,7 +810,7 @@ export default function TradeoffPage() {
                   </button>
                 ))}
               </div>
-              <span className="text-[10px] text-slate-400 italic">
+              <span className="text-xs text-slate-400 italic">
                 {getStarLabel(starsB)}
               </span>
             </div>
@@ -813,6 +822,7 @@ export default function TradeoffPage() {
               max={5}
               step={1}
               value={starsB}
+              aria-label="Importance of option B"
               onChange={(e) => setStarsB(Number(e.target.value))}
               className="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none mt-1"
             />
@@ -830,7 +840,7 @@ export default function TradeoffPage() {
               <span className="text-xs font-bold text-white bg-slate-800 px-2.5 py-0.5 rounded-xl border border-slate-700">
                 Year {timelineYear}
               </span>
-              <span className="text-[11px] font-semibold text-sky-300 bg-sky-950/60 px-2 py-0.5 rounded-lg border border-sky-800/40">
+              <span className="text-xs font-semibold text-sky-300 bg-sky-950/60 px-2 py-0.5 rounded-lg border border-sky-800/40">
                 Age {currentAgeAtScrub}
               </span>
             </div>
@@ -843,17 +853,18 @@ export default function TradeoffPage() {
             max={2050}
             step={1}
             value={timelineYear}
+            aria-label="Timeline year"
             onChange={(e) => setTimelineYear(Number(e.target.value))}
             className="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-800 rounded-lg appearance-none"
           />
 
           {/* Quick Milestone Jump Chips */}
-          <div className="flex items-center justify-between gap-1 overflow-x-auto py-1 scrollbar-none">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-1">
             {isMichael ? (
               <>
                 <button
                   onClick={() => setTimelineYear(2026)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-medium whitespace-nowrap transition-colors ${
+                  className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2026
                       ? 'bg-indigo-600 text-white font-bold'
                       : 'bg-slate-800 text-slate-400 hover:text-white'
@@ -863,7 +874,7 @@ export default function TradeoffPage() {
                 </button>
                 <button
                   onClick={() => setTimelineYear(2027)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-medium whitespace-nowrap transition-colors ${
+                  className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2027
                       ? 'bg-indigo-600 text-white font-bold'
                       : 'bg-slate-800 text-slate-400 hover:text-white'
@@ -873,7 +884,7 @@ export default function TradeoffPage() {
                 </button>
                 <button
                   onClick={() => setTimelineYear(2035)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-medium whitespace-nowrap transition-colors ${
+                  className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2035
                       ? 'bg-indigo-600 text-white font-bold'
                       : 'bg-slate-800 text-slate-400 hover:text-white'
@@ -883,7 +894,7 @@ export default function TradeoffPage() {
                 </button>
                 <button
                   onClick={() => setTimelineYear(2047)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-medium whitespace-nowrap transition-colors ${
+                  className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2047
                       ? 'bg-indigo-600 text-white font-bold'
                       : 'bg-slate-800 text-slate-400 hover:text-white'
@@ -893,7 +904,7 @@ export default function TradeoffPage() {
                 </button>
                 <button
                   onClick={() => setTimelineYear(2050)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-medium whitespace-nowrap transition-colors ${
+                  className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2050
                       ? 'bg-indigo-600 text-white font-bold'
                       : 'bg-slate-800 text-slate-400 hover:text-white'
@@ -906,7 +917,7 @@ export default function TradeoffPage() {
               <>
                 <button
                   onClick={() => setTimelineYear(2026)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-medium whitespace-nowrap transition-colors ${
+                  className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2026
                       ? 'bg-indigo-600 text-white font-bold'
                       : 'bg-slate-800 text-slate-400 hover:text-white'
@@ -916,7 +927,7 @@ export default function TradeoffPage() {
                 </button>
                 <button
                   onClick={() => setTimelineYear(2028)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-medium whitespace-nowrap transition-colors ${
+                  className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2028
                       ? 'bg-indigo-600 text-white font-bold'
                       : 'bg-slate-800 text-slate-400 hover:text-white'
@@ -926,7 +937,7 @@ export default function TradeoffPage() {
                 </button>
                 <button
                   onClick={() => setTimelineYear(2030)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-medium whitespace-nowrap transition-colors ${
+                  className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2030
                       ? 'bg-indigo-600 text-white font-bold'
                       : 'bg-slate-800 text-slate-400 hover:text-white'
@@ -936,7 +947,7 @@ export default function TradeoffPage() {
                 </button>
                 <button
                   onClick={() => setTimelineYear(2044)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-medium whitespace-nowrap transition-colors ${
+                  className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2044
                       ? 'bg-indigo-600 text-white font-bold'
                       : 'bg-slate-800 text-slate-400 hover:text-white'
@@ -946,7 +957,7 @@ export default function TradeoffPage() {
                 </button>
                 <button
                   onClick={() => setTimelineYear(2050)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-medium whitespace-nowrap transition-colors ${
+                  className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2050
                       ? 'bg-indigo-600 text-white font-bold'
                       : 'bg-slate-800 text-slate-400 hover:text-white'
@@ -962,7 +973,7 @@ export default function TradeoffPage() {
           <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2.5">
             <div className="flex items-center justify-between">
               <span
-                className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${milestoneData.statusColor}`}
+                className={`text-xs px-2 py-0.5 rounded-full font-bold border ${milestoneData.statusColor}`}
               >
                 {milestoneData.badge}
               </span>
@@ -971,7 +982,7 @@ export default function TradeoffPage() {
                 <button
                   type="button"
                   onClick={() => setActiveGrounding(milestoneData.groundingRef)}
-                  className="inline-flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 cursor-pointer"
+                  className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 cursor-pointer"
                 >
                   <ShieldCheck className="w-3 h-3" />
                   <span>Verify Data</span>
@@ -990,7 +1001,7 @@ export default function TradeoffPage() {
             {/* 3 Key Extracted Metrics */}
             <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800/80">
               <div className="p-2 rounded-xl bg-slate-900/90 text-center">
-                <div className="text-[9px] text-slate-400 truncate">
+                <div className="text-xs text-slate-400 truncate">
                   {milestoneData.stat1Label}
                 </div>
                 <div className="text-xs font-bold text-white mt-0.5 truncate">
@@ -999,7 +1010,7 @@ export default function TradeoffPage() {
               </div>
 
               <div className="p-2 rounded-xl bg-slate-900/90 text-center">
-                <div className="text-[9px] text-slate-400 truncate">
+                <div className="text-xs text-slate-400 truncate">
                   {milestoneData.stat2Label}
                 </div>
                 <div className="text-xs font-bold text-emerald-400 mt-0.5 truncate">
@@ -1008,7 +1019,7 @@ export default function TradeoffPage() {
               </div>
 
               <div className="p-2 rounded-xl bg-slate-900/90 text-center">
-                <div className="text-[9px] text-slate-400 truncate">
+                <div className="text-xs text-slate-400 truncate">
                   {milestoneData.stat3Label}
                 </div>
                 <div className="text-xs font-bold text-indigo-300 mt-0.5 truncate">

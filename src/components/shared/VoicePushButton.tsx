@@ -40,6 +40,7 @@ interface Props {
   onOpenCalibration?: (termKey: string) => void;
   onClosePopup?: () => void;
   disabled?: boolean;
+  onOverlayChange?: (open: boolean) => void;
 }
 
 const HOUSEHOLD_QUESTIONS: Record<
@@ -94,8 +95,10 @@ export function VoicePushButton({
   onOpenCalibration,
   onClosePopup,
   disabled,
+  onOverlayChange,
 }: Props) {
   const [customText, setCustomText] = useState('');
+  const [opened, setOpened] = useState(false);
   const isPressingRef = useRef(false);
   const sampleQuestions = HOUSEHOLD_QUESTIONS[caseId] || DEFAULT_QUESTIONS;
 
@@ -110,6 +113,7 @@ export function VoicePushButton({
   function handleStart(e: React.TouchEvent | React.MouseEvent) {
     if (disabled) return;
     e.stopPropagation();
+    setOpened(true);
 
     // If currently speaking, a tap stops/mutes speech
     if (voiceState === 'speaking') {
@@ -168,7 +172,8 @@ export function VoicePushButton({
 
   const isListening = voiceState === 'listening';
   const isSpeaking = voiceState === 'speaking';
-  const hasContent = Boolean(isListening || responseMessage || guardRedirect || showSuggestions);
+  const hasContent = opened && Boolean(isListening || responseMessage || guardRedirect || showSuggestions);
+  useEffect(() => { onOverlayChange?.(hasContent); }, [hasContent, onOverlayChange]);
 
   return (
     <div className="relative flex flex-col items-center select-none">
@@ -184,7 +189,7 @@ export function VoicePushButton({
           >
             {/* Header */}
             <div className="flex items-center justify-between pb-1.5 border-b border-slate-800">
-              <div className="flex items-center gap-1.5 font-bold text-[11px] uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider">
                 {guardRedirect ? (
                   <>
                     <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
@@ -210,7 +215,7 @@ export function VoicePushButton({
 
               {onClosePopup && (
                 <button
-                  onClick={onClosePopup}
+                  onClick={() => { setOpened(false); onClosePopup(); }}
                   className="min-w-11 min-h-11 flex items-center justify-center rounded-full text-slate-400 hover:text-white transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -229,12 +234,12 @@ export function VoicePushButton({
             {!isListening && (responseMessage || guardRedirect) && (
               <div className="space-y-2">
                 {transcript && (
-                  <div className="text-[10px] text-slate-400">
+                  <div className="text-xs text-slate-400">
                     You asked: <span className="text-slate-200 italic">"{transcript}"</span>
                   </div>
                 )}
                 <div className="text-xs text-slate-100 leading-relaxed font-normal bg-slate-950/70 p-3 rounded-2xl border border-slate-800">
-                  <div className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold mb-1">
+                  <div className="flex items-center gap-1 text-xs text-emerald-400 font-bold mb-1">
                     <ShieldCheck className="w-3 h-3" />
                     <span>Plan Verified Numbers</span>
                   </div>
@@ -264,7 +269,7 @@ export function VoicePushButton({
             {/* Suggestion Chips when mic was quiet or quick-tapped */}
             {!isListening && (!responseMessage || showSuggestions) && (
               <div className="space-y-1.5 pt-0.5">
-                <span className="text-[10px] text-slate-400 font-semibold block">
+                <span className="text-xs text-slate-400 font-semibold block">
                   Tap any question to ask instantly:
                 </span>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -287,6 +292,7 @@ export function VoicePushButton({
                   <input
                     type="text"
                     value={customText}
+                    aria-label="Ask a question about your plan"
                     onChange={(e) => setCustomText(e.target.value)}
                     placeholder="Or type a question (e.g. ¿cuánto dinero tengo?)..."
                     className="min-w-0 flex-1 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-400"

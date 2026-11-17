@@ -18,13 +18,21 @@ import { useVoiceSession } from '../lib/voice/useVoiceSession';
 
 export default function StoriesPage() {
   const { caseId } = useParams<{ caseId: string }>();
+  if (!CASES.some((item) => item.id === caseId)) {
+    return <main className="session-page p-8 text-white"><h1>Household not found</h1><p className="mt-4">Choose a household to start a session.</p><a href="/" className="mt-6 inline-flex items-center text-indigo-300 underline">Choose a household</a></main>;
+  }
+  return <StoriesContent key={caseId} />;
+}
+
+function StoriesContent() {
+  const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
 
   const currentCase = useAppStore((s) => s.currentCase);
   const setCase = useAppStore((s) => s.setCase);
   const addTelemetryEvent = useAppStore((s) => s.addTelemetryEvent);
 
-  const activeCase = currentCase ?? CASES.find((c) => c.id === caseId) ?? CASES[0];
+  const activeCase = CASES.find((c) => c.id === caseId)!;
 
   useEffect(() => {
     if (caseId && (!currentCase || currentCase.id !== caseId)) {
@@ -63,6 +71,7 @@ export default function StoriesPage() {
   return (
     <div className="relative w-full h-full bg-slate-950 overflow-hidden flex flex-col justify-between">
       <StoryContainer
+        key={activeCase.id}
         caseId={activeCase.id}
         stories={stories}
         calibrationCards={calibrationCards}

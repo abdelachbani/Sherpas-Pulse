@@ -4,6 +4,18 @@
 
 # Bring the plan to life
 
+## Sherpas Pulse interface
+
+The React application explains each household's plan in six chapters. Stories advance manually; Play enables optional automatic playback. Financial scenario calculations and voice transport remain separate from the interface.
+
+- Run the interface: `npm ci`, then `npm run dev`.
+- Run checks: `npm test`, `npm run lint`, and `npm run build`.
+- Check browser layouts and interactions: start `npm run preview -- --host 127.0.0.1 --port 4173`, then `node scripts/check-ui.mjs http://127.0.0.1:4173 /tmp/sherpas-ui-check`. This needs Chrome and Node 22+; output goes to the supplied temporary folder. `CHROME_PATH` selects a compatible Chrome/Chromium executable.
+- Voice needs the existing relay (`npm run server`) and its locally configured environment. Browser layout tests do not verify live AI responses or financial projections.
+
+Application checks are distinct from Taste Skill's marketing-page gate. Reports retain the original gate result separately; an application check passing does not mean that gate passed.
+
+
 **Sherpas x UPV Sigma Data Club hackathon, 12 to 19 November 2026**
 
 ## Join the Discord first

@@ -92,14 +92,14 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   // ── Stop playback helper ────────────────────────────────────────────────────
   const stopPlayback = useCallback(() => {
     for (const s of playSourcesRef.current) {
-      try { s.stop(); } catch {}
+      try { s.stop(); } catch { /* The audio or socket may already be stopped during cleanup. */ }
     }
     playSourcesRef.current = [];
     if (audioCtxRef.current) {
       playHeadRef.current = audioCtxRef.current.currentTime;
     }
     if ('speechSynthesis' in window) {
-      try { window.speechSynthesis.cancel(); } catch {}
+      try { window.speechSynthesis.cancel(); } catch { /* The audio or socket may already be stopped during cleanup. */ }
     }
     setVoiceState('idle');
   }, []);
@@ -237,7 +237,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     return () => {
       stopPlayback();
       if (wsRef.current) {
-        try { wsRef.current.close(); } catch {}
+        try { wsRef.current.close(); } catch { /* The audio or socket may already be stopped during cleanup. */ }
         wsRef.current = null;
       }
       if (micStreamRef.current) {
@@ -370,7 +370,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const disconnect = useCallback(() => {
     stopPlayback();
     if (wsRef.current) {
-      try { wsRef.current.close(); } catch {}
+      try { wsRef.current.close(); } catch { /* The audio or socket may already be stopped during cleanup. */ }
       wsRef.current = null;
     }
   }, [stopPlayback]);

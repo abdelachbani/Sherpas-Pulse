@@ -7,9 +7,11 @@
  * and the client's exact numbers from the MCP JSON.
  */
 
-import { motion } from 'framer-motion';
+import { useId } from 'react';
+import { motion, useIsPresent } from 'framer-motion';
 import { Lightbulb, Check, ShieldCheck, Sparkles } from 'lucide-react';
 import type { CalibrationCard, GroundingRef } from '../../types';
+import { useDialogFocus } from '../shared/useDialogFocus';
 
 interface Props {
   card: CalibrationCard;
@@ -18,8 +20,18 @@ interface Props {
 }
 
 export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Props) {
+  const titleId = useId();
+  const isPresent = useIsPresent();
+  const dialogRef = useDialogFocus(isPresent, onDismiss);
   return (
     <motion.div
+      ref={dialogRef}
+      role={isPresent ? "dialog" : undefined}
+      aria-modal={isPresent ? "true" : undefined}
+      aria-labelledby={titleId}
+      aria-hidden={!isPresent}
+      inert={!isPresent}
+      tabIndex={-1}
       initial={{ opacity: 0, y: 120 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 120 }}
@@ -35,10 +47,10 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-1 border border-blue-500/30">
             <Sparkles className="w-3 h-3" />
-            <span>Zero-Prompt Calibration</span>
+            <span>Financial term</span>
           </div>
-          <h2 className="text-xl font-bold text-white tracking-tight">{card.term}</h2>
-          <p className="text-xs text-slate-400 font-medium">{card.headline}</p>
+          <h2 id={titleId} className="text-xl font-bold text-white tracking-tight">{card.term}</h2>
+          <p className="text-sm text-slate-400 font-medium">{card.headline}</p>
         </div>
       </div>
 
@@ -52,7 +64,7 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
       </div>
 
       {/* Sherpas take */}
-      <div className="mt-3 p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700 text-slate-300 text-xs leading-relaxed">
+      <div className="mt-3 p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700 text-slate-300 text-sm leading-relaxed">
         <span className="font-semibold text-slate-200 block mb-1">What this means in your plan:</span>
         {card.sherpasTake}
       </div>
@@ -60,7 +72,7 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
       {/* Plan numbers */}
       {card.numbers.length > 0 && (
         <div className="mt-4">
-          <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-2">
+          <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">
             Your Exact Numbers
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -69,7 +81,7 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
                 key={idx}
                 className="p-3 rounded-xl bg-slate-800/80 border border-slate-700"
               >
-                <div className="text-[10px] text-slate-400">{num.label}</div>
+                <div className="text-xs text-slate-400">{num.label}</div>
                 <div className="text-base font-bold text-white mt-0.5">
                   {num.value}
                   {num.unit && <span className="text-xs font-normal text-slate-400 ml-1">{num.unit}</span>}
@@ -84,10 +96,10 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
       {card.groundingRefs.length > 0 && (
         <button
           onClick={() => onInspectGrounding(card.groundingRefs[0])}
-          className="mt-3 flex items-center justify-center gap-1.5 w-full py-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+          className="mt-3 flex items-center justify-center gap-1.5 w-full min-h-11 py-1.5 text-sm text-blue-300 hover:text-blue-200 transition-colors"
         >
           <ShieldCheck className="w-4 h-4" />
-          <span>Verify source in MCP data (Grounding Badge)</span>
+          <span>View plan source</span>
         </button>
       )}
 

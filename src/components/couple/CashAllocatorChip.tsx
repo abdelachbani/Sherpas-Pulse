@@ -55,7 +55,7 @@ export function CashAllocatorChip({
           </span>
           <div>
             <h3 className="font-bold text-white text-sm tracking-tight">{strategy.label}</h3>
-            <span className="text-[10px] uppercase font-semibold tracking-wider opacity-80 block">
+            <span className="text-xs uppercase font-semibold tracking-wider opacity-80 block">
               {strategy.urgency} Priority
             </span>
           </div>
@@ -90,7 +90,7 @@ export function CashAllocatorChip({
         </span>
       </div>
 
-      <p className="text-xs text-slate-300 mt-1 leading-relaxed bg-black/20 p-2 rounded-xl">
+      <p className="text-sm text-slate-300 mt-1 leading-relaxed bg-black/20 p-2 rounded-xl">
         {strategy.benefitSummary}
       </p>
 
@@ -98,10 +98,10 @@ export function CashAllocatorChip({
       {strategy.grounding && (
         <button
           onClick={onInspect}
-          className="mt-2.5 flex items-center gap-1 text-[11px] text-emerald-400 hover:text-emerald-300 transition-colors"
+          className="mt-2.5 flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
         >
           <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Verified in MCP plan</span>
+          <span>View plan source</span>
         </button>
       )}
     </motion.div>

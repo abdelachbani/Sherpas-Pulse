@@ -85,7 +85,7 @@ function CaseCard({ caseData }: { caseData: CaseData }) {
         <span className="capitalize font-medium">{band}</span>
         {(city || state) && (
           <>
-            <span className="text-gray-200">·</span>
+            <span className="text-gray-500">·</span>
             <span className="flex items-center gap-0.5">
               <MapPin className="w-3 h-3" />
               {[city, state].filter(Boolean).join(', ')}

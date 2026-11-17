@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react';
+import { useAppStore } from './stores/appStore';
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
 import CaseSelectPage from './pages/CaseSelectPage';
 import HouseholdEntryPage from './pages/HouseholdEntryPage';
@@ -17,6 +18,8 @@ import ActionPage from './pages/ActionPage';
 import { SplitScreenToggle, type SplitMode, type SplitTarget } from './components/shared/SplitScreenToggle';
 
 export default function App() {
+  const household = useAppStore((state) => state.currentCase?.financialHealth.case.household);
+  const adults = household?.filter((member) => member.role === 'client' || member.role === 'co-client') ?? [];
   const [splitMode, setSplitMode] = useState<SplitMode>('single');
   const [splitTarget, setSplitTarget] = useState<SplitTarget>('advisor');
 
@@ -36,8 +39,8 @@ export default function App() {
             onModeChange={setSplitMode}
             target={splitTarget}
             onTargetChange={setSplitTarget}
-            partner1Name="Timothy"
-            partner2Name="Melanie"
+            partner1Name={adults[0]?.first_name || 'Client'}
+            partner2Name={adults[1]?.first_name || 'Partner'}
           />
           </div>
         </header>
@@ -45,9 +48,9 @@ export default function App() {
         <div id="app-content" className="app-content" tabIndex={-1}>
         {splitMode === 'split' ? (
           /* Split Screen Projector Mode for Live Demo */
-          <div className="flex flex-col lg:flex-row items-center justify-center gap-6 min-h-dvh p-4 pt-16 bg-slate-950 overflow-x-auto">
+          <div className="flex flex-col lg:flex-row items-start justify-center gap-6 min-h-full p-4 sm:p-8 bg-slate-950">
             {/* Left Screen: Primary Partner / Stories */}
-            <div className="w-[390px] h-[844px] rounded-[44px] border-[10px] border-slate-800 shadow-2xl overflow-hidden relative bg-slate-950">
+            <div className="w-full max-w-[420px] h-[844px] rounded-2xl border border-slate-700 overflow-hidden relative bg-slate-950">
               <div className="absolute top-0 inset-x-0 h-6 bg-slate-800 z-50 flex items-center justify-center">
                 <div className="w-24 h-4 bg-slate-950 rounded-b-xl" />
               </div>
@@ -65,16 +68,15 @@ export default function App() {
             </div>
 
             {/* Right Screen: Secondary Partner / Family Consensus / Advisor View */}
-            <div className="w-[390px] h-[844px] rounded-[44px] border-[10px] border-slate-800 shadow-2xl overflow-hidden relative bg-slate-950">
+            <div className="w-full max-w-[420px] h-[844px] rounded-2xl border border-slate-700 overflow-hidden relative bg-slate-950">
               <div className="absolute top-0 inset-x-0 h-6 bg-slate-800 z-50 flex items-center justify-center">
                 <div className="w-24 h-4 bg-slate-950 rounded-b-xl" />
               </div>
               <div className="h-full pt-4 overflow-y-auto">
-                {splitTarget === 'advisor' ? (
-                  <ActionPage />
-                ) : (
-                  <FamilySyncPage />
-                )}
+                <Routes>
+                  <Route path="/case/:caseId/*" element={splitTarget === 'advisor' ? <ActionPage /> : <FamilySyncPage />} />
+                  <Route path="/" element={<p className="p-6 text-sm text-slate-300">Choose a household to preview its session.</p>} />
+                </Routes>
               </div>
             </div>
           </div>

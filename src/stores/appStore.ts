@@ -55,7 +55,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
   // ── Action implementations ───────────────────────────────────────────────
   setCase: (caseId) => {
     const found = CASES.find((c) => c.id === caseId) ?? null;
-    set({ currentCase: found, currentStoryIndex: 0 });
+    if (get().currentCase?.id === found?.id) return;
+    set({
+      currentCase: found, currentStoryIndex: 0, viewingStyle: null, partner: null,
+      telemetryEvents: [], coupleAllocations: { primary: null, secondary: null },
+    });
   },
 
   setStoryIndex: (n) => set({ currentStoryIndex: n }),
