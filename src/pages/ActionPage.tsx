@@ -73,8 +73,8 @@ function ActionContent() {
       primaryHesitationTerm={telemetrySummary.termConsultations.uniqueTerms[0] ?? 'Umbrella Liability'}
       firstWinTitle={moves[0]?.title ?? 'Pay off high-interest debt'}
       firstWinDollars={moves[0] ? `$${moves[0].target_amount.toLocaleString()}/yr` : '$3,240/yr'}
-      agreedTopic={activeCase.household.length > 1 ? 'liquidating high-interest card debt' : 'retirement savings roadmap'}
-      divergedTopic={activeCase.household.length > 1 ? 'College 529 vs. Umbrella Liability' : 'home purchase timing'}
+      agreedTopic={activeCase.financialHealth.case.household.length > 1 ? 'liquidating high-interest card debt' : 'retirement savings roadmap'}
+      divergedTopic={activeCase.financialHealth.case.household.length > 1 ? 'College 529 vs. Umbrella Liability' : 'home purchase timing'}
       isAdvisorView={false}
     />
     <button type="button" onClick={() => { resetStore(); navigate('/'); }} className="min-h-11 w-full rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-200">Start a new household session</button>

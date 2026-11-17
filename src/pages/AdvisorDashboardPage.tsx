@@ -32,6 +32,7 @@ import {
   RefreshCw,
   FileText,
   ExternalLink,
+  Printer,
 } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
@@ -201,6 +202,17 @@ export default function AdvisorDashboardPage() {
               <span className={`w-2 h-2 rounded-full ${hasLiveEvents ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
               <span>{hasLiveEvents ? `Live Session (${liveEvents.length} events)` : 'Demo Telemetry Mode'}</span>
             </span>
+
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all cursor-pointer"
+              title="Print 1-Page Pre-Meeting Cheat-Sheet for Zoom Call"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Print Cheat-Sheet</span>
+              <span className="sm:hidden">Print</span>
+            </button>
 
             <Link
               to={`/case/${activeCase.id}/action`}
@@ -465,10 +477,10 @@ export default function AdvisorDashboardPage() {
         {/* ── Pillar D: Multi-Touch Smart Nudges (Days 1 to 30 Follow-up Cadence) ── */}
         <MultiTouchCadenceSection
           caseId={activeCase.id}
-          clientNames={names}
+          clientNames={householdNames}
           primaryHesitationTerm={primaryHesitationTerm}
-          firstWinTitle={firstMove ? firstMove.title : 'Pay off high-interest debt'}
-          firstWinDollars={firstMove ? `$${firstMove.target_amount.toLocaleString()}/yr` : '$3,240/yr'}
+          firstWinTitle={fh.score.top_moves[0]?.title ?? 'Pay off high-interest debt'}
+          firstWinDollars={fh.score.top_moves[0] ? `$${fh.score.top_moves[0].target_amount.toLocaleString()}/yr` : '$3,240/yr'}
           agreedTopic={isCouple ? 'Liquidating $18k high-interest credit card debt' : 'Retirement savings allocation'}
           divergedTopic={isCouple ? 'College Savings (529) vs. Umbrella Protection' : 'Home purchase timing'}
           isAdvisorView={true}

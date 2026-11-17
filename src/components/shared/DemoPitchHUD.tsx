@@ -148,7 +148,8 @@ export function DemoPitchHUD() {
             <div className="grid grid-cols-2 gap-1.5">
               {CASES.map((c) => {
                 const isSelected = c.id === activeCaseId;
-                const isCouple = c.household.length > 1;
+                const isCouple = c.householdType === 'couple';
+                const members = c.financialHealth.case.household.filter((h) => h.role === 'client' || h.role === 'co-client');
                 return (
                   <button
                     key={c.id}
@@ -160,7 +161,7 @@ export function DemoPitchHUD() {
                         : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <div className="truncate">{c.household.map((h) => h.first_name).join(' & ')}</div>
+                    <div className="truncate">{members.map((h) => h.first_name).join(' & ')}</div>
                     <div className="text-[9px] font-normal text-slate-500">{isCouple ? 'Couple' : 'Single'}</div>
                   </button>
                 );
