@@ -22,10 +22,12 @@ import {
   ChevronRight,
   Smartphone,
   Check,
+  QrCode,
 } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
 import type { ViewingStyle } from '../types';
+import { PartnerQrModal } from '../components/shared/PartnerQrModal';
 
 export default function HouseholdEntryPage() {
   const { caseId } = useParams<{ caseId: string }>();
@@ -49,6 +51,7 @@ function HouseholdEntryPageContent() {
   const [selectedPartner, setSelectedPartner] = useState<'primary' | 'secondary'>('primary');
   const [selectedStyle, setSelectedStyle] = useState<ViewingStyle>('visual');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   const activeCase = (currentCase?.id === caseId ? currentCase : CASES.find((c) => c.id === caseId))!;
 
@@ -185,9 +188,10 @@ function HouseholdEntryPageContent() {
               </button>
             </div>
 
-            {/* Asynchronous share link */}
-            <div className="pt-0.5">
+            {/* Asynchronous share link & QR Pairing */}
+            <div className="pt-0.5 flex gap-2">
               <button
+                type="button"
                 onClick={() =>
                   handleCopyShareLink(
                     selectedPartner === 'primary'
@@ -195,19 +199,29 @@ function HouseholdEntryPageContent() {
                       : client?.first_name || 'partner'
                   )
                 }
-                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-600 hover:text-indigo-600 transition-colors"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 hover:text-indigo-600 hover:border-indigo-200 transition-colors cursor-pointer"
               >
                 {copiedLink ? (
                   <>
                     <Check className="w-3.5 h-3.5 text-emerald-700" />
-                    <span className="text-emerald-700">Share link copied for partner’s phone!</span>
+                    <span className="text-emerald-700 font-semibold">Link copied!</span>
                   </>
                 ) : (
                   <>
                     <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Send link for {selectedPartner === 'primary' ? coClient?.first_name : client?.first_name}’s phone</span>
+                    <span>Copy partner link</span>
                   </>
                 )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowQrModal(true)}
+                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-indigo-50 border border-indigo-200 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors cursor-pointer"
+                title="Scan QR on second phone"
+              >
+                <QrCode className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Scan QR</span>
               </button>
             </div>
           </div>
@@ -305,6 +319,20 @@ function HouseholdEntryPageContent() {
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Partner QR Pairing Modal */}
+      {isCouple && (
+        <PartnerQrModal
+          isOpen={showQrModal}
+          onClose={() => setShowQrModal(false)}
+          partnerName={selectedPartner === 'primary' ? coClient?.first_name || 'Partner' : client?.first_name || 'Partner'}
+          partnerRole={selectedPartner === 'primary' ? 'Peace of Mind Rhythm' : 'Analytical Rhythm'}
+          url={typeof window !== 'undefined'
+            ? `${window.location.origin}/case/${activeCase.id}?user=${(selectedPartner === 'primary' ? coClient?.first_name : client?.first_name)?.toLowerCase() || ''}`
+            : `/case/${activeCase.id}?user=${(selectedPartner === 'primary' ? coClient?.first_name : client?.first_name)?.toLowerCase() || ''}`
+          }
+        />
+      )}
     </div>
   );
 }
