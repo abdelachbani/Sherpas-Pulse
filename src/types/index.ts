@@ -153,6 +153,8 @@ export interface CalibrationCard {
   sherpasTake: string;
   numbers: DataPoint[];
   groundingRefs: GroundingRef[];
+  expertMechanics?: string;
+  statutoryLimits?: string;
 }
 
 export type TelemetryEventType =

@@ -209,17 +209,76 @@ export function extractCalibrationCards(
   _fh: FinancialHealth,
   _ia: InvestmentAnalysis,
 ): Record<string, CalibrationCard> {
-  const definitions: Record<string, [string, string, string]> = {
-    'roth-ira': ['Roth IRA', 'A retirement account funded with money that has already been taxed.', 'Eligibility, contribution limits and withdrawal rules depend on your circumstances.'],
-    'umbrella-liability': ['Umbrella liability', 'A policy that can provide liability coverage above the limits of underlying policies.', 'Coverage, exclusions and costs depend on the policy.'],
-    'revolving-apr': ['Revolving APR', 'The annual percentage rate describes the yearly cost of borrowing on a revolving balance.', 'Actual interest depends on the balance, rate and lender terms.'],
-    'mortality-ratio': ['Mortality ratio', 'A measure comparing life insurance coverage with an estimated coverage need.', 'The estimate depends on the assumptions used to assess that need.'],
-    '529-plan': ['529 education plan', 'A tax-advantaged account designed for eligible education expenses.', 'Tax treatment and eligible expenses depend on the plan and circumstances.'],
-    'leveraged-etf': ['Leveraged ETF', 'An exchange-traded fund that uses financial instruments to magnify an index’s movement, often over a single day.', 'Returns over longer periods can differ substantially from a simple multiple of the index.'],
-    'withdrawal-rate': ['Withdrawal rate', 'The amount withdrawn over a period expressed as a share of investments.', 'Its long-term effect depends on spending, returns, inflation and the time horizon.'],
+  interface CardDef {
+    term: string;
+    analogy: string;
+    take: string;
+    expertMechanics: string;
+    statutoryLimits: string;
+  }
+
+  const definitions: Record<string, CardDef> = {
+    'roth-ira': {
+      term: 'Roth IRA',
+      analogy: 'Think of a traditional 401(k) like a farmer taxed on the entire harvest; a Roth IRA taxes only the seed today, so decades of compounding and all retirement withdrawals are 100% tax-free.',
+      take: 'Eligibility, contribution limits and withdrawal rules depend on your circumstances.',
+      expertMechanics: 'Funded with post-tax capital. Earnings accumulate tax-deferred and qualified distributions (post age 59½ and 5-year seasoning) are 100% tax-exempt under IRC §408A. Ideal for shifting tax liability away from anticipated higher marginal brackets in retirement.',
+      statutoryLimits: '2026 Statutory limit: $7,000/year ($8,000 if age 50+). Phase-out begins at $146k-$161k MAGI (Single) and $230k-$240k MAGI (MFJ). Backdoor conversions bypass income caps, subject to aggregate traditional IRA pro-rata rules.',
+    },
+    'umbrella-liability': {
+      term: 'Umbrella liability',
+      analogy: 'Standard home and auto insurance are like a raincoat for light showers; an umbrella policy is a steel storm shelter that shields all your accumulated assets and future income from catastrophic legal claims.',
+      take: 'Coverage, exclusions and costs depend on the policy.',
+      expertMechanics: 'Excess third-party liability policy sitting atop primary underlying homeowners and auto policies (requiring $300k/$500k underlying limits). Provides worldwide coverage, personal injury protection (defamation/slander), and legal defense expenses outside policy limits.',
+      statutoryLimits: 'Sold in $1M increments (typically $1M-$5M). Exceptionally capital-efficient at ~$150-$300/year per $1M coverage, insulating total net worth against tort liabilities and wage garnishment.',
+    },
+    'revolving-apr': {
+      term: 'Revolving APR',
+      analogy: 'Revolving credit at 18% APR is like running with an open parachute: every month you carry a balance, interest compounds on interest, draining cash straight to the bank before you can save a dime.',
+      take: 'Actual interest depends on the balance, rate and lender terms.',
+      expertMechanics: 'Compounded daily on average daily balances. An 18% nominal APR equates to an Effective Annual Rate (EAR) of ~19.56%. Paying down revolving card debt yields an immediate, risk-free, tax-equivalent return that outpaces conventional liquid cash yields.',
+      statutoryLimits: 'Daily compounding rate ~0.0493%/day. Unpaid balances incur escalating compound interest charges, with zero tax deductibility under current TCJA personal interest guidelines.',
+    },
+    'mortality-ratio': {
+      term: 'Mortality ratio',
+      analogy: 'Your life insurance coverage is like the emergency backup generator for a household: the mortality ratio tells you whether backup power will keep the home running for 15 years or shut down in months if the primary earner passes away.',
+      take: 'A measure comparing life insurance coverage with an estimated coverage need.',
+      expertMechanics: 'The ratio of in-force death benefit to total human capital replacement obligations (capital needs analysis factoring in present value of future family living expenses, debt extinguishment, and college education discounted at real rates).',
+      statutoryLimits: 'Industry benchmark: 10x-15x gross annual earnings for earners with dependent minors. A 0/20 protection score indicates catastrophic family exposure to breadwinner mortality.',
+    },
+    '529-plan': {
+      term: '529 education plan',
+      analogy: 'A 529 plan is an express lane for your children’s education: tax-deductible perks going in, decades of tax-free compound growth, and 100% tax-free withdrawals for tuition, books, and housing.',
+      take: 'Tax treatment and eligible expenses depend on the plan and circumstances.',
+      expertMechanics: 'Qualified Tuition Program governed by IRC §529. Earnings accumulate federal tax-exempt, with qualified distributions covering tuition, fees, books, and room/board. Under SECURE 2.0, up to $35,000 of leftover 529 assets can be rolled over tax-free into the beneficiary’s Roth IRA (15-year seasoning).',
+      statutoryLimits: 'Annual gift tax exclusion applies ($18,000/donor, or 5-year superfund front-loading of $90,000 per parent in 2026). State income tax deductions vary by jurisdiction.',
+    },
+    'leveraged-etf': {
+      term: 'Leveraged ETF',
+      analogy: 'A leveraged ETF is like driving a drag racer with a hair-trigger gas pedal: exhilarating for a 1-day sprint, but dangerous for a family road trip because volatility drag will erode your capital over time.',
+      take: 'Returns over longer periods can differ substantially from a simple multiple of the index.',
+      expertMechanics: 'Employs financial derivatives (total return swaps, futures) targeting 2x or 3x daily returns of a benchmark index. Due to daily reset mechanics, mathematical beta slippage (volatility drag) compounds non-linearly during choppy or sideways markets.',
+      statutoryLimits: 'Subject to FINRA Regulatory Notice 09-31 cautioning against long-term retail holding. Generally unsuitable for strategic buy-and-hold asset allocation portfolios.',
+    },
+    'withdrawal-rate': {
+      term: 'Withdrawal rate',
+      analogy: 'Your withdrawal rate is like tapping a freshwater reservoir: if you only draw what seasonal rainfall refills each year (~3.5% to 4%), your water reserve will never run dry, even during prolonged droughts.',
+      take: 'Its long-term effect depends on spending, returns, inflation and the time horizon.',
+      expertMechanics: 'Annual portfolio distributions divided by total investable retirement assets. Benchmarked against Bengen safe withdrawal research and historical Monte Carlo sequence-of-returns simulations.',
+      statutoryLimits: 'Standard 30-year retirement rule of thumb: 4.0% initial withdrawal adjusted annually for CPI. For extended horizons (35+ years, e.g. early retirement at 58), target distribution rate should be calibrated to 3.25%-3.75% to eliminate terminal ruin probability.',
+    },
   };
-  return Object.fromEntries(Object.entries(definitions).map(([key, [term, analogy, take]]) => [key, {
-    term, termKey: key, headline: term, analogy, sherpasTake: take, numbers: [], groundingRefs: [],
+
+  return Object.fromEntries(Object.entries(definitions).map(([key, def]) => [key, {
+    term: def.term,
+    termKey: key,
+    headline: def.term,
+    analogy: def.analogy,
+    sherpasTake: def.take,
+    expertMechanics: def.expertMechanics,
+    statutoryLimits: def.statutoryLimits,
+    numbers: [],
+    groundingRefs: [],
   }]));
 }
 

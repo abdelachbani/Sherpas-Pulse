@@ -7,9 +7,9 @@
  * and the client's exact numbers from the MCP JSON.
  */
 
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { motion, useIsPresent } from 'framer-motion';
-import { Lightbulb, Check, ShieldCheck, Sparkles } from 'lucide-react';
+import { Lightbulb, Check, ShieldCheck, Sparkles, GraduationCap, Scale } from 'lucide-react';
 import type { CalibrationCard, GroundingRef } from '../../types';
 import { useDialogFocus } from '../shared/useDialogFocus';
 import { FinancialText } from '../shared/FinancialText';
@@ -24,6 +24,8 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
   const titleId = useId();
   const isPresent = useIsPresent();
   const dialogRef = useDialogFocus(isPresent, onDismiss);
+  const [viewMode, setViewMode] = useState<'beginner' | 'expert'>('beginner');
+
   return (
     <motion.div
       ref={dialogRef}
@@ -37,7 +39,7 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.12 }}
-      className="absolute inset-x-0 bottom-0 z-40 bg-slate-900/95 border-t border-slate-700/80 rounded-t-3xl p-5 text-white   max-h-[85dvh] overflow-y-auto"
+      className="absolute inset-x-0 bottom-0 z-40 bg-slate-900/95 border-t border-slate-700/80 rounded-t-3xl p-5 text-white max-h-[85dvh] overflow-y-auto"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Handle */}
@@ -48,27 +50,84 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-1 border border-blue-500/30">
             <Sparkles className="w-3 h-3" />
-            <span>Financial term</span>
+            <span>Zero-Prompt Calibration</span>
           </div>
           <h2 id={titleId} className="text-xl font-bold text-white tracking-tight"><FinancialText text={card.term} /></h2>
           <p className="text-sm text-slate-400 font-medium"><FinancialText text={card.headline} /></p>
         </div>
       </div>
 
-      {/* Analogy box */}
-      <div className="mt-4 p-4 rounded-2xl bg-blue-950/20 border border-blue-500/30 text-blue-100 text-sm leading-relaxed flex gap-3">
-        <Lightbulb className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-        <div>
-          <span className="font-semibold text-blue-300 block mb-1">In plain language:</span>
-          <FinancialText text={card.analogy} />
-        </div>
+      {/* Dual Persona Switcher (Beginner vs Expert) */}
+      <div className="flex rounded-xl bg-slate-800/90 p-1 border border-slate-700/80 mt-3" role="tablist" aria-label="Explanation depth">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={viewMode === 'beginner'}
+          onClick={() => setViewMode('beginner')}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+            viewMode === 'beginner'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Lightbulb className="w-3.5 h-3.5" />
+          <span>Everyday Analogy</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={viewMode === 'expert'}
+          onClick={() => setViewMode('expert')}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+            viewMode === 'expert'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <GraduationCap className="w-3.5 h-3.5" />
+          <span>Financial Mechanics (Expert)</span>
+        </button>
       </div>
 
-      {/* Sherpas take */}
-      {card.sherpasTake && <div className="mt-3 p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700 text-slate-300 text-sm leading-relaxed">
-        <span className="font-semibold text-slate-200 block mb-1">What this means in your plan:</span>
-        <FinancialText text={card.sherpasTake} />
-      </div>}
+      {/* Beginner Mode: Analogy & Plan Impact */}
+      {viewMode === 'beginner' && (
+        <div className="space-y-3 mt-3">
+          <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 text-indigo-100 text-sm leading-relaxed flex gap-3">
+            <Lightbulb className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-indigo-300 block mb-1">In plain language:</span>
+              <FinancialText text={card.analogy} />
+            </div>
+          </div>
+
+          {card.sherpasTake && (
+            <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700 text-slate-300 text-sm leading-relaxed">
+              <span className="font-semibold text-slate-200 block mb-1">What this means in your plan:</span>
+              <FinancialText text={card.sherpasTake} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Expert Mode: Institutional Mechanics & Statutory Code */}
+      {viewMode === 'expert' && (
+        <div className="space-y-3 mt-3">
+          <div className="p-4 rounded-2xl bg-purple-950/30 border border-purple-500/30 text-purple-100 text-sm leading-relaxed flex gap-3">
+            <Scale className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-purple-300 block mb-1">Institutional Mechanics:</span>
+              <FinancialText text={card.expertMechanics || card.sherpasTake} />
+            </div>
+          </div>
+
+          {card.statutoryLimits && (
+            <div className="p-3.5 rounded-2xl bg-slate-800/70 border border-slate-700 text-slate-300 text-xs leading-relaxed font-mono">
+              <span className="font-bold text-slate-200 block mb-1 font-sans text-xs">Statutory Limits & Guidelines:</span>
+              <FinancialText text={card.statutoryLimits} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Plan numbers */}
       {card.numbers.length > 0 && (
@@ -107,7 +166,7 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
       {/* Got it button */}
       <button
         onClick={onDismiss}
-        className="mt-4 w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm flex items-center justify-center gap-2   transition-all active:scale-[0.98]"
+        className="mt-4 w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
       >
         <Check className="w-4 h-4" />
         <span>Got it — Resume Plan</span>
