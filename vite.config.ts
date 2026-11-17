@@ -1,12 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { viteRelayPlugin } from './server/viteRelayPlugin';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    viteRelayPlugin(),
   ],
   resolve: {
     alias: {
@@ -15,16 +17,5 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    proxy: {
-      '/voice': {
-        target: 'ws://localhost:3001',
-        ws: true,
-        changeOrigin: true,
-      },
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
-    },
   },
 });
