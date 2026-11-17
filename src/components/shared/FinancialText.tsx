@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
-import { splitFinancialTerms } from '../../lib/financialGlossary';
+import { simplifyFinancialText, splitFinancialTerms } from '../../lib/financialGlossary';
+import { useAppStore } from '../../stores/appStore';
 import { TapToDefine } from './TapToDefine';
 
 interface Props {
@@ -7,6 +8,12 @@ interface Props {
 }
 
 export function FinancialText({ text }: Props) {
+  const languageMode = useAppStore((state) => state.languageMode);
+
+  if (languageMode === 'simple') {
+    return <>{simplifyFinancialText(text)}</>;
+  }
+
   return (
     <>
       {splitFinancialTerms(text).map((segment, index) => (

@@ -53,6 +53,7 @@ export function getTelemetrySummary(
   let tradeoffChanges = 0;
   let allocationChanges = 0;
   let voiceAsks = 0;
+  let languageModeChanges = 0;
 
   for (const event of events) {
     switch (event.type) {
@@ -75,6 +76,9 @@ export function getTelemetrySummary(
       case 'voice_ask':
         voiceAsks += 1;
         break;
+      case 'language_mode_change':
+        languageModeChanges += 1;
+        break;
     }
   }
 
@@ -86,7 +90,7 @@ export function getTelemetrySummary(
       uniqueTerms,
       uniqueTermCount: uniqueTerms.length,
     },
-    interactions: { tradeoffChanges, allocationChanges, voiceAsks },
+    interactions: { tradeoffChanges, allocationChanges, voiceAsks, languageModeChanges },
     shouldSuggestCalibration: uniqueTerms.length >= CALIBRATION_TERM_THRESHOLD,
   };
 }

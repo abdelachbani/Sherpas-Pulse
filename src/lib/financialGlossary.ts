@@ -36,6 +36,43 @@ const DEFINITIONS: Record<string, string> = {
   'high-yield savings account': 'A savings account that pays interest, often at a higher rate than a standard savings account. Rates and terms can change.',
 };
 
+const SIMPLE_TERMS: Record<string, string> = {
+  'health score': 'overall picture',
+  'financial health score': 'overall picture of your finances',
+  'cash flow': 'money coming in and going out',
+  liquidity: 'money available when you need it',
+  debt: 'money you owe',
+  investments: 'money invested to try to grow',
+  'retirement age': 'age you hope to stop working',
+  retirement: 'life after work',
+  'life insurance': 'insurance that can help your family if you die',
+  contribution: 'money added to an account',
+  '401(k)': 'workplace plan to save for when you stop working',
+  'roth ira': 'retirement account funded with money you already paid taxes on',
+  '529': 'plan to save for education',
+  '529 plan': 'plan to save for education',
+  '529 education plan': 'plan to save for education',
+  umbrella: 'extra insurance for large claims',
+  'umbrella liability': 'extra insurance for large claims',
+  'umbrella policy': 'extra insurance for large claims',
+  'credit card': 'card that lets you borrow money for purchases',
+  'sharpe ratio': 'how much return an investment earned for its ups and downs',
+  'expense ratio': 'yearly fee for a fund',
+  'emergency fund': 'savings for surprise costs',
+  'emergency funds': 'savings for surprise costs',
+  'debt avalanche': 'pay the highest-interest debt first',
+  'debt snowball': 'pay the smallest debt first',
+  'revolving apr': 'yearly interest rate on a changing balance',
+  apr: 'yearly cost of borrowing',
+  'mortality ratio': 'how life insurance compares with what your family may need',
+  'leveraged etf': 'investment designed to make daily market moves bigger',
+  'withdrawal rate': 'share of savings taken out over time',
+  'index fund': 'fund that follows a group of investments',
+  'index funds': 'funds that follow a group of investments',
+  'brokerage account': 'account for buying and selling investments',
+  'high-yield savings account': 'savings account with a higher interest rate',
+};
+
 const FINANCIAL_TERMS = Object.keys(DEFINITIONS)
   .sort((left, right) => right.length - left.length)
   .map((term) => ({
@@ -50,10 +87,37 @@ export interface FinancialTextSegment {
 
 export function getFinancialTermDefinition(term: string): string {
   const cleanTerm = term.trim();
-  const key = cleanTerm.toLowerCase().replace(/\s+/g, ' ');
+  const key = normalizeTerm(term);
 
   return DEFINITIONS[key]
     ?? `“${cleanTerm}” is a financial term whose exact meaning depends on how it is used in your plan. Your advisor can explain how it applies to your situation.`;
+}
+
+export function getSimpleFinancialTerm(term: string): string {
+  return SIMPLE_TERMS[normalizeTerm(term)] ?? term.trim();
+}
+
+export function simplifyFinancialText(text: string): string {
+  return splitFinancialTerms(text).reduce((result, segment) => {
+    if (!segment.term) return result + segment.text;
+
+    let replacement = getSimpleFinancialTerm(segment.term);
+    const article = result.match(/\b(an?)\s+$/i);
+    if (article) {
+      const desiredArticle = /^[aeiou]/i.test(replacement) ? 'an' : 'a';
+      const articleText = article[1][0] === article[1][0].toUpperCase()
+        ? desiredArticle[0].toUpperCase() + desiredArticle.slice(1)
+        : desiredArticle;
+      result = `${result.slice(0, -article[0].length)}${articleText} `;
+    }
+
+    const startsSentence = result.trim().length === 0 || /[.!?]\s*$/.test(result);
+    if (startsSentence && /^[A-Z]/.test(segment.text)) {
+      replacement = replacement[0].toUpperCase() + replacement.slice(1);
+    }
+
+    return result + replacement;
+  }, '');
 }
 
 export function splitFinancialTerms(text: string): FinancialTextSegment[] {
@@ -99,4 +163,8 @@ function escapeRegExp(value: string): string {
 
 function isWordCharacter(character: string | undefined): boolean {
   return character !== undefined && /[a-z0-9]/i.test(character);
+}
+
+function normalizeTerm(term: string): string {
+  return term.trim().toLowerCase().replace(/\s+/g, ' ');
 }

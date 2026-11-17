@@ -111,6 +111,7 @@ export interface InvestmentAnalysis {
 
 export type HouseholdType = 'couple' | 'single';
 export type ViewingStyle = 'analytical' | 'visual' | 'express';
+export type LanguageMode = 'standard' | 'simple';
 
 export interface GroundingRef {
   sourceFile: 'financial-health.json' | 'investment-analysis.json' | 'persona.md';
@@ -164,6 +165,7 @@ export type TelemetryEventType =
   | 'allocation_set'
   | 'story_complete'
   | 'style_select'
+  | 'language_mode_change'
   | 'grounding_view';
 
 export interface TermConsultationPayload {
@@ -193,6 +195,7 @@ export interface TelemetrySummary {
     tradeoffChanges: number;
     allocationChanges: number;
     voiceAsks: number;
+    languageModeChanges: number;
   };
   shouldSuggestCalibration: boolean;
 }

@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { getFinancialTermDefinition } from '../../lib/financialGlossary';
+import { getFinancialTermDefinition, getSimpleFinancialTerm } from '../../lib/financialGlossary';
 import { useAppStore } from '../../stores/appStore';
 import { StoryHelpContext } from '../stories/StoryHelpContext';
 
@@ -18,6 +18,7 @@ interface PopoverPosition {
 export function TapToDefine({ term, children }: Props) {
   const storyHelp = useContext(StoryHelpContext);
   const trackTermConsulted = useAppStore((state) => state.trackTermConsulted);
+  const languageMode = useAppStore((state) => state.languageMode);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const popoverId = useId();
@@ -30,6 +31,10 @@ export function TapToDefine({ term, children }: Props) {
     setIsOpen(false);
     if (restoreFocus) triggerRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (languageMode === 'simple') closePopover();
+  }, [closePopover, languageMode]);
 
   function handleTriggerClick() {
     if (isOpen) {
@@ -103,6 +108,10 @@ export function TapToDefine({ term, children }: Props) {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [closePopover, isOpen]);
+
+  if (languageMode === 'simple') {
+    return <span data-plain-language-term="true">{getSimpleFinancialTerm(term)}</span>;
+  }
 
   return (
     <>

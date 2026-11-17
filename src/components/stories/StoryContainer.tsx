@@ -8,9 +8,11 @@ import { advanceBeat, advanceElapsed, beatDuration, canNarrateStory, chapterProg
 import { buildStoryFrames } from '../../lib/storyFrames';
 import { storyTerms } from '../../lib/storyTerms';
 import { formatStoryValue } from '../../lib/storyFormatting';
-import { getFinancialTermDefinition } from '../../lib/financialGlossary';
+import { getFinancialTermDefinition, getSimpleFinancialTerm } from '../../lib/financialGlossary';
 import { StoryCard } from './StoryCard';
 import { StoryHelpContext } from './StoryHelpContext';
+import { CalibrationBanner } from '../shared/CalibrationBanner';
+import { FinancialText } from '../shared/FinancialText';
 import { CalibrationMicroCard } from '../calibration/CalibrationMicroCard';
 import { GroundingInspector } from '../calibration/GroundingInspector';
 import { VoicePushButton } from '../shared/VoicePushButton';
@@ -47,10 +49,11 @@ function frameDuration(card: StoryCardType): number {
 function TermsDialog({ terms, onClose, onSelect }: { terms: string[]; onClose: () => void; onSelect: (term: string) => void }) {
   const titleId = useId();
   const ref = useDialogFocus(true, onClose);
+  const languageMode = useAppStore((state) => state.languageMode);
   return <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65 p-5">
     <div ref={ref} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 text-white shadow-xl">
       <div className="flex items-center justify-between gap-3"><h2 id={titleId} className="text-lg font-semibold">Terms in this story</h2><button type="button" onClick={onClose} aria-label="Close terms" className="min-h-11 min-w-11"><X className="mx-auto h-5 w-5" /></button></div>
-      {terms.length ? <div className="mt-3 flex max-h-[55dvh] flex-col overflow-y-auto">{terms.map((term) => <button key={term.toLowerCase()} type="button" onClick={() => onSelect(term)} className="min-h-11 border-b border-white/10 py-2 text-left text-indigo-200 hover:text-white">{term}</button>)}</div> : <p className="mt-3 text-sm text-slate-300">No glossary terms appear in this story.</p>}
+      {terms.length ? <div className="mt-3 flex max-h-[55dvh] flex-col overflow-y-auto">{terms.map((term) => <button key={term.toLowerCase()} type="button" onClick={() => onSelect(term)} className="min-h-11 border-b border-white/10 py-2 text-left text-indigo-200 hover:text-white">{languageMode === 'simple' ? getSimpleFinancialTerm(term) : term}</button>)}</div> : <p className="mt-3 text-sm text-slate-300">No glossary terms appear in this story.</p>}
     </div>
   </div>;
 }
@@ -213,6 +216,7 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
             <VoicePushButton compact onOverlayChange={setVoicePanelOpen} caseId={caseId} voiceState={voice.voiceState} transcript={voice.transcript} responseMessage={voice.responseMessage} guardRedirect={voice.guardRedirect} detectedTerm={voice.detectedTerm} showSuggestions={voice.showSuggestions} onPressStart={voice.startListening} onPressEnd={voice.stopListening} onStopSpeaking={voice.stopSpeaking} onSelectSuggestion={(q) => voice.pushToAsk(q)} onOpenCalibration={handleCalibrationOpen} onClosePopup={() => { voice.setShowSuggestions(false); voice.clearGuardRedirect(); voice.clearResponseMessage(); voice.stopSpeaking(); }} />
           </div>
         </div>
+        <CalibrationBanner placement="inline" />
         <nav aria-label="Story steps" className="mt-2 flex gap-1 sm:gap-2">
           {stories.map((story, index) => {
             const firstFrame = frames.findIndex((item) => item.chapterIndex === index);
@@ -226,10 +230,10 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
         {checkpoint && chapter && <section className="mx-auto flex h-full max-w-xl flex-col px-5 pb-2 text-white" aria-label="Chapter checkpoint">
           <div className="shrink-0"><p className="text-xs font-semibold text-indigo-300">YOUR GUIDE · {frame.chapterIndex + 1} / {stories.length}</p><h1 className="mt-1 text-xl font-semibold">Anything you would like to clarify?</h1><p className="mt-1 text-sm text-slate-300">Review this chapter and ask a question, or continue when you are ready.</p></div>
           <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-xl border border-white/10 bg-white/5 px-4" aria-label="Chapter summary">
-            {chapter.highlightNumber != null && <div className="border-b border-white/10 py-2"><p className="text-xs text-slate-400">{chapter.highlightLabel || 'Highlight'}</p><p className="break-words text-sm text-white">{formatStoryValue(chapter.highlightNumber)}{chapter.highlightUnit ? ` ${chapter.highlightUnit}` : ''}</p>{chapter.tagline && <p className="text-xs text-slate-300">{chapter.tagline}</p>}</div>}
-            {chapter.dataPoints.map((point, index) => <div key={`${point.label}-${index}`} className="border-b border-white/10 py-2 last:border-0"><p className="text-xs text-slate-400">{point.label.replace(/_/g, ' ')}</p><p className="break-words text-sm text-white">{formatStoryValue(point.value)}{point.unit ? ` ${point.unit}` : ''}</p></div>)}
+            {chapter.highlightNumber != null && <div className="border-b border-white/10 py-2"><p className="text-xs text-slate-400"><FinancialText text={chapter.highlightLabel || 'Highlight'} /></p><p className="break-words text-sm text-white"><FinancialText text={`${formatStoryValue(chapter.highlightNumber)}${chapter.highlightUnit ? ` ${chapter.highlightUnit}` : ''}`} /></p>{chapter.tagline && <p className="text-xs text-slate-300"><FinancialText text={chapter.tagline} /></p>}</div>}
+            {chapter.dataPoints.map((point, index) => <div key={`${point.label}-${index}`} className="border-b border-white/10 py-2 last:border-0"><p className="text-xs text-slate-400"><FinancialText text={point.label.replace(/_/g, ' ')} /></p><p className="break-words text-sm text-white"><FinancialText text={`${formatStoryValue(point.value)}${point.unit ? ` ${point.unit}` : ''}`} /></p></div>)}
           </div>
-          <div className="shrink-0 pt-3">{questionOpen ? <form onSubmit={(event) => { event.preventDefault(); if (question.trim()) { voice.pushToAsk(question); setQuestion(''); } }}><label htmlFor={questionId} className="sr-only">Your question</label><div className="flex gap-2"><input id={questionId} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about this chapter" className="min-h-11 min-w-0 flex-1 rounded-xl border border-white/20 bg-white/5 px-3 text-sm" /><button type="submit" disabled={!question.trim()} className="min-h-11 rounded-xl border border-white/20 px-4 text-sm font-semibold disabled:opacity-40">Ask</button></div>{voice.isSpeaking && <p className="mt-1 text-xs text-slate-300">Waiting for a response…</p>}{(voice.responseMessage || voice.guardRedirect) && <p className="mt-1 max-h-16 overflow-y-auto text-xs text-slate-200">{voice.guardRedirect || voice.responseMessage}</p>}{voice.errorNotice && <p className="mt-1 text-xs text-slate-300">{voice.errorNotice}</p>}</form> : <button type="button" onClick={() => setQuestionOpen(true)} className="min-h-11 text-sm font-semibold text-indigo-200 underline">I have a question</button>}<button type="button" onClick={continueChapter} className="ml-3 min-h-11 rounded-xl bg-[#4565d6] px-5 text-sm font-semibold text-white">Continue</button></div>
+          <div className="shrink-0 pt-3">{questionOpen ? <form onSubmit={(event) => { event.preventDefault(); if (question.trim()) { voice.pushToAsk(question); setQuestion(''); } }}><label htmlFor={questionId} className="sr-only">Your question</label><div className="flex gap-2"><input id={questionId} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about this chapter" className="min-h-11 min-w-0 flex-1 rounded-xl border border-white/20 bg-white/5 px-3 text-sm" /><button type="submit" disabled={!question.trim()} className="min-h-11 rounded-xl border border-white/20 px-4 text-sm font-semibold disabled:opacity-40">Ask</button></div>{voice.isSpeaking && <p className="mt-1 text-xs text-slate-300">Waiting for a response…</p>}{(voice.responseMessage || voice.guardRedirect) && <p className="mt-1 max-h-16 overflow-y-auto text-xs text-slate-200"><FinancialText text={voice.guardRedirect ?? voice.responseMessage ?? ''} /></p>}{voice.errorNotice && <p className="mt-1 text-xs text-slate-300">{voice.errorNotice}</p>}</form> : <button type="button" onClick={() => setQuestionOpen(true)} className="min-h-11 text-sm font-semibold text-indigo-200 underline">I have a question</button>}<button type="button" onClick={continueChapter} className="ml-3 min-h-11 rounded-xl bg-[#4565d6] px-5 text-sm font-semibold text-white">Continue</button></div>
         </section>}
       </main>
       <button type="button" onClick={goToPrev} disabled={frameIndex === 0 || modalOpen || isAssistantActive} className="sr-only focus:not-sr-only">Previous story page</button><button type="button" onClick={goToNext} disabled={modalOpen || isAssistantActive} className="sr-only focus:not-sr-only">Next story page</button>

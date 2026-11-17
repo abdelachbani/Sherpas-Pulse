@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import type {
   CaseData,
   CoupleAllocation,
+  LanguageMode,
   TelemetryEvent,
   TelemetrySummary,
   ViewingStyle,
@@ -23,6 +24,7 @@ interface AppStore {
   currentCase:        CaseData | null;
   currentStoryIndex:  number;
   viewingStyle:       ViewingStyle | null;
+  languageMode:       LanguageMode;
   partner:            'primary' | 'secondary' | null;
   telemetryEvents:    TelemetryEvent[];
   coupleAllocations:  { primary: CoupleAllocation | null; secondary: CoupleAllocation | null };
@@ -31,6 +33,7 @@ interface AppStore {
   setCase(caseId: string): void;
   setStoryIndex(n: number): void;
   setViewingStyle(s: ViewingStyle): void;
+  setLanguageMode(mode: LanguageMode): void;
   setPartner(p: 'primary' | 'secondary'): void;
   addTelemetryEvent(e: TelemetryEvent): void;
   trackTermConsulted(term: string, storyId?: string): void;
@@ -48,6 +51,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   currentCase:        null,
   currentStoryIndex:  0,
   viewingStyle:       null,
+  languageMode:       'standard',
   partner:            null,
   telemetryEvents:    [],
   coupleAllocations:  { primary: null, secondary: null },
@@ -57,7 +61,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const found = CASES.find((c) => c.id === caseId) ?? null;
     if (get().currentCase?.id === found?.id) return;
     set({
-      currentCase: found, currentStoryIndex: 0, viewingStyle: null, partner: null,
+      currentCase: found, currentStoryIndex: 0, viewingStyle: null, languageMode: 'standard', partner: null,
       telemetryEvents: [], coupleAllocations: { primary: null, secondary: null },
     });
   },
@@ -65,6 +69,17 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setStoryIndex: (n) => set({ currentStoryIndex: n }),
 
   setViewingStyle: (s) => set({ viewingStyle: s }),
+
+  setLanguageMode: (mode) => {
+    if (get().languageMode === mode) return;
+    set((state) => ({
+      languageMode: mode,
+      telemetryEvents: [
+        ...state.telemetryEvents,
+        mkEvent('language_mode_change', { languageMode: mode }),
+      ],
+    }));
+  },
 
   setPartner: (p) => set({ partner: p }),
 
@@ -105,6 +120,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       currentCase:       null,
       currentStoryIndex: 0,
       viewingStyle:      null,
+      languageMode:       'standard',
       partner:           null,
       telemetryEvents:   [],
       coupleAllocations: { primary: null, secondary: null },
