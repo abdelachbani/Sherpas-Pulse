@@ -24,14 +24,14 @@ export function AllocationSummary({ totalCash, surplusCash, allocatedAmount }: P
   const isOverSurplus = allocatedAmount > surplusCash;
 
   const tankColor = isWithinSurplus
-    ? 'from-sky-500 to-indigo-500'
-    : 'from-amber-500 to-rose-500';
+    ? 'bg-blue-500'
+    : 'bg-amber-500';
 
   return (
-    <div className="w-full bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-xl space-y-3">
+    <div className="w-full bg-slate-900 border border-slate-800 rounded-3xl p-4  space-y-3">
       {/* Header row */}
       <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-1.5 text-sky-400 font-bold">
+        <div className="flex items-center gap-1.5 text-blue-400 font-bold">
           <Droplets className="w-4 h-4" />
           <span>Surplus Cash Tank</span>
         </div>
@@ -44,7 +44,7 @@ export function AllocationSummary({ totalCash, surplusCash, allocatedAmount }: P
       {/* Tank fill bar */}
       <div className="h-4 w-full bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800 relative">
         <motion.div
-          className={`h-full rounded-full bg-gradient-to-r ${tankColor} transition-all duration-300`}
+          className={`h-full rounded-full ${tankColor} transition-all duration-300`}
           style={{ width: `${percentUsed}%` }}
         />
       </div>

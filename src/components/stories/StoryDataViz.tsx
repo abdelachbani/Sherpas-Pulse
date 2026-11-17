@@ -144,7 +144,7 @@ export function SuperpowerVsLeakViz({
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="p-3 rounded-2xl bg-gradient-to-br from-emerald-950/60 to-slate-900 border border-emerald-500/40 relative overflow-hidden flex flex-col justify-between"
+        className="p-3 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden flex flex-col justify-between"
       >
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
@@ -162,7 +162,7 @@ export function SuperpowerVsLeakViz({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="p-3 rounded-2xl bg-gradient-to-br from-rose-950/60 to-slate-900 border border-rose-500/40 relative overflow-hidden flex flex-col justify-between cursor-pointer"
+        className="p-3 rounded-2xl bg-rose-950/20 border border-rose-500/30 relative overflow-hidden flex flex-col justify-between cursor-pointer"
         onClick={onInspectLeak}
       >
         <div>
@@ -197,7 +197,7 @@ export function RealLifeTranslatorViz({
     <motion.div
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="w-full p-3.5 rounded-2xl bg-slate-900/90 border border-indigo-500/30 my-2 space-y-2.5"
+      className="w-full p-3.5 rounded-2xl bg-white/5 border border-white/10 my-2 space-y-2.5"
     >
       <div className="flex items-center justify-between pb-1.5 border-b border-slate-800">
         <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
@@ -215,7 +215,7 @@ export function RealLifeTranslatorViz({
 
         <div className="text-sm font-black text-slate-400">≈</div>
 
-        <div className="flex-1 p-2 rounded-xl bg-indigo-950/40 border border-indigo-500/30">
+        <div className="flex-1 p-2 rounded-xl bg-[#4565d6]/15 border border-[#6380ff]/25">
           <div className="text-[10px] text-slate-400">Child's Future</div>
           <div className="text-xs font-bold text-indigo-300 mt-0.5 leading-tight">
             {equivalentMilestone}
@@ -243,7 +243,7 @@ export function LiquidityTankPreview({
   strategiesCount?: number;
 }) {
   return (
-    <div className="w-full p-3.5 rounded-2xl bg-slate-900/80 border border-sky-500/30 my-2 space-y-2">
+    <div className="w-full p-3.5 rounded-2xl bg-white/5 border border-white/10 my-2 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1 text-sky-400 font-semibold text-xs">
           <Droplets className="w-3.5 h-3.5" />
@@ -259,7 +259,7 @@ export function LiquidityTankPreview({
           initial={{ width: 0 }}
           animate={{ width: '60%' }}
           transition={{ duration: 1.0, ease: 'easeOut' }}
-          className="h-full bg-gradient-to-r from-sky-500 to-indigo-500 rounded-lg flex items-center justify-center text-[9px] font-bold text-white shadow-inner"
+          className="h-full bg-[#4565d6] rounded-lg flex items-center justify-center text-[9px] font-bold text-white shadow-inner"
         >
           {surplusCash} Surplus
         </motion.div>
@@ -284,15 +284,15 @@ export function TimelineMini({
   retirementAge?: number;
 }) {
   const milestones = [
-    { label: 'Today', year: 2026, icon: Sparkles, color: 'text-sky-400 bg-sky-950/60' },
-    { label: 'Vehicle', year: 2028, icon: Car, color: 'text-amber-400 bg-amber-950/60' },
-    { label: 'Home Upgrade', year: 2030, icon: Home, color: 'text-indigo-400 bg-indigo-950/60' },
-    { label: 'College', year: 2038, icon: GraduationCap, color: 'text-purple-400 bg-purple-950/60' },
-    { label: `Retire (${retirementAge})`, year: 2048, icon: Palmtree, color: 'text-emerald-400 bg-emerald-950/60' },
+    { label: 'Today', year: 2026, icon: Sparkles, color: 'text-[#aabaff] bg-[#4565d6]/20' },
+    { label: 'Vehicle', year: 2028, icon: Car, color: 'text-[#aabaff] bg-[#4565d6]/20' },
+    { label: 'Home Upgrade', year: 2030, icon: Home, color: 'text-[#aabaff] bg-[#4565d6]/20' },
+    { label: 'College', year: 2038, icon: GraduationCap, color: 'text-[#aabaff] bg-[#4565d6]/20' },
+    { label: `Retire (${retirementAge})`, year: 2048, icon: Palmtree, color: 'text-[#aabaff] bg-[#4565d6]/20' },
   ];
 
   return (
-    <div className="w-full my-2 p-3 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+    <div className="w-full my-2 p-3 rounded-2xl bg-white/5 border border-white/10 space-y-2">
       <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
         <span>Milestone Horizon</span>
         <span className="text-[10px] text-slate-400">2026 → 2048+</span>

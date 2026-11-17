@@ -61,7 +61,7 @@ export default function StoriesPage() {
   }
 
   return (
-    <div className="relative w-full h-dvh bg-slate-950 overflow-hidden flex flex-col justify-between">
+    <div className="relative w-full h-full bg-slate-950 overflow-hidden flex flex-col justify-between">
       <StoryContainer
         caseId={activeCase.id}
         stories={stories}

@@ -437,11 +437,7 @@ export default function TradeoffPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-white max-w-[420px] mx-auto p-4 pb-8 flex flex-col justify-between select-none relative overflow-x-hidden font-sans">
-      {/* Background Ambience Glow */}
-      <div className="absolute top-0 -left-20 w-64 h-64 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/3 -right-20 w-64 h-64 bg-emerald-600/15 rounded-full blur-3xl pointer-events-none" />
-
+    <div className="min-h-dvh bg-[#171827] text-white max-w-[420px] mx-auto p-5 pb-8 flex flex-col justify-between select-none relative overflow-x-hidden font-sans">
       {/* ── Top Header Bar ──────────────────────────────────────────────────── */}
       <div className="pt-2 relative z-10">
         <div className="flex items-center justify-between mb-2">
@@ -486,14 +482,14 @@ export default function TradeoffPage() {
             </span>
             <div>
               <div className="flex items-center gap-1.5">
-                <h1 className="text-lg font-black text-white leading-tight">
+                <h1 className="text-xl font-semibold tracking-tight text-white leading-tight">
                   {clientName} Carter
                 </h1>
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   Single
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-xs text-slate-400">
                 Age {clientAge} · {fh.case.city}, {fh.case.state} · Target Retire: {retirementAge}
               </p>
             </div>
@@ -529,7 +525,7 @@ export default function TradeoffPage() {
       </div>
 
       {/* ── Center Content: Interactive What-If & Priority Sliders ──────────── */}
-      <div className="py-4 space-y-4 relative z-10">
+      <div className="py-6 space-y-5 relative z-10">
         {/* Scenario Selector (if multiple exist, e.g. Home vs Retire vs Umbrella) */}
         {scenarios.length > 1 && (
           <div className="flex gap-2">
@@ -554,7 +550,7 @@ export default function TradeoffPage() {
         )}
 
         {/* ── Interactive What-If Chips Card ─────────────────────────────────── */}
-        <div className="p-4 rounded-3xl bg-slate-900/90 border border-indigo-500/30 shadow-xl space-y-3">
+        <div className="p-4 rounded-2xl bg-[#202237] border border-slate-700/70 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider">
               Competing Priorities
@@ -615,7 +611,7 @@ export default function TradeoffPage() {
                 </span>
               </div>
 
-              <p className="text-[11px] text-slate-300 mt-2 leading-relaxed">
+              <p className="text-xs text-slate-300 mt-2 leading-relaxed">
                 {activeScenario.optionA.impact}
               </p>
             </motion.div>
@@ -662,7 +658,7 @@ export default function TradeoffPage() {
                 </span>
               </div>
 
-              <p className="text-[11px] text-slate-300 mt-2 leading-relaxed">
+              <p className="text-xs text-slate-300 mt-2 leading-relaxed">
                 {activeScenario.optionB.impact}
               </p>
             </motion.div>
@@ -683,11 +679,11 @@ export default function TradeoffPage() {
             {/* Split Visual Progress Bar */}
             <div className="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden flex">
               <div
-                className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all duration-300"
+                className="h-full bg-indigo-500 transition-all duration-300"
                 style={{ width: `${weightA}%` }}
               />
               <div
-                className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-300"
+                className="h-full bg-emerald-500 transition-all duration-300"
                 style={{ width: `${weightB}%` }}
               />
             </div>
@@ -717,7 +713,7 @@ export default function TradeoffPage() {
         </div>
 
         {/* ── Priority Importance Sliders (1 to 5 Stars for Each Option) ────── */}
-        <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="p-4 rounded-2xl bg-[#202237] border border-slate-700/70 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
               <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
@@ -824,7 +820,7 @@ export default function TradeoffPage() {
         </div>
 
         {/* ── Timeline Horizon Scrubber (2026 to 2050) ───────────────────────── */}
-        <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-3">
+        <div className="p-4 rounded-2xl bg-[#202237] border border-slate-700/70 space-y-3">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
             <span className="flex items-center gap-1.5 text-sky-400">
               <Calendar className="w-4 h-4" />
@@ -987,7 +983,7 @@ export default function TradeoffPage() {
               {milestoneData.title}
             </h4>
 
-            <p className="text-[11px] text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-300 leading-relaxed">
               {milestoneData.narrative}
             </p>
 
@@ -1028,13 +1024,13 @@ export default function TradeoffPage() {
       <div className="pt-2 pb-2 relative z-10 space-y-2">
         <button
           onClick={handleContinueToAction}
-          className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-emerald-600 hover:opacity-95 text-white font-black text-sm shadow-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+          className="w-full py-4 rounded-2xl bg-[#4565d6] hover:bg-[#6380ff] text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
         >
           <span>Continue to Your Action Plan</span>
           <ChevronRight className="w-4 h-4" />
         </button>
 
-        <p className="text-[11px] text-slate-400 text-center">
+        <p className="text-xs text-slate-400 text-center">
           Next: Turn your trade-off simulation into a concrete 5-minute win.
         </p>
       </div>

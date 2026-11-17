@@ -106,7 +106,7 @@ export function TapToDefine({ term, children }: Props) {
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-controls={popoverId}
-        className="cursor-pointer rounded-sm text-inherit underline decoration-dotted decoration-emerald-400/80 underline-offset-4 transition-colors hover:text-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-default disabled:no-underline"
+        className="cursor-pointer rounded-sm text-inherit underline decoration-dotted decoration-blue-400/80 underline-offset-4 transition-colors hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-default disabled:no-underline"
       >
         {children ?? term}
       </button>
@@ -119,11 +119,11 @@ export function TapToDefine({ term, children }: Props) {
           aria-modal="false"
           aria-labelledby={`${popoverId}-title`}
           style={{ position: 'fixed', top: position.top, left: position.left }}
-          className="z-[80] w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-slate-700/80 bg-slate-900/95 p-4 text-white shadow-2xl backdrop-blur-xl"
+          className="z-[80] w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-slate-700/80 bg-slate-900/95 p-4 text-white  "
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-blue-400">
                 Quick definition
               </p>
               <h2 id={`${popoverId}-title`} className="text-base font-bold leading-snug">
@@ -133,7 +133,7 @@ export function TapToDefine({ term, children }: Props) {
             <button
               type="button"
               onClick={() => closePopover(true)}
-              className="shrink-0 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+              className="shrink-0 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
               aria-label="Close definition"
             >
               <X className="h-4 w-4" />

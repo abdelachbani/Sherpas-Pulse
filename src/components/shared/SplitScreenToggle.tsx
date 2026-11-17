@@ -38,37 +38,35 @@ export function SplitScreenToggle({
   className = '',
 }: SplitScreenToggleProps) {
   return (
-    <div className={`w-full flex flex-col items-center gap-2 ${className}`}>
+    <div className={`flex flex-col items-center gap-2 ${className}`}>
       {/* Primary Toggle Bar */}
-      <div className="inline-flex p-1 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl backdrop-blur-md">
+      <div className="inline-flex p-1 rounded-xl bg-slate-900 border border-slate-700 ">
         <button
           type="button"
           onClick={() => onModeChange('single')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+          aria-label="Single Phone"
+          className={`flex items-center gap-2 min-h-11 px-3 rounded-lg text-xs font-semibold transition-all ${
             mode === 'single'
-              ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md'
+              ? 'bg-[#4565d6] text-white '
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <Smartphone className="w-3.5 h-3.5" />
-          <span>Single Phone</span>
+          <span className="hidden sm:inline">Single Phone</span>
         </button>
 
         <button
           type="button"
           onClick={() => onModeChange('split')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all relative ${
+          aria-label="Split Screen"
+          className={`flex items-center gap-2 min-h-11 px-3 rounded-lg text-xs font-semibold transition-all relative ${
             mode === 'split'
-              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
+              ? 'bg-[#4565d6] text-white '
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <Monitor className="w-3.5 h-3.5" />
-          <span>Split Screen</span>
-          <span className="flex h-2 w-2 relative ml-0.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
+          <span className="hidden sm:inline">Split Screen</span>
         </button>
       </div>
 
@@ -77,15 +75,15 @@ export function SplitScreenToggle({
         <motion.div
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/60 border border-slate-800/80 text-[11px]"
+          className="flex flex-wrap justify-center items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/60 border border-slate-800/80 text-[11px]"
         >
           <span className="text-slate-400 font-medium">Split View:</span>
           <button
             type="button"
             onClick={() => onTargetChange('advisor')}
-            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-medium transition-all ${
+            className={`flex items-center gap-1 min-h-11 px-2.5 rounded-lg font-medium transition-all ${
               target === 'advisor'
-                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -96,9 +94,9 @@ export function SplitScreenToggle({
           <button
             type="button"
             onClick={() => onTargetChange('partners')}
-            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-medium transition-all ${
+            className={`flex items-center gap-1 min-h-11 px-2.5 rounded-lg font-medium transition-all ${
               target === 'partners'
-                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -145,9 +143,9 @@ export function SplitScreenContainer({
   return (
     <div className={`w-full max-w-6xl mx-auto px-4 py-2 ${className}`}>
       {/* Projector Header Banner */}
-      <div className="mb-4 flex items-center justify-between px-4 py-2.5 rounded-2xl bg-slate-900/70 border border-indigo-500/30 text-xs">
-        <div className="flex items-center gap-2 text-indigo-300 font-semibold">
-          <Sparkles className="w-4 h-4 text-indigo-400" />
+      <div className="mb-4 flex items-center justify-between px-4 py-2.5 rounded-2xl bg-slate-900/70 border border-blue-500/30 text-xs">
+        <div className="flex items-center gap-2 text-blue-300 font-semibold">
+          <Sparkles className="w-4 h-4 text-blue-400" />
           <span>Stage Projector Mode · Dual View Synchronized in Real-Time</span>
         </div>
         <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono">
@@ -158,7 +156,7 @@ export function SplitScreenContainer({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start justify-center">
         {/* Left Mobile Device Frame */}
-        <div className="w-full max-w-[420px] mx-auto rounded-[36px] bg-slate-900/90 border-2 border-slate-700/80 p-3 shadow-2xl shadow-indigo-950/40 relative overflow-hidden">
+        <div className="w-full max-w-[420px] mx-auto rounded-[36px] bg-slate-900/90 border-2 border-slate-700/80 p-3   relative overflow-hidden">
           {/* Top Speaker Notch */}
           <div className="flex justify-center mb-2">
             <div className="w-24 h-4 bg-slate-950 rounded-full flex items-center justify-center">
@@ -170,7 +168,7 @@ export function SplitScreenContainer({
           {/* Device Label */}
           <div className="px-3 py-1.5 mb-2 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between text-xs">
             <span className="font-bold text-white flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
+              <span className="w-2 h-2 rounded-full bg-blue-400"></span>
               {leftTitle}
             </span>
             {leftSubtitle && <span className="text-[10px] text-slate-400">{leftSubtitle}</span>}
@@ -182,7 +180,7 @@ export function SplitScreenContainer({
         </div>
 
         {/* Right Mobile Device Frame */}
-        <div className="w-full max-w-[420px] mx-auto rounded-[36px] bg-slate-900/90 border-2 border-slate-700/80 p-3 shadow-2xl shadow-purple-950/40 relative overflow-hidden">
+        <div className="w-full max-w-[420px] mx-auto rounded-[36px] bg-slate-900/90 border-2 border-slate-700/80 p-3   relative overflow-hidden">
           {/* Top Speaker Notch */}
           <div className="flex justify-center mb-2">
             <div className="w-24 h-4 bg-slate-950 rounded-full flex items-center justify-center">
@@ -194,7 +192,7 @@ export function SplitScreenContainer({
           {/* Device Label */}
           <div className="px-3 py-1.5 mb-2 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between text-xs">
             <span className="font-bold text-white flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+              <span className="w-2 h-2 rounded-full bg-blue-400"></span>
               {rightTitle}
             </span>
             {rightSubtitle && <span className="text-[10px] text-slate-400">{rightSubtitle}</span>}

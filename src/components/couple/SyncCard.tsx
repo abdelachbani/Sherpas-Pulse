@@ -53,13 +53,11 @@ export function GreenZoneCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1, duration: 0.35 }}
-      className="w-full bg-gradient-to-b from-emerald-950/40 via-slate-900 to-slate-900/95 border border-emerald-500/40 rounded-3xl p-4.5 shadow-xl relative overflow-hidden"
+      className="w-full bg-slate-900 border border-emerald-500/40 rounded-3xl p-4  relative overflow-hidden"
     >
-      {/* Decorative ambient glow */}
-      <div className="absolute -top-10 -right-10 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
       {/* Top Badge Row */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/30">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
           <span>Ready-to-Act Agreement</span>
@@ -105,10 +103,10 @@ export function GreenZoneCard({
 
         <div className="grid grid-cols-2 gap-2">
           {/* Partner 1 (Timothy) */}
-          <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 flex items-center justify-between">
+          <div className="p-2.5 rounded-xl bg-blue-950/40 border border-blue-500/30 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-bold text-indigo-300 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+              <div className="text-[11px] font-bold text-blue-300 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                 <span>{partner1Name}</span>
               </div>
               <span className="text-[10px] text-slate-400">Ranked #1 Priority</span>
@@ -119,10 +117,10 @@ export function GreenZoneCard({
           </div>
 
           {/* Partner 2 (Melanie) */}
-          <div className="p-2.5 rounded-xl bg-rose-950/40 border border-rose-500/30 flex items-center justify-between">
+          <div className="p-2.5 rounded-xl bg-blue-950/40 border border-blue-500/30 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-bold text-rose-300 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+              <div className="text-[11px] font-bold text-blue-300 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                 <span>{partner2Name}</span>
               </div>
               <span className="text-[10px] text-slate-400">Ranked #1 Priority</span>
@@ -192,13 +190,11 @@ export function AmberZoneCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1, duration: 0.35 }}
-      className="w-full bg-gradient-to-b from-amber-950/40 via-slate-900 to-slate-900/95 border border-amber-500/40 rounded-3xl p-4.5 shadow-xl relative overflow-hidden"
+      className="w-full bg-slate-900 border border-amber-500/40 rounded-3xl p-4  relative overflow-hidden"
     >
-      {/* Decorative ambient glow */}
-      <div className="absolute -top-10 -right-10 w-28 h-28 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
 
       {/* Top Badge Row */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-bold border border-amber-500/30">
           <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
           <span>Advisor Tie-Breaker</span>
@@ -220,19 +216,19 @@ export function AmberZoneCard({
       </p>
 
       {/* Both Partners' Priority Badges & Comparison */}
-      <div className="mt-3 grid grid-cols-[1fr,auto,1fr] items-center gap-2">
+      <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
         {/* Partner 1 Priority */}
-        <div className="p-3 rounded-2xl bg-indigo-950/50 border border-indigo-500/40 text-left">
+        <div className="p-3 rounded-2xl bg-blue-950/50 border border-blue-500/40 text-left">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">
               {p1}
             </span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-indigo-600/30 text-indigo-200 font-bold">
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-blue-600/30 text-blue-200 font-bold">
               #{tieBreaker.partner1Priority}
             </span>
           </div>
           <div className="text-xs font-bold text-white truncate">College 529</div>
-          <div className="text-xs font-black text-indigo-300 mt-0.5">
+          <div className="text-xs font-black text-blue-300 mt-0.5">
             ${tieBreaker.partner1Amount.toLocaleString()}
             <span className="text-[10px] font-normal text-slate-400">/yr</span>
           </div>
@@ -244,17 +240,17 @@ export function AmberZoneCard({
         </div>
 
         {/* Partner 2 Priority */}
-        <div className="p-3 rounded-2xl bg-rose-950/50 border border-rose-500/40 text-left">
+        <div className="min-w-0 p-2 rounded-xl bg-blue-950/40 border border-blue-500/30 text-left">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-bold text-rose-300 uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">
               {p2}
             </span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-rose-600/30 text-rose-200 font-bold">
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-blue-600/30 text-blue-200 font-bold">
               #{tieBreaker.partner2Priority}
             </span>
           </div>
           <div className="text-xs font-bold text-white truncate">Life Insurance</div>
-          <div className="text-xs font-black text-rose-300 mt-0.5">
+          <div className="text-xs font-black text-blue-300 mt-0.5">
             ${tieBreaker.partner2Amount.toLocaleString()}
           </div>
         </div>

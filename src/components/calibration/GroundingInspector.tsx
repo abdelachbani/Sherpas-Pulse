@@ -26,7 +26,7 @@ export function GroundingInspector({ grounding, onClose }: Props) {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 40 }}
-          className="w-full max-w-[400px] bg-slate-900 border border-emerald-500/40 rounded-3xl p-5 text-white shadow-2xl relative"
+          className="w-full max-w-[400px] max-h-[calc(100dvh-2rem)] overflow-y-auto bg-slate-900 border border-emerald-500/40 rounded-3xl p-5 text-white  relative"
         >
           {/* Header */}
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -43,7 +43,7 @@ export function GroundingInspector({ grounding, onClose }: Props) {
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+              className="min-w-11 min-h-11 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white"
             >
               <X className="w-4 h-4" />
             </button>
@@ -69,11 +69,11 @@ export function GroundingInspector({ grounding, onClose }: Props) {
               </div>
             </div>
 
-            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 font-mono text-[11px] text-sky-400">
+            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 font-mono text-[11px] text-blue-400">
               <Database className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
               <div className="break-all">
                 <span className="text-slate-400">Path: </span>
-                <span className="text-sky-300">{grounding.jsonPath}</span>
+                <span className="text-blue-300">{grounding.jsonPath}</span>
               </div>
             </div>
 
@@ -92,7 +92,7 @@ export function GroundingInspector({ grounding, onClose }: Props) {
 
           <button
             onClick={onClose}
-            className="mt-4 w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm transition-colors"
+            className="mt-4 w-full min-h-11 py-2.5 rounded-xl bg-[#4565d6] hover:bg-[#6380ff] text-white font-semibold text-sm transition-colors"
           >
             Done
           </button>

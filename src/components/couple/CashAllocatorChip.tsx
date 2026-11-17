@@ -45,7 +45,7 @@ export function CashAllocatorChip({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-      className={`p-4 rounded-2xl border bg-slate-900/90 shadow-md ${urgencyColors[strategy.urgency]}`}
+      className={`p-4 rounded-2xl border bg-slate-900/90  ${urgencyColors[strategy.urgency]}`}
     >
       <div className="flex items-start justify-between gap-3">
         {/* Priority Rank & Title */}
@@ -66,7 +66,7 @@ export function CashAllocatorChip({
           <button
             onClick={onMoveUp}
             disabled={isFirst}
-            className={`p-1 rounded-lg ${isFirst ? 'text-slate-600' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}
+            className={`min-w-11 min-h-11 flex items-center justify-center rounded-lg ${isFirst ? 'text-slate-600' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}
             aria-label="Move priority up"
           >
             <ArrowUp className="w-3.5 h-3.5" />
@@ -74,7 +74,7 @@ export function CashAllocatorChip({
           <button
             onClick={onMoveDown}
             disabled={isLast}
-            className={`p-1 rounded-lg ${isLast ? 'text-slate-600' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}
+            className={`min-w-11 min-h-11 flex items-center justify-center rounded-lg ${isLast ? 'text-slate-600' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}
             aria-label="Move priority down"
           >
             <ArrowDown className="w-3.5 h-3.5" />

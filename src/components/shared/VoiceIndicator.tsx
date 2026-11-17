@@ -24,7 +24,7 @@ export function VoiceIndicator({ voiceState, onActivate }: Props) {
 
   return (
     <motion.button
-      className={`${color} text-xs font-medium px-3 py-1 rounded-full shadow select-none`}
+      className={`${color} min-h-11 text-xs font-medium px-3 py-1 rounded-full select-none`}
       onClick={onActivate}
       animate={pulse ? { opacity: [1, 0.6, 1] } : { opacity: 1 }}
       transition={pulse ? { duration: 1.2, repeat: Infinity } : {}}

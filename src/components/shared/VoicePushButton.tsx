@@ -179,7 +179,7 @@ export function VoicePushButton({
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="absolute bottom-full mb-3 w-[340px] max-w-[92vw] p-3.5 rounded-3xl text-xs shadow-2xl backdrop-blur-xl border bg-slate-900/95 border-slate-700/80 text-white z-50 space-y-2.5"
+            className="absolute bottom-full mb-3 w-[340px] max-w-[calc(100vw-2rem)] max-h-[70dvh] overflow-y-auto p-3.5 rounded-3xl text-xs   border bg-slate-900/95 border-slate-700/80 text-white z-50 space-y-2.5"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -197,13 +197,13 @@ export function VoicePushButton({
                   </>
                 ) : isSpeaking ? (
                   <>
-                    <Volume2 className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-                    <span className="text-indigo-300">Sherpas Voice Answer</span>
+                    <Volume2 className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+                    <span className="text-blue-300">Sherpas Voice Answer</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-                    <span className="text-sky-300">Ask Your Sherpas Guide</span>
+                    <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="text-blue-300">Ask Your Sherpas Guide</span>
                   </>
                 )}
               </div>
@@ -211,7 +211,7 @@ export function VoicePushButton({
               {onClosePopup && (
                 <button
                   onClick={onClosePopup}
-                  className="p-1 rounded-full text-slate-400 hover:text-white transition-colors"
+                  className="min-w-11 min-h-11 flex items-center justify-center rounded-full text-slate-400 hover:text-white transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -272,7 +272,7 @@ export function VoicePushButton({
                     <button
                       key={q.label}
                       onClick={() => onSelectSuggestion?.(q.query)}
-                      className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-colors cursor-pointer"
+                      className="min-h-11 p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-colors cursor-pointer"
                     >
                       <div className="text-xs font-bold text-white flex items-center gap-1 truncate">
                         <span>{q.icon}</span>
@@ -289,12 +289,12 @@ export function VoicePushButton({
                     value={customText}
                     onChange={(e) => setCustomText(e.target.value)}
                     placeholder="Or type a question (e.g. ¿cuánto dinero tengo?)..."
-                    className="flex-1 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
+                    className="min-w-0 flex-1 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-400"
                   />
                   <button
                     type="submit"
                     disabled={!customText.trim()}
-                    className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold text-xs transition-colors cursor-pointer"
+                    className="min-h-11 px-3 py-1.5 rounded-xl bg-[#4565d6] hover:bg-blue-500 disabled:opacity-40 text-white font-bold text-xs transition-colors cursor-pointer"
                   >
                     Ask
                   </button>
@@ -332,12 +332,12 @@ export function VoicePushButton({
             userSelect: 'none',
             WebkitTouchCallout: 'none',
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold shadow-xl border transition-all cursor-pointer select-none ${
+          className={`flex items-center gap-2 min-h-11 px-4 py-2 rounded-full text-xs font-bold  border transition-all cursor-pointer select-none ${
             isListening
-              ? 'bg-rose-600 text-white border-rose-400 shadow-rose-600/40 ring-4 ring-rose-500/20'
+              ? 'bg-rose-600 text-white border-rose-400  ring-4 ring-rose-500/20'
               : isSpeaking
-              ? 'bg-indigo-600 text-white border-indigo-400 shadow-indigo-600/30 animate-pulse'
-              : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:border-slate-500 hover:text-white backdrop-blur-md'
+              ? 'bg-blue-600 text-white border-blue-400  animate-pulse'
+              : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:border-slate-500 hover:text-white '
           }`}
           aria-label={isListening ? 'Release to ask' : 'Hold to ask'}
         >
@@ -348,12 +348,12 @@ export function VoicePushButton({
             </>
           ) : isSpeaking ? (
             <>
-              <Volume2 className="w-3.5 h-3.5 text-indigo-300 animate-pulse" />
+              <Volume2 className="w-3.5 h-3.5 text-blue-300 animate-pulse" />
               <span>Sherpas Answering...</span>
             </>
           ) : (
             <>
-              <Mic className="w-3.5 h-3.5 text-indigo-400" />
+              <Mic className="w-3.5 h-3.5 text-blue-400" />
               <span>Hold to Ask</span>
             </>
           )}

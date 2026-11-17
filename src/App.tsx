@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
 import CaseSelectPage from './pages/CaseSelectPage';
 import HouseholdEntryPage from './pages/HouseholdEntryPage';
 import StoriesPage from './pages/StoriesPage';
@@ -22,9 +22,15 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="relative min-h-dvh bg-slate-950 text-white">
+      <div className="app-shell relative bg-slate-950 text-white">
         {/* Live Projector Split Screen Toggle */}
-        <div className="fixed top-3 right-3 z-50">
+        <a className="skip-link" href="#app-content">Skip to content</a>
+        <header className="app-toolbar">
+          <div className="app-toolbar-inner">
+            <Link className="app-wordmark" to="/" aria-label="Sherpas Pulse home">
+              <img src="/brand/sherpas.svg" alt="Sherpas" width="104" height="30" />
+              <span>Pulse</span>
+            </Link>
           <SplitScreenToggle
             mode={splitMode}
             onModeChange={setSplitMode}
@@ -33,8 +39,10 @@ export default function App() {
             partner1Name="Timothy"
             partner2Name="Melanie"
           />
-        </div>
+          </div>
+        </header>
 
+        <div id="app-content" className="app-content" tabIndex={-1}>
         {splitMode === 'split' ? (
           /* Split Screen Projector Mode for Live Demo */
           <div className="flex flex-col lg:flex-row items-center justify-center gap-6 min-h-dvh p-4 pt-16 bg-slate-950 overflow-x-auto">
@@ -93,6 +101,7 @@ export default function App() {
             <Route path="/case/:caseId/action" element={<ActionPage />} />
           </Routes>
         )}
+        </div>
       </div>
     </BrowserRouter>
   );

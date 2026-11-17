@@ -365,7 +365,7 @@ https://sherpas.io`;
 
   // ── Render: Client Action Plan (Left View) ──────────────────────────────────
   const renderClientPlanView = (
-    <div className="p-4 space-y-4 text-white">
+    <div className="p-5 space-y-6 text-white">
       {/* ── Celebration Header ────────────────────────────────────────────── */}
       <div className="pt-1">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold border border-emerald-500/40">
@@ -373,7 +373,7 @@ https://sherpas.io`;
           <span>Your 5-Minute Win</span>
         </div>
 
-        <h1 className="text-2xl font-black text-white mt-2 leading-tight">
+        <h1 className="text-2xl font-semibold tracking-tight text-white mt-2 leading-tight">
           {isCouple ? `${clientName} & ${partnerName}’s Breakthrough` : `${clientName}’s Breakthrough`}
         </h1>
         <p className="text-xs text-slate-300 mt-1 leading-relaxed">
@@ -385,9 +385,8 @@ https://sherpas.io`;
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="rounded-3xl bg-gradient-to-br from-emerald-950/80 via-slate-900 to-slate-900 border-2 border-emerald-500/50 p-5 shadow-2xl shadow-emerald-950/40 relative overflow-hidden"
+        className="rounded-2xl bg-[#202237] border border-emerald-500/30 p-5 relative overflow-hidden"
       >
-        <div className="absolute top-0 right-0 translate-x-4 -translate-y-4 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
@@ -444,10 +443,10 @@ https://sherpas.io`;
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+            <h2 className="text-sm font-semibold text-white tracking-wide flex items-center gap-1.5">
               <span>Your 3-Step Execution Plan</span>
             </h2>
-            <p className="text-[11px] text-slate-400">Tap any step to mark complete as you take action</p>
+            <p className="text-xs text-slate-400">Tap any step to mark complete as you take action</p>
           </div>
           <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-800 text-indigo-300 border border-slate-700">
             {completedCount} / {checklist.length} Done
@@ -457,7 +456,7 @@ https://sherpas.io`;
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-800">
           <div
-            className="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 transition-all duration-300"
+            className="h-full bg-indigo-500 transition-all duration-300"
             style={{ width: `${(completedCount / checklist.length) * 100}%` }}
           />
         </div>
@@ -502,7 +501,7 @@ https://sherpas.io`;
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">{item.description}</p>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">{item.description}</p>
 
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
@@ -531,7 +530,7 @@ https://sherpas.io`;
       </div>
 
       {/* ── Multi-Touch Smart Nudges ──────────────────────────────────────── */}
-      <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-3">
+      <div className="p-4 rounded-2xl bg-[#202237] border border-slate-700/70 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="p-1.5 rounded-xl bg-indigo-500/20 text-indigo-400">
@@ -573,7 +572,7 @@ https://sherpas.io`;
         </div>
 
         {/* Nudge Preview Box */}
-        <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-slate-300 whitespace-pre-wrap leading-relaxed max-h-44 overflow-y-auto">
+        <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-300 whitespace-pre-wrap leading-relaxed max-h-44 overflow-y-auto">
           {nudgeChannel === 'whatsapp' ? whatsappNudge : emailNudge}
         </div>
 
@@ -584,7 +583,7 @@ https://sherpas.io`;
           className={`w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98] ${
             copiedNudge
               ? 'bg-emerald-600 text-white'
-              : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+              : 'bg-[#4565d6] hover:bg-[#6380ff] text-white'
           }`}
         >
           {copiedNudge ? (
@@ -621,12 +620,12 @@ https://sherpas.io`;
 
   // ── Render: Advisor Pre-Meeting View (Right View / Sherpas Dashboard) ───────
   const renderAdvisorView = (
-    <div className="p-4 space-y-4 text-white">
+    <div className="p-5 space-y-6 text-white">
       {/* ── Advisor Top Header ────────────────────────────────────────────── */}
       <div className="pt-1">
         <div className="flex items-center justify-between">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-semibold border border-purple-500/40">
-            <Activity className="w-3.5 h-3.5 text-purple-400" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold border border-indigo-500/40">
+            <Activity className="w-3.5 h-3.5 text-indigo-400" />
             <span>Sherpas Advisor Dashboard</span>
           </div>
           <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -635,7 +634,7 @@ https://sherpas.io`;
           </span>
         </div>
 
-        <h2 className="text-xl font-black text-white mt-2 leading-tight">
+        <h2 className="text-2xl font-semibold tracking-tight text-white mt-2 leading-tight">
           Advisor Pre-Meeting View
         </h2>
         <p className="text-xs text-slate-300 mt-1 leading-relaxed">
@@ -644,10 +643,10 @@ https://sherpas.io`;
       </div>
 
       {/* ── Comprehension Telemetry Card ──────────────────────────────────── */}
-      <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-3">
+      <div className="p-4 rounded-2xl bg-[#202237] border border-slate-700/70 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-300 font-bold text-xs">
+            <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-300 font-bold text-xs">
               94%
             </div>
             <div>
@@ -702,10 +701,10 @@ https://sherpas.io`;
 
       {/* ── Couple Consensus Summary ──────────────────────────────────────── */}
       {isCouple && (
-        <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-3">
+        <div className="p-4 rounded-2xl bg-[#202237] border border-slate-700/70 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-white flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-purple-400" />
+              <Users className="w-3.5 h-3.5 text-indigo-400" />
               <span>Couple Consensus Summary</span>
             </span>
             <span className="text-[10px] text-slate-400">
@@ -720,7 +719,7 @@ https://sherpas.io`;
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Instant Agreements (Green Zone)</span>
               </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
+              <p className="text-xs text-slate-300 leading-relaxed">
                 Both agreed on <strong>Pay off 18% Credit Card ($18,000)</strong> saving $3,240/yr and adding <strong>$1M Umbrella Policy</strong>.
               </p>
             </div>
@@ -731,7 +730,7 @@ https://sherpas.io`;
                 <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
                 <span>Advisor Tie-Breaker (Amber Zone)</span>
               </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
+              <p className="text-xs text-slate-300 leading-relaxed">
                 {clientName} prioritized <strong>College 529 ($4,609/yr)</strong> as #2, while {partnerName} prioritized <strong>Term Life Insurance ($235,000)</strong> as #2.
               </p>
             </div>
@@ -740,24 +739,24 @@ https://sherpas.io`;
       )}
 
       {/* ── "3 Human Questions for the Zoom Call" ──────────────────────────── */}
-      <div className="p-4 rounded-3xl bg-slate-900 border border-purple-500/40 space-y-3">
+      <div className="p-4 rounded-3xl bg-slate-900 border border-indigo-500/40 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-xl bg-purple-500/20 text-purple-300">
+            <span className="p-1.5 rounded-xl bg-indigo-500/20 text-indigo-300">
               <HelpCircle className="w-4 h-4" />
             </span>
             <div>
               <h3 className="text-xs font-bold text-white">3 Human Questions for the Zoom Call</h3>
-              <p className="text-[10px] text-purple-300">Advisor Cheat-Sheet: Skip the slides</p>
+              <p className="text-[10px] text-indigo-300">Advisor Cheat-Sheet: Skip the slides</p>
             </div>
           </div>
         </div>
 
         <div className="space-y-2.5 text-xs">
           {/* Question 1 */}
-          <div className="p-3 rounded-2xl bg-slate-950 border border-purple-500/20 space-y-1">
+          <div className="p-3 rounded-2xl bg-slate-950 border border-indigo-500/20 space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wide">
+              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide">
                 Question 1 · Priority Tension
               </span>
               <span className="text-[10px] text-slate-400">Minute 0–4</span>
@@ -768,9 +767,9 @@ https://sherpas.io`;
           </div>
 
           {/* Question 2 */}
-          <div className="p-3 rounded-2xl bg-slate-950 border border-purple-500/20 space-y-1">
+          <div className="p-3 rounded-2xl bg-slate-950 border border-indigo-500/20 space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wide">
+              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide">
                 Question 2 · Emotional Liquidity
               </span>
               <span className="text-[10px] text-slate-400">Minute 5–9</span>
@@ -781,9 +780,9 @@ https://sherpas.io`;
           </div>
 
           {/* Question 3 */}
-          <div className="p-3 rounded-2xl bg-slate-950 border border-purple-500/20 space-y-1">
+          <div className="p-3 rounded-2xl bg-slate-950 border border-indigo-500/20 space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wide">
+              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide">
                 Question 3 · Protection Blindspot
               </span>
               <span className="text-[10px] text-slate-400">Minute 10–14</span>
@@ -794,7 +793,7 @@ https://sherpas.io`;
           </div>
         </div>
 
-        <div className="p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/30 text-[11px] text-purple-200">
+        <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-[11px] text-indigo-200">
           💡 <strong>Pro Advisor Tip:</strong> Addressing these 3 human tension points secures client commitment and execution in the first 15 minutes of the call.
         </div>
       </div>
@@ -816,7 +815,7 @@ https://sherpas.io`;
   );
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-white flex flex-col items-center">
+    <div className="min-h-dvh bg-[#171827] text-white flex flex-col items-center">
       {/* ── Top Bar with Projector Split Screen Toggle ─────────────────────── */}
       <div className="w-full max-w-4xl px-4 pt-4 pb-2 flex flex-col items-center gap-3">
         <SplitScreenToggle
@@ -849,7 +848,7 @@ https://sherpas.io`;
               onClick={() => setActiveTab('advisor')}
               className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                 activeTab === 'advisor'
-                  ? 'bg-purple-600 text-white shadow-md'
+                  ? 'bg-indigo-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >

@@ -1,20 +1,90 @@
 @import "tailwindcss";
 
+@font-face { font-family: Inter; src: url('/brand/inter-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: Inter; src: url('/brand/inter-500.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: Inter; src: url('/brand/inter-600.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: Inter; src: url('/brand/inter-700.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: Poppins; src: url('/brand/poppins-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: Poppins; src: url('/brand/poppins-500.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: Poppins; src: url('/brand/poppins-600.woff2') format('woff2'); font-weight: 600 900; font-display: swap; }
+
+/* Shared Sherpas palette: financial status colours remain independent. */
+@theme {
+  --color-slate-950: #161827;
+  --color-slate-900: #1e2235;
+  --color-slate-800: #2b3046;
+  --color-slate-700: #424960;
+  --color-slate-600: #596176;
+  --color-slate-500: #677086;
+  --color-slate-400: #a1a8bc;
+  --color-slate-300: #c4c9d9;
+  --color-slate-200: #dfe1e9;
+  --color-slate-100: #f0f1f5;
+  --color-slate-50: #f8f9fb;
+  --color-indigo-50: #f0f3ff;
+  --color-indigo-100: #e1e7ff;
+  --color-indigo-200: #c4d0ff;
+  --color-indigo-300: #a5b7ff;
+  --color-indigo-400: #819cff;
+  --color-indigo-500: #6380ff;
+  --color-indigo-600: #4565d6;
+  --color-indigo-700: #3650b3;
+  --color-indigo-800: #293f90;
+  --color-indigo-900: #233064;
+  --color-indigo-950: #1b2446;
+}
+
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: Inter, system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: light dark;
+  color-scheme: dark;
+  background: #161827;
+  font-synthesis: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+body { margin: 0; min-width: 320px; }
+#root { min-height: 100dvh; }
+h1, h2, h3 { font-family: Poppins, Inter, sans-serif; letter-spacing: -0.035em; text-wrap: balance; }
+button, input, select, textarea { font-family: inherit; }
+button { touch-action: manipulation; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button:enabled, a { transition: background-color 160ms, border-color 160ms, color 160ms, box-shadow 160ms, transform 160ms; }
+button:enabled:active { transform: translateY(1px); }
+:focus-visible { outline: 3px solid #4565d6; outline-offset: 3px; box-shadow: 0 0 0 6px white; }
+::selection { background: #4565d6; color: white; }
+input[type="range"] { accent-color: #6380ff; }
+input[type="checkbox"] { accent-color: #4565d6; }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  background-color: #f9fafb;
+.app-toolbar { background: #fcfcfc; color: #141419; border-bottom: 1px solid #dfe1e9; }
+.app-toolbar-inner { max-width: 1280px; margin-inline: auto; min-height: 76px; padding: 12px 48px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.app-wordmark { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+.app-wordmark img { width: 104px; height: 30px; }
+.app-wordmark span { border-left: 1px solid #dfe1e9; padding-left: 16px; color: #596176; font-size: 12px; letter-spacing: 0.14em; }
+.app-toolbar-inner > div:last-child { width: auto; }
+.skip-link { position: absolute; left: 12px; top: -80px; z-index: 100; padding: 12px 20px; background: white; color: #141419; }
+.skip-link:focus { top: 12px; }
+.story-shell { box-shadow: 0 0 0 1px #ffffff0d; }
+.story-card h1 { font-weight: 500; font-size: clamp(24px, 6vw, 30px); line-height: 1.2; }
+.story-card { --tw-shadow: 0 0 #0000; }
+@media (hover: hover) {
+  button:enabled:hover { transform: translateY(-1px); }
+  article[onclick]:hover { transform: translateY(-2px); }
+}
+@media (max-width: 639px) {
+  .app-toolbar-inner { padding: 10px 20px; min-height: 66px; gap: 8px; flex-wrap: wrap; }
+  .app-wordmark { gap: 8px; }
+  .app-wordmark img { width: 82px; height: 24px; }
+  .app-wordmark span { font-size: 10px; padding-left: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
 
-#root {
-  min-height: 100vh;
-}
+.app-shell { height: 100dvh; display: flex; flex-direction: column; }
+.app-toolbar { flex-shrink: 0; }
+.app-content { flex: 1; min-height: 0; overflow: auto; }
+@media (hover: hover) { button[class*="bg-indigo-600"]:hover, button[class*="bg-[#4565d6]"]:hover { background-color: #3650b3; } }

@@ -131,14 +131,14 @@ export function StoryCard({
   }
 
   return (
-    <div className="h-full flex flex-col justify-between px-4 pt-11 pb-20 select-none relative z-10 text-white overflow-hidden">
+    <div className="story-card h-full flex flex-col justify-between px-5 pt-16 pb-20 select-none relative z-10 text-white overflow-hidden">
       {/* ── Top Header (Shrink-0 to avoid crushing) ─────────────────────────── */}
-      <div className="shrink-0 mb-1">
+      <div className="shrink-0 mb-3">
         <div className="flex items-center justify-between">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md text-[10px] font-semibold text-slate-200 border border-white/10">
+          <div className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-300">
             <span className="capitalize">{card.pillar.replace('-', ' ')}</span>
             <span className="text-white/40">·</span>
-            <span className="text-emerald-400">Pillar {card.storyIndex + 1}/6</span>
+            <span className="text-[#91a5ff]">Pillar {card.storyIndex + 1}/6</span>
           </div>
 
           {card.grounding && (
@@ -147,7 +147,7 @@ export function StoryCard({
                 e.stopPropagation();
                 onInspectGrounding(card.grounding!);
               }}
-              className="inline-flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 px-2 py-0.5 rounded-full bg-emerald-950/40 border border-emerald-500/30 transition-colors"
+              className="inline-flex items-center gap-1 text-[10px] text-[#aabaff] hover:text-white px-2 py-1 transition-colors"
             >
               <ShieldCheck className="w-3 h-3" />
               <span>Grounding Badge</span>
@@ -158,7 +158,7 @@ export function StoryCard({
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-lg sm:text-xl font-black text-white mt-1.5 leading-tight tracking-tight"
+          className="text-2xl sm:text-3xl font-bold text-white mt-1.5 leading-tight tracking-tight"
         >
           {card.title}
         </motion.h1>
@@ -169,7 +169,7 @@ export function StoryCard({
       </div>
 
       {/* ── Center Content Area: Scrollable with safe bounds (pb-20 ensures NO bottom overlap) ── */}
-      <div className="flex-1 overflow-y-auto pr-1 no-scrollbar space-y-2 pb-20">
+      <div className="flex-1 overflow-y-auto pr-1 no-scrollbar space-y-2 pb-4">
         {/* Story 0: Vibe Check Style Picker */}
         {card.interactiveType === 'vibe_check' && (
           <div className="space-y-2 pt-0.5">
@@ -179,17 +179,17 @@ export function StoryCard({
             {[
               {
                 id: 'visual' as const,
-                title: 'Peace of Mind / Visual 🌿',
+                title: 'Peace of Mind / Visual',
                 desc: 'Family protection, children’s future, clean milestones with zero jargon.',
               },
               {
                 id: 'analytical' as const,
-                title: 'Analytical / Direct to Numbers 📊',
+                title: 'Analytical / Direct to Numbers',
                 desc: 'ROI, debt interest rates, tax brackets, and portfolio volatility.',
               },
               {
                 id: 'express' as const,
-                title: 'Express Mode ⚡',
+                title: 'Express Mode',
                 desc: 'Executive summary under 60 seconds with immediate next step.',
               },
             ].map((opt) => (
@@ -202,8 +202,8 @@ export function StoryCard({
                 }}
                 className={`w-full p-2.5 sm:p-3 rounded-2xl text-left border transition-all ${
                   viewingStyle === opt.id
-                    ? 'bg-indigo-600/40 border-indigo-400 text-white shadow-lg'
-                    : 'bg-slate-900/70 border-slate-700/70 text-slate-300 hover:border-slate-500'
+                    ? 'bg-[#4565d6]/25 border-[#6380ff] text-white'
+                    : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/30'
                 }`}
               >
                 <div className="font-bold text-xs text-white">{opt.title}</div>
@@ -284,7 +284,7 @@ export function StoryCard({
         {card.interactiveType === 'time_machine' && (
           <div>
             <TimelineMini retirementAge={62} />
-            <div className="p-3.5 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 text-xs space-y-1.5 mt-2">
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs space-y-1.5 mt-2">
               <div className="font-semibold text-indigo-300 flex items-center gap-1.5 text-xs">
                 <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Zero-Hallucination Grounding</span>
@@ -299,7 +299,7 @@ export function StoryCard({
         {/* Story 5: 5-Minute Win Action */}
         {card.interactiveType === 'wrapped_summary' && (
           <div className="space-y-2.5">
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-950/80 to-slate-900 border border-emerald-500/50">
+            <div className="p-3 rounded-2xl bg-[#4565d6]/15 border border-[#6380ff]/30">
               <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block mb-0.5">
                 The First Domino
               </span>
@@ -327,7 +327,7 @@ export function StoryCard({
                 e.stopPropagation();
                 onActionComplete?.();
               }}
-              className="w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-xl flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer mt-2"
+              className="w-full py-3 rounded-2xl bg-[#4565d6] hover:bg-[#6380ff] text-white font-bold text-xs shadow-xl flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer mt-2"
             >
               <span>Continue to Consensus & Advisor Prep</span>
               <ChevronRight className="w-4 h-4" />
@@ -339,7 +339,7 @@ export function StoryCard({
       {/* ── Bottom Subtle Navigation Hint (Shrink-0) ────────────────────────── */}
       <div className="shrink-0 pt-1 pb-1 flex items-center justify-between text-[10px] text-slate-400">
         <span className="flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#6380ff]" />
           Tap right to advance · Tap left to return
         </span>
         <button

@@ -42,28 +42,28 @@ function CaseCard({ caseData }: { caseData: CaseData }) {
 
   return (
     <article
-      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-3 active:scale-[0.98] transition-transform cursor-pointer"
+      className="bg-white rounded-2xl border border-slate-200/80 p-6 flex flex-col gap-5 transition-all hover:border-indigo-300 hover:-translate-y-0.5 hover:shadow-sm cursor-pointer"
       onClick={() => navigate(`/case/${caseData.id}`)}
     >
       {/* Header row */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className={clsx(
-            'flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center',
-            isCouple ? 'bg-indigo-50' : 'bg-sky-50',
+            'flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center',
+            isCouple ? 'bg-indigo-50' : 'bg-indigo-50',
           )}>
             {isCouple
               ? <Users className="w-5 h-5 text-indigo-500" />
-              : <User  className="w-5 h-5 text-sky-500" />}
+              : <User  className="w-5 h-5 text-indigo-500" />}
           </span>
           <div className="min-w-0">
-            <h2 className="font-semibold text-gray-900 text-sm leading-tight truncate">
+            <h2 className="font-semibold text-slate-900 text-base leading-tight truncate">
               {householdDisplayName(caseData)}
             </h2>
             <span className={clsx(
-              'inline-block mt-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full border',
+              'inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full border',
               isCouple ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
-                       : 'bg-sky-50 text-sky-600 border-sky-100',
+                       : 'bg-indigo-50 text-indigo-600 border-indigo-100',
             )}>
               {isCouple ? 'Couple' : 'Single'}
             </span>
@@ -95,26 +95,26 @@ function CaseCard({ caseData }: { caseData: CaseData }) {
       </div>
 
       {/* Pillar mini-bars */}
-      <div className="space-y-1">
+      <div className="space-y-2.5">
         {fh.score.pillars.map((p) => (
-          <div key={p.pillar} className="flex items-center gap-2">
-            <span className="text-[10px] text-gray-400 w-28 flex-shrink-0 truncate">
+          <div key={p.pillar} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5">
+            <span className="text-xs text-slate-600">
               {p.pillar}
             </span>
-            <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+            <div className="col-span-2 row-start-2 bg-gray-100 rounded-full h-1.5 overflow-hidden">
               <div
                 className={clsx('h-full rounded-full', p.score >= 80 ? 'bg-green-400' : p.score >= 60 ? 'bg-yellow-400' : 'bg-red-400')}
                 style={{ width: `${p.score}%` }}
               />
             </div>
-            <span className="text-[10px] text-gray-500 w-6 text-right">{p.score}</span>
+            <span className="text-xs text-slate-600 col-start-2 row-start-1 text-right">{p.score}</span>
           </div>
         ))}
       </div>
 
       {/* CTA */}
       <button
-        className="mt-1 w-full flex items-center justify-center gap-1 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium py-2.5 rounded-xl transition-colors"
+        className="mt-auto w-full flex items-center justify-center gap-1 bg-[#171827] hover:bg-[#4565d6] text-white text-sm font-medium py-3 rounded-xl transition-colors"
         onClick={(e) => { e.stopPropagation(); navigate(`/case/${caseData.id}`); }}
       >
         Start session
@@ -127,22 +127,19 @@ function CaseCard({ caseData }: { caseData: CaseData }) {
 // ─── Page ────────────────────────────────────────────────────────────────────
 export default function CaseSelectPage() {
   return (
-    <div className="min-h-screen bg-gray-50 pb-8">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-5 pt-10 pb-5 max-w-[420px] mx-auto">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-2xl">⛰️</span>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Sherpas Pulse</h1>
+    <div className="min-h-screen bg-[#f4f5f6] pb-12 text-[#141419]">
+      <main className="mx-auto max-w-7xl px-5 pt-10 sm:px-8 sm:pt-14 lg:px-12">
+        <div className="mb-8 max-w-2xl sm:mb-10">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#4565d6]">Household sessions</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-[#171827] sm:text-4xl">Select a household</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">Select a household to begin the financial health session.</p>
         </div>
-        <p className="text-sm text-gray-500">Select a household to begin the financial health session.</p>
-      </div>
-
-      {/* Case list */}
-      <div className="max-w-[420px] mx-auto px-4 mt-4 space-y-3">
-        {CASES.map((c) => (
-          <CaseCard key={c.id} caseData={c} />
-        ))}
-      </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {CASES.map((c) => (
+            <CaseCard key={c.id} caseData={c} />
+          ))}
+        </div>
+      </main>
     </div>
   );
 }

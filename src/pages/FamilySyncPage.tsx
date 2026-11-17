@@ -81,7 +81,7 @@ export default function FamilySyncPage() {
   } · ${tieBreakersCount} Advisor Discussion Point${tieBreakersCount === 1 ? '' : 's'}`;
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-white max-w-[420px] mx-auto p-4 sm:p-5 flex flex-col justify-between select-none relative">
+    <div className="min-h-dvh bg-[#171827] text-white max-w-[420px] mx-auto p-5 sm:p-6 flex flex-col justify-between select-none relative">
       {/* ── Top Header ──────────────────────────────────────────────────────── */}
       <div className="pt-2">
         {/* Category Pill & Status */}
@@ -103,13 +103,13 @@ export default function FamilySyncPage() {
             {p1Name}
           </span>
           <span className="text-slate-400 font-semibold">&</span>
-          <span className="px-2.5 py-0.5 rounded-full bg-rose-600/30 text-rose-300 border border-rose-500/40 font-bold text-xs">
+          <span className="px-2.5 py-0.5 rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 font-bold text-xs">
             {p2Name}
           </span>
           <span className="text-slate-400 font-medium text-xs">· Family Sync</span>
         </div>
 
-        <h1 className="text-xl font-black text-white mt-2 tracking-tight">
+        <h1 className="text-2xl font-semibold tracking-tight text-white mt-2 tracking-tight">
           Two Paces, One Aligned Plan
         </h1>
         <p className="text-xs text-slate-300 mt-1 leading-relaxed">
@@ -122,17 +122,17 @@ export default function FamilySyncPage() {
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
-        className="my-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-amber-950/60 border border-emerald-500/30 shadow-lg"
+        className="my-5 p-4 rounded-2xl bg-[#202237] border border-emerald-500/30"
       >
         <div className="flex items-center gap-2">
           <span className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
           </span>
           <div>
-            <h2 className="text-xs font-black text-white tracking-wide uppercase">
+            <h2 className="text-sm font-semibold text-white tracking-wide">
               {summaryBannerText}
             </h2>
-            <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
+            <p className="text-xs text-slate-300 mt-0.5 leading-snug">
               Instant action on debt & liability. 1 productive trade-off queued for your meeting.
             </p>
           </div>
@@ -196,11 +196,11 @@ export default function FamilySyncPage() {
       </div>
 
       {/* ── Bottom Action Footer ────────────────────────────────────────────── */}
-      <div className="pt-3 pb-2 space-y-2 border-t border-slate-900 bg-slate-950/80 backdrop-blur-sm">
+      <div className="pt-3 pb-2 space-y-2 border-t border-slate-700/70 bg-[#171827]">
         {/* Continue to Action Plan Button */}
         <button
           onClick={() => navigate(`/case/${activeCase.id}/action`)}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:opacity-95 text-white font-bold text-sm shadow-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+          className="w-full py-3.5 rounded-2xl bg-[#4565d6] hover:bg-[#6380ff] text-white font-bold text-sm shadow-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
         >
           <span>Continue to Your Action Plan</span>
           <ArrowRight className="w-4 h-4" />

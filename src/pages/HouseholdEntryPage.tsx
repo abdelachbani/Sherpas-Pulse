@@ -98,29 +98,26 @@ export default function HouseholdEntryPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-white flex flex-col justify-between max-w-[420px] mx-auto p-5 select-none relative overflow-y-auto">
-      {/* Background glow */}
-      <div className="absolute top-0 -left-20 w-72 h-72 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 -right-20 w-72 h-72 bg-emerald-600/15 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-dvh bg-[#f4f5f6] text-[#141419] flex flex-col justify-between max-w-2xl mx-auto px-5 py-8 sm:px-10 sm:py-12 select-none relative overflow-y-auto">
 
       {/* ── Top Header ──────────────────────────────────────────────────────── */}
       <div className="pt-2 relative z-10 shrink-0">
         <button
           onClick={() => navigate('/')}
-          className="text-xs text-slate-400 hover:text-white transition-colors mb-3 block"
+          className="text-xs text-slate-500 hover:text-indigo-600 transition-colors mb-6 block"
         >
           ← Switch household
         </button>
 
         <div className="flex items-center gap-2">
-          <span className="p-2 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+          <span className="p-3 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100">
             {isCouple ? <Users className="w-5 h-5" /> : <User className="w-5 h-5" />}
           </span>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
               {isCouple ? 'Two Paces, One Plan' : 'Single Trade-off Simulator'}
             </span>
-            <h1 className="text-xl font-black text-white leading-tight">
+            <h1 className="text-2xl font-semibold text-slate-900 leading-tight">
               {isCouple
                 ? `${client?.first_name} & ${coClient?.first_name}`
                 : client?.first_name}
@@ -128,7 +125,7 @@ export default function HouseholdEntryPage() {
           </div>
         </div>
 
-        <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+        <p className="text-sm text-slate-600 mt-4 leading-relaxed">
           {isCouple
             ? 'Each partner explores on their own phone at their own pace. We bring your choices together into a Family Consensus.'
             : 'Explore your customized plan milestones and simulate trade-offs with 100% deterministic plan grounding.'}
@@ -136,13 +133,13 @@ export default function HouseholdEntryPage() {
       </div>
 
       {/* ── Center Content ──────────────────────────────────────────────────── */}
-      <div className="my-auto py-3 relative z-10 space-y-4">
+      <div className="my-auto py-8 relative z-10 space-y-7">
         {/* Step 1: Who is reviewing? (Couples only) */}
         {isCouple && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
               <span>1. Who is reviewing now?</span>
-              <span className="text-[11px] text-slate-400">Select partner</span>
+              <span className="text-[11px] text-slate-500">Select partner</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
@@ -151,12 +148,12 @@ export default function HouseholdEntryPage() {
                 onClick={() => setSelectedPartner('primary')}
                 className={`p-3.5 rounded-2xl border text-left transition-all ${
                   selectedPartner === 'primary'
-                    ? 'bg-indigo-600/40 border-indigo-400 text-white shadow-lg'
-                    : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:border-slate-600'
+                    ? 'bg-indigo-50 border-indigo-500 text-slate-900'
+                    : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300'
                 }`}
               >
-                <div className="text-sm font-bold text-white">{client?.first_name}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">
+                <div className="text-sm font-bold text-slate-900">{client?.first_name}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">
                   Age {client?.age} · {client?.risk_profile}
                 </div>
               </button>
@@ -166,12 +163,12 @@ export default function HouseholdEntryPage() {
                 onClick={() => setSelectedPartner('secondary')}
                 className={`p-3.5 rounded-2xl border text-left transition-all ${
                   selectedPartner === 'secondary'
-                    ? 'bg-rose-600/40 border-rose-400 text-white shadow-lg'
-                    : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:border-slate-600'
+                    ? 'bg-indigo-50 border-indigo-500 text-slate-900'
+                    : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300'
                 }`}
               >
-                <div className="text-sm font-bold text-white">{coClient?.first_name}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">
+                <div className="text-sm font-bold text-slate-900">{coClient?.first_name}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">
                   Age {coClient?.age} · {coClient?.risk_profile}
                 </div>
               </button>
@@ -187,16 +184,16 @@ export default function HouseholdEntryPage() {
                       : client?.first_name || 'partner'
                   )
                 }
-                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300 hover:text-white transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white border border-slate-200 text-[11px] text-slate-600 hover:text-indigo-600 transition-colors"
               >
                 {copiedLink ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-emerald-400">Share link copied for partner’s phone!</span>
+                    <Check className="w-3.5 h-3.5 text-emerald-700" />
+                    <span className="text-emerald-700">Share link copied for partner’s phone!</span>
                   </>
                 ) : (
                   <>
-                    <Smartphone className="w-3.5 h-3.5 text-indigo-400" />
+                    <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
                     <span>Send link for {selectedPartner === 'primary' ? coClient?.first_name : client?.first_name}’s phone</span>
                   </>
                 )}
@@ -207,9 +204,9 @@ export default function HouseholdEntryPage() {
 
         {/* Step 2: Choose viewing pace / style */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
             <span>{isCouple ? '2. Pick your viewing rhythm' : 'Choose your viewing rhythm'}</span>
-            <span className="text-[11px] text-slate-400">Customized experience</span>
+            <span className="text-[11px] text-slate-500">Customized experience</span>
           </div>
 
           <div className="space-y-2">
@@ -219,19 +216,19 @@ export default function HouseholdEntryPage() {
               onClick={() => setSelectedStyle('visual')}
               className={`p-3 rounded-2xl border flex items-start gap-2.5 cursor-pointer transition-all ${
                 selectedStyle === 'visual'
-                  ? 'bg-emerald-950/40 border-emerald-500/50 text-white'
-                  : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:border-slate-700'
+                  ? 'bg-indigo-50 border-indigo-500 text-slate-900'
+                  : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300'
               }`}
             >
-              <span className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 mt-0.5">
+              <span className="p-1.5 rounded-xl bg-indigo-100 text-indigo-600 mt-0.5">
                 <Heart className="w-3.5 h-3.5" />
               </span>
               <div className="flex-1">
-                <div className="text-xs font-bold text-white flex items-center justify-between">
-                  <span>Peace of Mind & Family 🌿</span>
-                  {selectedStyle === 'visual' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                <div className="text-xs font-bold text-slate-900 flex items-center justify-between">
+                  <span>Peace of Mind & Family</span>
+                  {selectedStyle === 'visual' && <Check className="w-3.5 h-3.5 text-emerald-700" />}
                 </div>
-                <div className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                <div className="text-[10px] text-slate-500 mt-0.5 leading-snug">
                   Focus on protecting the kids, peace of mind, and life milestones. Simple terms, no financial jargon.
                 </div>
               </div>
@@ -243,19 +240,19 @@ export default function HouseholdEntryPage() {
               onClick={() => setSelectedStyle('analytical')}
               className={`p-3 rounded-2xl border flex items-start gap-2.5 cursor-pointer transition-all ${
                 selectedStyle === 'analytical'
-                  ? 'bg-indigo-950/40 border-indigo-500/50 text-white'
-                  : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:border-slate-700'
+                  ? 'bg-indigo-50 border-indigo-500 text-slate-900'
+                  : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300'
               }`}
             >
-              <span className="p-1.5 rounded-xl bg-indigo-500/20 text-indigo-400 mt-0.5">
+              <span className="p-1.5 rounded-xl bg-indigo-100 text-indigo-600 mt-0.5">
                 <BarChart3 className="w-3.5 h-3.5" />
               </span>
               <div className="flex-1">
-                <div className="text-xs font-bold text-white flex items-center justify-between">
-                  <span>Analytical & Direct Numbers 📊</span>
-                  {selectedStyle === 'analytical' && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                <div className="text-xs font-bold text-slate-900 flex items-center justify-between">
+                  <span>Analytical & Direct Numbers</span>
+                  {selectedStyle === 'analytical' && <Check className="w-3.5 h-3.5 text-indigo-600" />}
                 </div>
-                <div className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                <div className="text-[10px] text-slate-500 mt-0.5 leading-snug">
                   Deep dive into 18% APR savings, ROI on cash, tax deductions, and portfolio volatility analysis.
                 </div>
               </div>
@@ -264,16 +261,16 @@ export default function HouseholdEntryPage() {
         </div>
 
         {/* Plan health snapshot banner */}
-        <div className="p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-between text-xs">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 flex items-center justify-between text-xs">
           <div>
-            <div className="text-[9px] text-slate-400 uppercase font-semibold">Published Health Score</div>
-            <div className="text-base font-bold text-white mt-0.5">
-              {fh.score.published_score}/100 <span className="text-xs text-amber-400 font-medium">({fh.score.band})</span>
+            <div className="text-[9px] text-slate-500 uppercase font-semibold">Published Health Score</div>
+            <div className="text-base font-bold text-slate-900 mt-0.5">
+              {fh.score.published_score}/100 <span className="text-xs text-amber-700 font-medium">({fh.score.band})</span>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-[9px] text-slate-400 uppercase font-semibold">Pillars Analyzed</div>
-            <div className="text-xs font-bold text-emerald-400 mt-0.5">{fh.score.pillars.length} Pillars Verified</div>
+            <div className="text-[9px] text-slate-500 uppercase font-semibold">Pillars Analyzed</div>
+            <div className="text-xs font-bold text-emerald-700 mt-0.5">{fh.score.pillars.length} Pillars Verified</div>
           </div>
         </div>
       </div>

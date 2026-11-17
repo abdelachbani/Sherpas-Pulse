@@ -118,7 +118,7 @@ export default function AllocationPage() {
   }
 
   return (
-    <div className="h-dvh bg-slate-950 text-white max-w-[420px] mx-auto p-4 flex flex-col justify-between select-none relative overflow-hidden">
+    <div className="h-full min-h-[420px] bg-[#171827] text-white max-w-[420px] mx-auto p-5 flex flex-col justify-between select-none relative overflow-hidden">
       {/* ── Top Header (Shrink-0) ────────────────────────────────────────────── */}
       <div className="shrink-0 pt-1">
         <div className="flex items-center justify-between">
@@ -131,17 +131,17 @@ export default function AllocationPage() {
             className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
               partner === 'primary'
                 ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
-                : 'bg-rose-600/30 text-rose-300 border border-rose-500/40'
+                : 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
             }`}
           >
             {currentPartnerName}’s Turn
           </span>
         </div>
 
-        <h1 className="text-lg font-black text-white mt-1.5 leading-tight">
+        <h1 className="text-xl font-semibold tracking-tight text-white mt-3 leading-tight">
           Prioritize Your $150,000 Cash
         </h1>
-        <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
+        <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
           Order strategies by dragging or tapping arrows. What should your cash tackle first?
         </p>
       </div>
@@ -167,7 +167,7 @@ export default function AllocationPage() {
       </div>
 
       {/* ── Liquidity Tank Summary (Shrink-0 at bottom) ────────────────────── */}
-      <div className="shrink-0 space-y-2.5 pt-1 border-t border-slate-900 bg-slate-950/90">
+      <div className="shrink-0 space-y-2.5 pt-1 border-t border-slate-700/70 bg-[#171827]">
         <AllocationSummary
           totalCash={totalCash}
           surplusCash={surplusCash}
@@ -178,24 +178,24 @@ export default function AllocationPage() {
         {!hasLockedIn ? (
           <button
             onClick={handleLockIn}
-            className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-xl flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
+            className="w-full py-3 rounded-2xl bg-[#4565d6] hover:bg-[#6380ff] text-white font-bold text-xs shadow-xl flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
           >
             <Check className="w-4 h-4" />
             <span>Lock In {currentPartnerName}’s Priorities</span>
           </button>
         ) : (
-          <div className="p-3 rounded-2xl bg-slate-900 border border-indigo-500/40 space-y-2">
+          <div className="p-4 rounded-2xl bg-[#202237] border border-slate-700/70 space-y-2">
             <div className="text-xs text-emerald-400 font-bold flex items-center gap-1.5">
               <Check className="w-4 h-4" />
               <span>{currentPartnerName}’s priorities are locked!</span>
             </div>
-            <p className="text-[11px] text-slate-300 leading-snug">
+            <p className="text-xs text-slate-300 leading-snug">
               Now {otherPartnerName} can order priorities on their phone, or you can simulate their choices for the demo.
             </p>
 
             <button
               onClick={handleSimulatePartner2}
-              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:opacity-90 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full py-2.5 rounded-xl bg-[#4565d6] hover:bg-[#6380ff] text-white font-bold text-xs shadow-lg flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Simulate {otherPartnerName}’s Turn & See Consensus →</span>

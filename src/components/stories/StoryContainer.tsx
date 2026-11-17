@@ -73,17 +73,6 @@ export function StoryContainer({
     }
   }, [voice.detectedTerm, calibrationCards, voice]);
 
-  // ── Background gradients per story ──────────────────────────────────────────
-  const gradients = [
-    'from-slate-950 via-slate-900 to-indigo-950', // 0: Vibe Check
-    'from-slate-950 via-slate-900 to-teal-950',   // 1: Overview Superpower/Leak
-    'from-slate-950 via-indigo-950 to-slate-900', // 2: Real-Life Translator
-    'from-slate-950 via-slate-900 to-sky-950',    // 3: Advice Liquidity Tank
-    'from-slate-950 via-purple-950 to-slate-900', // 4: Living Map Time Machine
-    'from-slate-950 via-emerald-950 to-slate-900',// 5: Action 5-Min Win
-  ];
-  const bgGradient = gradients[currentIndex] || gradients[0];
-
   // ── Voice narration using Web Speech API fallback ───────────────────────────
   const speakCurrentStory = useCallback((text: string) => {
     if (!('speechSynthesis' in window)) return;
@@ -213,7 +202,7 @@ export function StoryContainer({
 
   return (
     <div
-      className={`relative w-full max-w-[420px] h-dvh mx-auto flex flex-col justify-between overflow-hidden bg-gradient-to-b ${bgGradient} transition-colors duration-700 select-none shadow-2xl`}
+      className="story-shell relative w-full max-w-[420px] h-full mx-auto flex flex-col justify-between overflow-hidden bg-[#171827] select-none shadow-2xl"
     >
       {/* ── Top Progress Segments (Instagram-style) ─────────────────────────── */}
       <div className="absolute top-0 inset-x-0 z-30 pt-2 px-3 flex gap-1 pointer-events-none">
@@ -237,13 +226,13 @@ export function StoryContainer({
       </div>
 
       {/* ── Top Floating Action Bar ─────────────────────────────────────────── */}
-      <div className="absolute top-4 inset-x-0 z-30 px-3 flex items-center justify-between pointer-events-auto">
+      <div className="absolute top-3 inset-x-0 z-30 px-3 flex items-center justify-between pointer-events-auto">
         <button
           onClick={(e) => {
             e.stopPropagation();
             onNavigateBack();
           }}
-          className="p-1.5 rounded-full bg-black/40 text-white/80 hover:text-white backdrop-blur-md border border-white/10 cursor-pointer"
+          className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 text-white/80 hover:text-white border border-white/10 cursor-pointer"
           aria-label="Back to case selection"
         >
           <X className="w-4 h-4" />
@@ -256,9 +245,9 @@ export function StoryContainer({
               e.stopPropagation();
               handleCalibrationOpen('revolving-apr');
             }}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 backdrop-blur-md hover:bg-amber-500/30 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 min-h-11 px-3 rounded-xl text-[11px] font-semibold bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
           >
-            <Lightbulb className="w-3 h-3 text-amber-400" />
+            <Lightbulb className="w-3.5 h-3.5 text-[#91a5ff]" />
             <span>Calibrate</span>
           </button>
 
@@ -268,15 +257,15 @@ export function StoryContainer({
               e.stopPropagation();
               setIsVoiceNarrating((prev) => !prev);
             }}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold backdrop-blur-md border transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 min-h-11 px-3 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer ${
               isVoiceNarrating
-                ? 'bg-emerald-500/30 text-emerald-300 border-emerald-400/40 shadow-lg shadow-emerald-500/20'
-                : 'bg-black/40 text-slate-300 border-white/10'
+                ? 'bg-[#4565d6]/25 text-white border-[#6380ff]/50'
+                : 'bg-white/5 text-slate-300 border-white/10'
             }`}
           >
             {isVoiceNarrating ? (
               <>
-                <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <Volume2 className="w-3.5 h-3.5 text-[#91a5ff]" />
                 <span>Voice On</span>
               </>
             ) : (
