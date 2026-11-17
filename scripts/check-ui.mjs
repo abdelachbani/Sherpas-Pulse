@@ -7,10 +7,15 @@ import { mkdtemp, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 const base = process.argv[2] || 'http://127.0.0.1:4173';
-const out = process.argv[3] || '/tmp/sherpas-ui-check';
+const out = process.argv[3] || join(tmpdir(), 'sherpas-ui-check');
 const profile = await mkdtemp(join(tmpdir(), 'sherpas-ui-chrome-'));
 await mkdir(out, { recursive: true });
-const chrome = spawn(process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', ['--headless=new', '--no-first-run', '--no-default-browser-check', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore' });
+const defaultChrome = process.env.CHROME_PATH || (process.platform === 'win32'
+  ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+  : (process.platform === 'darwin'
+    ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+    : 'google-chrome'));
+const chrome = spawn(defaultChrome, ['--headless=new', '--no-sandbox', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore' });
 process.on('SIGINT', async () => { chrome.kill('SIGTERM'); await rm(profile,{recursive:true,force:true}); process.exit(130); });
 process.once('SIGINT', () => { chrome.kill('SIGTERM'); ws?.close(); process.exitCode=130; });
 const pause = ms => new Promise(r => setTimeout(r, ms));

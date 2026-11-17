@@ -107,7 +107,7 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
       {/* Got it button */}
       <button
         onClick={onDismiss}
-        className="mt-4 w-full py-3 rounded-2xl bg-[#4565d6] hover:bg-[#6380ff] text-white font-semibold text-sm flex items-center justify-center gap-2   transition-all active:scale-[0.98]"
+        className="mt-4 w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm flex items-center justify-center gap-2   transition-all active:scale-[0.98]"
       >
         <Check className="w-4 h-4" />
         <span>Got it — Resume Plan</span>

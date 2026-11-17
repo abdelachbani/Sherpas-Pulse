@@ -2,18 +2,23 @@
  * src/lib/voice/useVoiceSession.ts
  *
  * Realtime AI Voice Session Hook for Sherpas Pulse:
- *  - Direct WebSocket connection to the Sherpas Hackathon Realtime AI Relay (/voice)
+ *  - Direct WebSocket connection to the Sherpas Realtime AI Relay (/voice)
  *  - Uses team's AI key with Gemini 3.8 Live (or gpt-realtime-2.1)
  *  - 24kHz PCM16 bidirectional streaming via Web Audio AudioWorklet (mic-worklet.js)
  *  - Works on ANY browser (Microsoft Edge, Google Chrome, Safari, Android, iOS)
  *  - Zero regex limitation: Real AI understands natural Spanish & English speech
  *  - Interactive term detection mapping AI answers to calibration cards
- *  - Seamless offline fallback to deterministic plan figures if server is offline
+ *  - Seamless offline fallback to deterministic grounded plan figures if server is offline
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { createResponseGate } from './responseGate';
+import {
+  getOfflineAnswer,
+  GUARDRAIL_REDIRECT_MESSAGE,
+  OFF_PLAN_TERMS,
+} from './offlineAnswer';
 
 export type VoiceState = 'idle' | 'listening' | 'speaking';
 
@@ -50,21 +55,6 @@ const TERM_PATTERNS: { regex: RegExp; key: string }[] = [
   { regex: /(?:withdraw|withdrawal|safe.?rate|tasa.?de.?retiro|retiro.?seguro|regla.?del.?4%)/i, key: 'withdrawal-rate' },
 ];
 
-const OFF_PLAN_TERMS = [
-  /bitcoin/i,
-  /crypto/i,
-  /cripto/i,
-  /cryptocurrency/i,
-  /stock.?pick/i,
-  /acciones/i,
-  /nvidia/i,
-  /day.?trad/i,
-  /get.?rich/i,
-  /meme.?stock/i,
-  /forex/i,
-  /options.?trading/i,
-];
-
 // Base64 helper for PCM16 audio
 const b64 = (buf: ArrayBuffer): string => {
   let s = '';
@@ -76,6 +66,7 @@ const b64 = (buf: ArrayBuffer): string => {
 export function useVoiceSession(caseId: string): VoiceSessionResult {
   const trackVoiceAsk = useAppStore((state) => state.trackVoiceAsk);
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
+  const [isConnected, setIsConnected] = useState<boolean>(false);
   const [transcript, setTranscript] = useState('');
   const [responseMessage, setResponseMessage] = useState<string | null>(null);
   const [guardRedirect, setGuardRedirect] = useState<string | null>(null);
@@ -95,11 +86,18 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const responseGateRef = useRef(createResponseGate());
   const waitingSendRef = useRef<(() => void) | null>(null);
   const waitingTimerRef = useRef<number | null>(null);
+
+  // Fallback and response tracking refs
+  const activeRequestTokenRef = useRef<number | null>(null);
+  const inFlightQuestionRef = useRef<string | null>(null);
+  const responseTimeoutTimerRef = useRef<number | null>(null);
+
   const clearWaitingSend = useCallback(() => {
     waitingSendRef.current = null;
     if (waitingTimerRef.current !== null) window.clearTimeout(waitingTimerRef.current);
     waitingTimerRef.current = null;
   }, []);
+
   const sendAfterCancel = useCallback((send: () => void) => {
     if (!responseGateRef.current.isBlocked()) { send(); return; }
     clearWaitingSend();
@@ -112,22 +110,78 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     }, 5000);
   }, [clearWaitingSend]);
 
+  // ── Offline Grounded Fallback Answer ────────────────────────────────────────
+  const executeFallback = useCallback(
+    (question: string, reason?: string) => {
+      if (responseTimeoutTimerRef.current !== null) {
+        window.clearTimeout(responseTimeoutTimerRef.current);
+        responseTimeoutTimerRef.current = null;
+      }
+      const token = activeRequestTokenRef.current;
+      if (token !== null && !responseGateRef.current.isCurrent(token)) return;
+
+      inFlightQuestionRef.current = null;
+      const fallback = getOfflineAnswer(caseId, question);
+
+      if (fallback.isGuardrail) {
+        setGuardRedirect(fallback.text);
+        setResponseMessage(fallback.text);
+        setVoiceState('idle');
+        return;
+      }
+
+      setResponseMessage(fallback.text);
+      if (fallback.detectedTerm) {
+        setDetectedTerm(fallback.detectedTerm);
+      }
+      setErrorNotice(reason || 'AI relay offline · Answered from verified plan figures');
+      setShowSuggestions(true);
+
+      // Attempt speech synthesis for spoken voice feedback
+      if ('speechSynthesis' in window && typeof window.SpeechSynthesisUtterance !== 'undefined') {
+        try {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(fallback.text);
+          utterance.onend = () => {
+            setVoiceState('idle');
+          };
+          utterance.onerror = () => {
+            setVoiceState('idle');
+          };
+          setVoiceState('speaking');
+          window.speechSynthesis.speak(utterance);
+        } catch {
+          setVoiceState('idle');
+        }
+      } else {
+        setVoiceState('idle');
+      }
+    },
+    [caseId]
+  );
+
   // ── Stop playback helper ────────────────────────────────────────────────────
   const stopPlayback = useCallback(() => {
     clearWaitingSend();
+    if (responseTimeoutTimerRef.current !== null) {
+      window.clearTimeout(responseTimeoutTimerRef.current);
+      responseTimeoutTimerRef.current = null;
+    }
+    inFlightQuestionRef.current = null;
+
     const shouldCancel = responseGateRef.current.cancel();
     if (shouldCancel && wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'response.cancel' }));
     }
     for (const s of playSourcesRef.current) {
-      try { s.stop(); } catch { /* The audio or socket may already be stopped during cleanup. */ }
+      try { s.stop(); } catch { /* Audio or socket may already be stopped */ }
     }
     playSourcesRef.current = [];
     if (audioCtxRef.current) {
       playHeadRef.current = audioCtxRef.current.currentTime;
     }
     if ('speechSynthesis' in window) {
-      try { window.speechSynthesis.cancel(); } catch { /* The audio or socket may already be stopped during cleanup. */ }
+      try { window.speechSynthesis.cancel(); } catch { /* Speech synthesis cleanup */ }
     }
     setVoiceState('idle');
   }, [clearWaitingSend]);
@@ -176,7 +230,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
     const model = import.meta.env.VITE_VOICE_MODEL || 'gemini-3.8-live';
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Connect to /voice through Vite dev proxy
+    // Connect to /voice through dev server / proxy
     const wsUrl = `${protocol}//${window.location.host}/voice?model=${model}&case=${encodeURIComponent(caseId)}`;
 
     console.log('[AI Voice] Connecting to', wsUrl);
@@ -185,6 +239,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
     ws.onopen = () => {
       console.log('[AI Voice] Connected successfully to', model, 'for case', caseId);
+      setIsConnected(true);
       setErrorNotice(null);
       ws.send(JSON.stringify({
         type: 'session.update',
@@ -204,16 +259,34 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         const ev = JSON.parse(event.data);
         const t = ev.type || '';
         const responseId = ev.response_id ?? ev.response?.id;
+
         if (t === 'response.created') {
           if (!responseGateRef.current.created(responseId)) return;
           currentReplyTextRef.current = '';
+          if (responseTimeoutTimerRef.current !== null) {
+            window.clearTimeout(responseTimeoutTimerRef.current);
+            responseTimeoutTimerRef.current = null;
+          }
           return;
         }
+
         if (t.startsWith('response.') && t !== 'response.done' && !responseGateRef.current.accepts(responseId)) return;
+
         if (t === 'response.done') {
+          if (responseTimeoutTimerRef.current !== null) {
+            window.clearTimeout(responseTimeoutTimerRef.current);
+            responseTimeoutTimerRef.current = null;
+          }
+          inFlightQuestionRef.current = null;
           const wasBlocked = responseGateRef.current.isBlocked();
-          if (responseGateRef.current.finish(responseId) && playSourcesRef.current.length === 0 && !isPressingRef.current) setVoiceState('idle');
-          if (wasBlocked && !responseGateRef.current.isBlocked()) { const queued = waitingSendRef.current; clearWaitingSend(); queued?.(); }
+          if (responseGateRef.current.finish(responseId) && playSourcesRef.current.length === 0 && !isPressingRef.current) {
+            setVoiceState('idle');
+          }
+          if (wasBlocked && !responseGateRef.current.isBlocked()) {
+            const queued = waitingSendRef.current;
+            clearWaitingSend();
+            queued?.();
+          }
           return;
         }
 
@@ -255,11 +328,18 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
           }
         }
 
-
         if (t === 'error') {
           console.warn('[AI Voice Error event]', ev.error);
-          setErrorNotice(ev.error?.message || 'AI Voice service error');
+          setIsConnected(false);
+          const errorMsg = ev.error?.message || 'AI Voice service error';
+          setErrorNotice(errorMsg);
           setShowSuggestions(true);
+          if (inFlightQuestionRef.current && !currentReplyTextRef.current) {
+            const q = inFlightQuestionRef.current;
+            executeFallback(q, errorMsg.includes('TEAM_KEY') ? 'Server missing TEAM_KEY · Answering from verified plan' : errorMsg);
+          } else {
+            setVoiceState('idle');
+          }
         }
       } catch (err) {
         console.warn('WS parse error', err);
@@ -268,15 +348,25 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
     ws.onerror = (e) => {
       console.warn('[AI Voice WS error]', e);
+      setIsConnected(false);
+      if (inFlightQuestionRef.current && !currentReplyTextRef.current) {
+        const q = inFlightQuestionRef.current;
+        executeFallback(q, 'Voice relay unavailable · Answered from verified plan figures');
+      }
     };
 
     ws.onclose = (ev) => {
       console.log('[AI Voice WS closed]', ev.code, ev.reason);
+      setIsConnected(false);
       wsRef.current = null;
+      if (inFlightQuestionRef.current && !currentReplyTextRef.current) {
+        const q = inFlightQuestionRef.current;
+        executeFallback(q, 'Voice relay offline · Answered from verified plan figures');
+      }
     };
 
     return ws;
-  }, [caseId, clearWaitingSend, playChunk, trackVoiceAsk]);
+  }, [caseId, clearWaitingSend, executeFallback, playChunk, trackVoiceAsk]);
 
   // Connect on mount or caseId change
   useEffect(() => {
@@ -284,7 +374,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     return () => {
       stopPlayback();
       if (wsRef.current) {
-        try { wsRef.current.close(); } catch { /* The audio or socket may already be stopped during cleanup. */ }
+        try { wsRef.current.close(); } catch { /* Cleanup */ }
         wsRef.current = null;
       }
       if (micStreamRef.current) {
@@ -364,6 +454,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
         if (responseGateRef.current.markSent(token)) wsRef.current.send(JSON.stringify({ type: 'response.create' }));
+      } else {
+        // Socket is not open - reset voice state so user is not stuck in 'listening'
+        setVoiceState('idle');
+        setErrorNotice('Voice relay is currently offline. You can select suggestion chips or type your question below.');
+        setShowSuggestions(true);
       }
     });
   }, [sendAfterCancel]);
@@ -374,7 +469,9 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       stopPlayback();
       const clean = question.trim();
       if (!clean) return;
+
       const requestToken = responseGateRef.current.start();
+      activeRequestTokenRef.current = requestToken;
       trackVoiceAsk({ inputMode: 'typed_or_suggestion' });
 
       currentReplyTextRef.current = '';
@@ -386,19 +483,31 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
       // Check guardrails immediately for user feedback
       if (OFF_PLAN_TERMS.some((re) => re.test(clean))) {
-        const guardMsg =
-          "I can only advise on recommendations within your validated Sherpas plan. Speculative assets like crypto or single stocks carry unmodeled volatility that would derail your Living Map milestones.";
-        setGuardRedirect(guardMsg);
-        setResponseMessage(guardMsg);
+        setGuardRedirect(GUARDRAIL_REDIRECT_MESSAGE);
+        setResponseMessage(GUARDRAIL_REDIRECT_MESSAGE);
         setVoiceState('idle');
         return;
       }
 
-      const ws = connectWs();
+      inFlightQuestionRef.current = clean;
+      connectWs();
+
+      let attempts = 0;
+      const MAX_ATTEMPTS = 5; // 5 * 250ms = 1.25s max connection attempt window
+      let pollTimer: number | null = null;
+
       const sendPayload = () => {
-        if (!responseGateRef.current.isCurrent(requestToken)) return;
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(
+        if (!responseGateRef.current.isCurrent(requestToken)) {
+          if (pollTimer !== null) window.clearTimeout(pollTimer);
+          return;
+        }
+
+        const activeWs = wsRef.current;
+
+        // If WebSocket is ready, send the question and request response
+        if (activeWs && activeWs.readyState === WebSocket.OPEN) {
+          if (pollTimer !== null) window.clearTimeout(pollTimer);
+          activeWs.send(
             JSON.stringify({
               type: 'conversation.item.create',
               item: {
@@ -408,31 +517,55 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
               },
             })
           );
-          if (responseGateRef.current.markSent(requestToken)) ws.send(JSON.stringify({ type: 'response.create' }));
-        } else {
-          setTimeout(sendPayload, 400);
+          if (responseGateRef.current.markSent(requestToken)) {
+            activeWs.send(JSON.stringify({ type: 'response.create' }));
+          }
+
+          // Safety timeout in case server never responds
+          responseTimeoutTimerRef.current = window.setTimeout(() => {
+            if (responseGateRef.current.isCurrent(requestToken) && !currentReplyTextRef.current) {
+              executeFallback(clean, 'Response timed out · Answered from verified plan figures');
+            }
+          }, 8000);
+          return;
         }
+
+        // If WebSocket is closed or closing, or attempts exhausted: do not loop forever!
+        attempts++;
+        if (!activeWs || activeWs.readyState === WebSocket.CLOSED || activeWs.readyState === WebSocket.CLOSING || attempts >= MAX_ATTEMPTS) {
+          if (pollTimer !== null) window.clearTimeout(pollTimer);
+          executeFallback(clean, 'Voice relay offline · Answered from verified plan figures');
+          return;
+        }
+
+        // Still connecting: retry after 250ms
+        pollTimer = window.setTimeout(sendPayload, 250);
       };
 
       sendAfterCancel(() => {
-        if (ws && ws.readyState === WebSocket.OPEN) sendPayload();
-        else setTimeout(sendPayload, 300);
+        const activeWs = wsRef.current;
+        if (activeWs && activeWs.readyState === WebSocket.OPEN) {
+          sendPayload();
+        } else {
+          pollTimer = window.setTimeout(sendPayload, 200);
+        }
       });
     },
-    [connectWs, sendAfterCancel, stopPlayback, trackVoiceAsk]
+    [connectWs, executeFallback, sendAfterCancel, stopPlayback, trackVoiceAsk]
   );
 
   const disconnect = useCallback(() => {
     stopPlayback();
     if (wsRef.current) {
-      try { wsRef.current.close(); } catch { /* The audio or socket may already be stopped during cleanup. */ }
+      try { wsRef.current.close(); } catch { /* Socket close cleanup */ }
       wsRef.current = null;
     }
+    setIsConnected(false);
   }, [stopPlayback]);
 
   return {
     voiceState,
-    isConnected: true,
+    isConnected,
     isListening: voiceState === 'listening',
     isSpeaking: voiceState === 'speaking',
     transcript,
