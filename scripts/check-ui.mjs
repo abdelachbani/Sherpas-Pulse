@@ -106,7 +106,7 @@ try {
   for(const width of widths){
     await call('Emulation.setDeviceMetricsOverride',{width,height:width===320?568:width===430?932:width===768?1024:width===844?390:width>=1024?900:844,deviceScaleFactor:1,mobile:false});
     await navigate('/');await inspect('home',width,true);
-    results.push({label:'desktop-only-split',width,pass:await evaluate(`Boolean(document.querySelector('button[aria-label="Split Screen"]'))===${width>=1024}`)});
+    results.push({label:'clean-responsive-layout',width,pass:await evaluate(`!document.querySelector('button[aria-label="Split Screen"]') && Boolean(document.querySelector('.app-shell'))`)});
     for(const id of cases){
       await navigate('/case/'+id);await inspect(id+'-entry',width,width===390);
       await navigate('/case/'+id+'/stories');

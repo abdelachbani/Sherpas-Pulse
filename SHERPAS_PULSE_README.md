@@ -75,7 +75,7 @@ Every financial advisor faces a critical **"third job"**: once a comprehensive p
 | Evaluation Criteria | Weight | How Sherpas Pulse Wins Maximum Score |
 |---|---|---|
 | **Understanding** | **25 pts** | Replaces static PDFs with 25s vertical stories. Implicit Calibration translates complex terms into everyday analogies upon detecting hesitation. |
-| **Creativity** | **20 pts** | First 100% mobile-first experience for Sherpas; Asynchronous Couple Alignment ("Two Paces, One Plan"); Tactile Cash Tank Allocator; Demo Split-Screen mode. |
+| **Creativity** | **20 pts** | First 100% mobile-first experience for Sherpas; Asynchronous Couple Alignment ("Two Paces, One Plan"); Tactile Cash Tank Allocator; Responsive Mobile-First Architecture. |
 | **Motivation to Act** | **20 pts** | Replaces 8 overwhelming tasks with "The First Domino" (quantified 5-minute win), 3-step checklist, and 48-hour Multi-Touch Smart Nudges. |
 | **Grounding (Zero Hallucination)** | **20 pts** | Decoupled deterministic TypeScript extraction layer (`extractor.ts`); Interactive Grounding Inspector on all metrics; Boomerang Guardrail Router. |
 | **Ready to Use** | **15 pts** | Runs out-of-the-box (`npm install && npm run dev`); supports all 4 synthetic households dynamically via MCP; plug-and-play advisor telemetry. |
@@ -125,6 +125,6 @@ npm run dev
 ```
 
 ### Live Demo Features:
-- **Projector Split-Screen Mode:** Click the **"Demo Split Screen"** toggle in the top-right corner to show two synchronized phones side-by-side on stage!
+- **Clean Mobile-First Responsive Design:** Seamlessly adapts across mobile, tablet, and desktop viewports with zero fake frames or clumsy split toggles.
 - **Voice Interruption:** Hold down the floating mic button to trigger Push-to-Ask voice interruption.
 - **Grounding Inspector:** Tap the green shield icon next to any figure to inspect the exact MCP JSON path.

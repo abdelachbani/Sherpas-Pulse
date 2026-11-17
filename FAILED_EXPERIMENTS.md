@@ -33,12 +33,12 @@ _This document is a mandatory submission requirement documenting the technical h
 
 ---
 
-## 4. Live Stage Demo Presentation & Asynchronous Couple Sync
+## 4. Dual Phone Split-Screen Mockup vs. Native Responsive Mobile-First Architecture
 
-- **Hypothesis:** Require two physical smartphones connected over WebSockets to demonstrate the couple alignment feature on stage.
-- **What Failed:** During a live hackathon presentation with venue Wi-Fi, tethering two separate physical phones and syncing them live presents high latency and single-point-of-failure risks.
-- **The Solution:** We implemented:
-  1. **Demo Split-Screen Mode (`SplitScreenToggle.tsx`):** A single toggle on the top right transforms the web app into two side-by-side mobile device mockups on the projector screen (e.g. Timothy on the left, Melanie or Advisor on the right).
+- **Hypothesis:** Render two side-by-side fake phone mockups on desktop screens ("Split-Screen Mode") to demonstrate couple alignment on stage.
+- **What Failed:** The dual-phone mockup squeezed content into artificial containers, broke native scrolling, introduced awkward layout bugs, and degraded responsiveness on intermediate screen sizes. Testing showed real wealth management clients and presenters prefer authentic responsive layouts.
+- **The Solution:** We eliminated the artificial split-screen mode and phone frames entirely in favor of a clean, mobile-first responsive layout:
+  1. **Tabbed Action & Discussion Views:** Clear, accessible tab toggling between the Action Plan and Advisor Discussion Overview.
   2. **Simulate Partner Turn Button:** The presenter can prioritize as Timothy, and with one click simulate Melanie's known profile preferences to instantly demonstrate the Consensus Screen ("Family Sync") with green agreements and amber tie-breakers.
 
 ---
