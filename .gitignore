@@ -2,7 +2,6 @@
 .env
 .env.*
 !.env.example
-01-sherpas-hackathon-upv-es.html
 
 # Dependencies and builds
 node_modules/
@@ -12,6 +11,7 @@ __pycache__/
 dist/
 build/
 .next/
+assets/01-sherpas-hackathon-upv-es.html
 
 # OS and editors
 .DS_Store
