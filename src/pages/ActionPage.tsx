@@ -6,7 +6,6 @@ import { extractWhatIfScenarios } from '../lib/mcp/extractor';
 import { buildAdvisorQuestions, formatSessionHandoff } from '../lib/sessionHandoff';
 import { getTelemetrySummary as summarizeTelemetry, serialiseTelemetry } from '../lib/telemetry';
 import { simplifyFinancialText } from '../lib/financialGlossary';
-import { SplitScreenToggle, SplitScreenContainer, type SplitMode } from '../components/shared/SplitScreenToggle';
 import { FinancialText } from '../components/shared/FinancialText';
 
 export default function ActionPage() {
@@ -32,7 +31,6 @@ function ActionContent() {
   const checkboxPrefix = useId();
   const activeCase = (currentCase?.id === caseId ? currentCase : CASES.find((c) => c.id === caseId))!;
   const [done, setDone] = useState<number[]>([]);
-  const [mode, setMode] = useState<SplitMode>('single');
   const [tab, setTab] = useState<'plan' | 'advisor'>('plan');
   const [channel, setChannel] = useState<'whatsapp' | 'email'>('whatsapp');
   const [copied, setCopied] = useState(false);
@@ -123,5 +121,26 @@ function ActionContent() {
       </section>
     </div>
   );
-  return <main className="session-page min-h-dvh bg-[#171827] text-white"><div className="mx-auto flex max-w-4xl flex-col items-center gap-3 px-4 pt-6"><SplitScreenToggle mode={mode} onModeChange={setMode} showTargetSelector={false} />{mode === 'single' && <div className="grid w-full max-w-3xl grid-cols-2 rounded-xl border border-slate-700 bg-slate-900 p-1">{(['plan', 'advisor'] as const).map((item) => <button key={item} type="button" aria-pressed={tab === item} onClick={() => setTab(item)} className={`min-h-11 rounded-lg text-sm font-semibold ${tab === item ? 'bg-indigo-600' : 'text-slate-300'}`}>{item === 'plan' ? 'Action plan' : 'Discussion overview'}</button>)}</div>}</div><SplitScreenContainer mode={mode} leftTitle="Action plan" leftSubtitle="Plan recommendations" leftContent={plan} rightTitle="Discussion overview" rightSubtitle="Meeting preparation" rightContent={advisor} singleActiveTab={tab === 'plan' ? 'left' : 'right'} className="pb-8" /></main>;
+  return (
+    <main className="session-page min-h-dvh bg-[#171827] text-white">
+      <div className="mx-auto flex max-w-4xl flex-col items-center gap-3 px-4 pt-6">
+        <div className="grid w-full max-w-3xl grid-cols-2 rounded-xl border border-slate-700 bg-slate-900 p-1">
+          {(['plan', 'advisor'] as const).map((item) => (
+            <button
+              key={item}
+              type="button"
+              aria-pressed={tab === item}
+              onClick={() => setTab(item)}
+              className={`min-h-11 rounded-lg text-sm font-semibold ${tab === item ? 'bg-indigo-600' : 'text-slate-300'}`}
+            >
+              {item === 'plan' ? 'Action plan' : 'Discussion overview'}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="w-full max-w-3xl mx-auto min-h-full flex flex-col pb-8">
+        {tab === 'plan' ? plan : advisor}
+      </div>
+    </main>
+  );
 }
