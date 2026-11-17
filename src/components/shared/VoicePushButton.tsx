@@ -2,10 +2,12 @@
  * src/components/shared/VoicePushButton.tsx
  *
  * Push-to-Ask voice component for Sherpas Pulse:
- *  - Simple, elegant Hold-to-Ask bottom button
- *  - Touch & mouse hold-to-ask interactions with touch-action: none
+ *  - Modern PointerEvents (onPointerDown, onPointerUp, onPointerCancel) with setPointerCapture
+ *  - Cross-browser support for Chrome, Edge, Safari, touchscreens, mouse, and trackpads
+ *  - Clean separation:
+ *      a) Quick single tap (<250ms) toggles the suggestions and question input modal
+ *      b) Holding (>=250ms) activates Push-to-Talk with live visual waveform/level meter
  *  - Live transcript bubble + Sherpas audio response
- *  - Automatic 1-tap suggestions fallback if mic was quiet or quick-tapped
  *  - 1-tap shortcut to open Calibration Micro-Card on detected terms
  */
 
@@ -14,7 +16,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic,
   Square,
-  Bot,
   AlertCircle,
   X,
   Sparkles,
@@ -34,6 +35,7 @@ interface Props {
   guardRedirect?: string | null;
   detectedTerm?: string | null;
   showSuggestions?: boolean;
+  audioLevel?: number;
   onPressStart: () => void;
   onPressEnd: () => void;
   onStopSpeaking?: () => void;
@@ -90,6 +92,7 @@ export function VoicePushButton({
   guardRedirect,
   detectedTerm,
   showSuggestions = false,
+  audioLevel = 0,
   onPressStart,
   onPressEnd,
   onStopSpeaking,
@@ -103,7 +106,16 @@ export function VoicePushButton({
   const [customText, setCustomText] = useState('');
   const [opened, setOpened] = useState(false);
   const isPressingRef = useRef(false);
+  const pressStartTimeRef = useRef(0);
+  const pointerIdRef = useRef<number | null>(null);
   const sampleQuestions = HOUSEHOLD_QUESTIONS[caseId] || DEFAULT_QUESTIONS;
+
+  // Sync opened state when suggestions or replies arrive from the voice session
+  useEffect(() => {
+    if (showSuggestions || responseMessage || guardRedirect) {
+      setOpened(true);
+    }
+  }, [showSuggestions, responseMessage, guardRedirect]);
 
   function handleSubmitCustom(e: React.FormEvent) {
     e.preventDefault();
@@ -113,10 +125,10 @@ export function VoicePushButton({
     setCustomText('');
   }
 
-  function handleStart(e: React.TouchEvent | React.MouseEvent) {
+  function handlePointerDown(e: React.PointerEvent<HTMLButtonElement>) {
     if (disabled) return;
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
     e.stopPropagation();
-    setOpened(true);
 
     // If currently speaking, a tap stops/mutes speech
     if (voiceState === 'speaking') {
@@ -124,59 +136,79 @@ export function VoicePushButton({
       return;
     }
 
-    if (isPressingRef.current) return;
+    pointerIdRef.current = e.pointerId;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Ignore if setPointerCapture fails on certain virtual elements
+    }
+
     isPressingRef.current = true;
+    pressStartTimeRef.current = performance.now();
     onPressStart();
   }
 
-  function handleEnd(e: React.TouchEvent | React.MouseEvent) {
+  function handlePointerUp(e: React.PointerEvent<HTMLButtonElement>) {
     e.stopPropagation();
+    if (pointerIdRef.current !== null) {
+      try {
+        if (e.currentTarget.hasPointerCapture(pointerIdRef.current)) {
+          e.currentTarget.releasePointerCapture(pointerIdRef.current);
+        }
+      } catch {
+        // Ignore
+      }
+      pointerIdRef.current = null;
+    }
+
     if (!isPressingRef.current) return;
     isPressingRef.current = false;
-    onPressEnd();
+
+    const duration = performance.now() - pressStartTimeRef.current;
+    if (duration < 250) {
+      // Quick single tap (<250ms): toggle suggestions / input modal
+      onPressEnd();
+      setOpened((prev) => !prev);
+    } else {
+      // Held to talk (>=250ms): commit voice question
+      setOpened(true);
+      onPressEnd();
+    }
   }
 
-  function handleTouchStart(e: React.TouchEvent) {
-    if (e.cancelable) e.preventDefault();
-    handleStart(e);
-  }
-
-  function handleTouchEnd(e: React.TouchEvent) {
-    if (e.cancelable) e.preventDefault();
-    handleEnd(e);
-  }
-
-  function handleTouchCancel(e: React.TouchEvent) {
-    handleEnd(e);
-  }
-
-  function handleMouseDown(e: React.MouseEvent) {
-    handleStart(e);
-  }
-
-  function handleMouseUp(e: React.MouseEvent) {
-    handleEnd(e);
-  }
-
-  function handleMouseLeave(e: React.MouseEvent) {
-    handleEnd(e);
-  }
-
-  useEffect(() => {
-    const handleWindowBlur = () => {
-      if (isPressingRef.current) {
-        isPressingRef.current = false;
-        onPressEnd();
+  function handlePointerCancel(e: React.PointerEvent<HTMLButtonElement>) {
+    if (pointerIdRef.current !== null) {
+      try {
+        if (e.currentTarget.hasPointerCapture(pointerIdRef.current)) {
+          e.currentTarget.releasePointerCapture(pointerIdRef.current);
+        }
+      } catch {
+        // Ignore
       }
-    };
-    window.addEventListener('blur', handleWindowBlur);
-    return () => window.removeEventListener('blur', handleWindowBlur);
-  }, [onPressEnd]);
+      pointerIdRef.current = null;
+    }
+
+    if (isPressingRef.current) {
+      isPressingRef.current = false;
+      onPressEnd();
+    }
+  }
+
+  function handleLostPointerCapture(_e: React.PointerEvent<HTMLButtonElement>) {
+    pointerIdRef.current = null;
+    if (isPressingRef.current) {
+      isPressingRef.current = false;
+      onPressEnd();
+    }
+  }
 
   const isListening = voiceState === 'listening';
   const isSpeaking = voiceState === 'speaking';
-  const hasContent = opened && Boolean(isListening || responseMessage || guardRedirect || showSuggestions);
-  useEffect(() => { onOverlayChange?.(hasContent); }, [hasContent, onOverlayChange]);
+  const hasContent = opened || isListening;
+
+  useEffect(() => {
+    onOverlayChange?.(hasContent);
+  }, [hasContent, onOverlayChange]);
 
   return (
     <div className="relative flex flex-col items-center select-none">
@@ -184,10 +216,11 @@ export function VoicePushButton({
       <AnimatePresence>
         {hasContent && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className={`absolute ${compact ? 'top-full right-0 mt-3' : 'bottom-full mb-3'} w-[340px] max-w-[calc(100vw-2rem)] max-h-[70dvh] overflow-y-auto p-3.5 rounded-2xl text-xs border bg-slate-900 border-slate-700 text-white z-50 space-y-2.5`}
+            initial={{ opacity: 0, y: compact ? 8 : -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: compact ? 8 : -8 }}
+            transition={{ duration: 0.15 }}
+            className={`absolute ${compact ? 'top-full right-0 mt-3' : 'bottom-full mb-3'} w-[340px] max-w-[calc(100vw-2rem)] max-h-[70dvh] overflow-y-auto p-3.5 rounded-2xl text-xs border bg-slate-900 border-slate-700 text-white z-50 space-y-2.5 shadow-2xl`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -199,13 +232,36 @@ export function VoicePushButton({
                     <span className="text-amber-300">Guardrail Redirect</span>
                   </>
                 ) : isListening ? (
-                  <>
-                    <span className="w-2 h-2 rounded-full bg-rose-500 " />
+                  <div className="flex items-center gap-1.5">
+                    <span className="relative flex h-2.5 w-2.5 items-center justify-center">
+                      <span
+                        className="absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75 animate-ping"
+                        style={{
+                          transform: `scale(${1 + audioLevel * 1.5})`,
+                        }}
+                      />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+                    </span>
                     <span className="text-rose-300">Listening to your voice...</span>
-                  </>
+                    {/* Live equalizer bars reflecting RMS level */}
+                    <div className="flex items-center gap-0.5 ml-2 h-4 px-1.5 py-0.5 rounded bg-rose-950/60 border border-rose-800/50">
+                      <span
+                        className="w-1 bg-rose-400 rounded-full transition-all duration-75"
+                        style={{ height: `${Math.max(3, Math.min(14, 3 + audioLevel * 16))}px` }}
+                      />
+                      <span
+                        className="w-1 bg-rose-300 rounded-full transition-all duration-75"
+                        style={{ height: `${Math.max(4, Math.min(14, 4 + audioLevel * 22))}px` }}
+                      />
+                      <span
+                        className="w-1 bg-rose-400 rounded-full transition-all duration-75"
+                        style={{ height: `${Math.max(3, Math.min(14, 3 + audioLevel * 14))}px` }}
+                      />
+                    </div>
+                  </div>
                 ) : isSpeaking ? (
                   <>
-                    <Volume2 className="w-3.5 h-3.5 text-blue-400 " />
+                    <Volume2 className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
                     <span className="text-blue-300">Sherpas Voice Answer</span>
                   </>
                 ) : (
@@ -218,8 +274,13 @@ export function VoicePushButton({
 
               {onClosePopup && (
                 <button
-                  onClick={() => { setOpened(false); onClosePopup(); }}
+                  type="button"
+                  onClick={() => {
+                    setOpened(false);
+                    onClosePopup();
+                  }}
                   className="min-w-11 min-h-11 flex items-center justify-center rounded-full text-slate-400 hover:text-white transition-colors"
+                  aria-label="Close voice assistant"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -228,9 +289,12 @@ export function VoicePushButton({
 
             {/* Listening Live Transcript */}
             {isListening && (
-              <p className="text-xs text-rose-200 font-medium leading-relaxed italic">
-                {transcript ? <FinancialText text={transcript} /> : 'Listening... Say your question now'}
-              </p>
+              <div className="space-y-1">
+                <p className="text-xs text-rose-200 font-medium leading-relaxed italic">
+                  {transcript ? <FinancialText text={transcript} /> : 'Listening... Say your question now'}
+                </p>
+                <p className="text-[10px] text-slate-400">Release button when finished speaking</p>
+              </div>
             )}
 
             {/* AI Response Message or Guardrail Notice */}
@@ -252,6 +316,7 @@ export function VoicePushButton({
                 {/* 1-Tap shortcut to Calibration Micro-Card */}
                 {detectedTerm && onOpenCalibration && (
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       onOpenCalibration(detectedTerm);
@@ -269,7 +334,7 @@ export function VoicePushButton({
               </div>
             )}
 
-            {/* Suggestion Chips when mic was quiet or quick-tapped */}
+            {/* Suggestion Chips and Text Input */}
             {!isListening && (!responseMessage || showSuggestions) && (
               <div className="space-y-1.5 pt-0.5">
                 <span className="text-xs text-slate-400 font-semibold block">
@@ -319,17 +384,24 @@ export function VoicePushButton({
 
       {/* ── Push-to-Ask Dock Button ─────────────────────────────────────────── */}
       <div className="relative flex items-center justify-center">
-
+        {/* Animated pulsating halo when listening to user's voice */}
+        {isListening && (
+          <span
+            className="absolute -inset-1 rounded-full bg-rose-500/30 blur-sm pointer-events-none transition-transform duration-75"
+            style={{
+              transform: `scale(${1 + audioLevel * 0.25})`,
+              opacity: Math.max(0.4, Math.min(1, 0.4 + audioLevel * 0.8)),
+            }}
+          />
+        )}
 
         <motion.button
-
+          type="button"
           transition={{ duration: 0.12 }}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchCancel}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          onLostPointerCapture={handleLostPointerCapture}
           onContextMenu={(e) => e.preventDefault()}
           disabled={disabled}
           style={{
@@ -338,23 +410,38 @@ export function VoicePushButton({
             userSelect: 'none',
             WebkitTouchCallout: 'none',
           }}
-          className={`flex items-center gap-2 min-h-11 ${compact ? 'px-3' : 'px-4'} py-2 rounded-full text-xs font-bold  border transition-all cursor-pointer select-none ${
+          className={`relative flex items-center gap-2 min-h-11 ${compact ? 'px-3' : 'px-4'} py-2 rounded-full text-xs font-bold border transition-all cursor-pointer select-none ${
             isListening
-              ? 'bg-rose-600 text-white border-rose-400  ring-4 ring-rose-500/20'
+              ? 'bg-rose-600 text-white border-rose-400 ring-4 ring-rose-500/20'
               : isSpeaking
-              ? 'bg-blue-600 text-white border-blue-400  '
-              : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:border-slate-500 hover:text-white '
+              ? 'bg-blue-600 text-white border-blue-400'
+              : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:border-slate-500 hover:text-white'
           }`}
           aria-label={isListening ? 'Release to ask' : 'Hold to ask'}
         >
           {isListening ? (
             <>
               <Square className="w-3.5 h-3.5 fill-white text-white" />
+              {/* Dynamic sound wave bars inside button */}
+              <div className="flex items-center gap-0.5 h-3.5" aria-hidden="true">
+                <span
+                  className="w-0.5 bg-white/90 rounded-full transition-all duration-75"
+                  style={{ height: `${Math.max(3, Math.min(12, 3 + audioLevel * 14))}px` }}
+                />
+                <span
+                  className="w-0.5 bg-white rounded-full transition-all duration-75"
+                  style={{ height: `${Math.max(4, Math.min(12, 4 + audioLevel * 18))}px` }}
+                />
+                <span
+                  className="w-0.5 bg-white/90 rounded-full transition-all duration-75"
+                  style={{ height: `${Math.max(3, Math.min(12, 3 + audioLevel * 12))}px` }}
+                />
+              </div>
               <span className={compact ? 'sr-only' : undefined}>Release to Send</span>
             </>
           ) : isSpeaking ? (
             <>
-              <Volume2 className="w-3.5 h-3.5 text-blue-300 " />
+              <Volume2 className="w-3.5 h-3.5 text-blue-300 animate-pulse" />
               <span className={compact ? 'sr-only' : undefined}>Sherpas Answering...</span>
             </>
           ) : (
