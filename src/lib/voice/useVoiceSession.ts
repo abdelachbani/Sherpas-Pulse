@@ -5,8 +5,9 @@
  *  - Direct WebSocket connection to the Sherpas Realtime AI Relay (/voice)
  *  - Uses team's AI key with Gemini 3.8 Live (or gpt-realtime-2.1)
  *  - 24kHz PCM16 bidirectional streaming via Web Audio AudioWorklet (mic-worklet.js)
- *  - Works on ANY browser (Microsoft Edge, Google Chrome, Safari, Android, iOS)
- *  - Zero regex limitation: Real AI understands natural Spanish & English speech
+ *  - Persistent MediaStreamAudioSourceNode reference preventing V8 garbage collection
+ *  - Live RMS audio level metering for responsive waveform visualizer in Chrome & Edge
+ *  - Push-to-talk turn detection with graceful pending commit handling while connecting
  *  - Interactive term detection mapping AI answers to calibration cards
  *  - Seamless offline fallback to deterministic grounded plan figures if server is offline
  */
@@ -33,6 +34,7 @@ export interface VoiceSessionResult {
   detectedTerm: string | null;
   errorNotice: string | null;
   showSuggestions: boolean;
+  audioLevel: number;
   startListening: () => void;
   stopListening: () => void;
   stopSpeaking: () => void;
@@ -73,10 +75,12 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const [detectedTerm, setDetectedTerm] = useState<string | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [audioLevel, setAudioLevel] = useState<number>(0);
 
   const wsRef = useRef<WebSocket | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
+  const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const micNodeRef = useRef<AudioWorkletNode | null>(null);
   const playSourcesRef = useRef<AudioBufferSourceNode[]>([]);
   const playHeadRef = useRef<number>(0);
@@ -86,6 +90,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const responseGateRef = useRef(createResponseGate());
   const waitingSendRef = useRef<(() => void) | null>(null);
   const waitingTimerRef = useRef<number | null>(null);
+
+  // Audio capture & pending commit tracking
+  const audioFramesCountRef = useRef<number>(0);
+  const pendingCommitRef = useRef<{ token: number; hasAudio: boolean } | null>(null);
+  const lastLevelUpdateRef = useRef<number>(0);
 
   // Fallback and response tracking refs
   const activeRequestTokenRef = useRef<number | null>(null);
@@ -160,6 +169,22 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     [caseId]
   );
 
+  // ── Safety timeout helper ───────────────────────────────────────────────────
+  const startResponseTimeout = useCallback(
+    (token: number, reason: string) => {
+      if (responseTimeoutTimerRef.current !== null) {
+        window.clearTimeout(responseTimeoutTimerRef.current);
+      }
+      responseTimeoutTimerRef.current = window.setTimeout(() => {
+        responseTimeoutTimerRef.current = null;
+        if (responseGateRef.current.isCurrent(token) && !currentReplyTextRef.current) {
+          executeFallback(inFlightQuestionRef.current || transcript || 'Can you explain this part of our plan?', reason);
+        }
+      }, 8000);
+    },
+    [executeFallback, transcript]
+  );
+
   // ── Stop playback helper ────────────────────────────────────────────────────
   const stopPlayback = useCallback(() => {
     clearWaitingSend();
@@ -168,6 +193,8 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       responseTimeoutTimerRef.current = null;
     }
     inFlightQuestionRef.current = null;
+    pendingCommitRef.current = null;
+    setAudioLevel(0);
 
     const shouldCancel = responseGateRef.current.cancel();
     if (shouldCancel && wsRef.current?.readyState === WebSocket.OPEN) {
@@ -247,11 +274,36 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
           type: 'realtime',
           instructions: 'You are an empathetic, world-class Sherpas wealth advisor talking to this family about their financial plan. Speak in short, concise, natural conversational sentences. Always use the figures from their verified plan. Answer in the same language the client speaks (Spanish or English).',
           audio: {
-            input: { format: { type: 'audio/pcm', rate: 24000 } },
-            output: { format: { type: 'audio/pcm', rate: 24000 } },
+            input: {
+              format: { type: 'audio/pcm', rate: 24000 },
+              turn_detection: null, // Push-to-talk: explicit commit
+              transcription: { model: 'gpt-4o-mini-transcribe' },
+            },
+            output: {
+              format: { type: 'audio/pcm', rate: 24000 },
+              voice: 'marin',
+            },
           },
         },
       }));
+
+      // Flush pending commit if stopListening was called while connecting
+      if (pendingCommitRef.current) {
+        const { token, hasAudio } = pendingCommitRef.current;
+        pendingCommitRef.current = null;
+        if (responseGateRef.current.isCurrent(token)) {
+          if (hasAudio) {
+            ws.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
+            if (responseGateRef.current.markSent(token)) {
+              ws.send(JSON.stringify({ type: 'response.create' }));
+            }
+            setVoiceState('speaking');
+            startResponseTimeout(token, 'Voice relay response timed out · Answered from verified plan figures');
+          } else {
+            setVoiceState('idle');
+          }
+        }
+      }
     };
 
     ws.onmessage = (event) => {
@@ -309,7 +361,14 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         // Voice output chunks
         if ((t === 'response.output_audio.delta' || t === 'response.audio.delta') && ev.delta) {
           if (!audioCtxRef.current) {
-            audioCtxRef.current = new AudioContext({ sampleRate: 24000 });
+            try {
+              audioCtxRef.current = new AudioContext({ sampleRate: 24000 });
+            } catch {
+              audioCtxRef.current = new AudioContext();
+            }
+          }
+          if (audioCtxRef.current.state === 'suspended') {
+            audioCtxRef.current.resume();
           }
           playChunk(ev.delta, audioCtxRef.current);
         }
@@ -349,7 +408,10 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     ws.onerror = (e) => {
       console.warn('[AI Voice WS error]', e);
       setIsConnected(false);
-      if (inFlightQuestionRef.current && !currentReplyTextRef.current) {
+      if (pendingCommitRef.current) {
+        pendingCommitRef.current = null;
+        executeFallback(transcript || 'Can you explain this part of our plan?', 'Voice relay unavailable · Answered from verified plan figures');
+      } else if (inFlightQuestionRef.current && !currentReplyTextRef.current) {
         const q = inFlightQuestionRef.current;
         executeFallback(q, 'Voice relay unavailable · Answered from verified plan figures');
       }
@@ -359,14 +421,17 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       console.log('[AI Voice WS closed]', ev.code, ev.reason);
       setIsConnected(false);
       wsRef.current = null;
-      if (inFlightQuestionRef.current && !currentReplyTextRef.current) {
+      if (pendingCommitRef.current) {
+        pendingCommitRef.current = null;
+        executeFallback(transcript || 'Can you explain this part of our plan?', 'Voice relay offline · Answered from verified plan figures');
+      } else if (inFlightQuestionRef.current && !currentReplyTextRef.current) {
         const q = inFlightQuestionRef.current;
         executeFallback(q, 'Voice relay offline · Answered from verified plan figures');
       }
     };
 
     return ws;
-  }, [caseId, clearWaitingSend, executeFallback, playChunk, trackVoiceAsk]);
+  }, [caseId, clearWaitingSend, executeFallback, playChunk, startResponseTimeout, trackVoiceAsk, transcript]);
 
   // Connect on mount or caseId change
   useEffect(() => {
@@ -381,31 +446,58 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         micStreamRef.current.getTracks().forEach((t) => t.stop());
         micStreamRef.current = null;
       }
+      sourceNodeRef.current = null;
+      micNodeRef.current = null;
     };
   }, [caseId, connectWs, stopPlayback]);
 
   // ── Ensure microphone is active ─────────────────────────────────────────────
   const ensureMic = useCallback(async (): Promise<boolean> => {
-    if (micNodeRef.current && micStreamRef.current) return true;
+    if (micNodeRef.current && micStreamRef.current && sourceNodeRef.current) return true;
     try {
       if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioContext({ sampleRate: 24000 });
+        try {
+          audioCtxRef.current = new AudioContext({ sampleRate: 24000 });
+        } catch {
+          audioCtxRef.current = new AudioContext();
+        }
       }
       if (audioCtxRef.current.state === 'suspended') {
         await audioCtxRef.current.resume();
       }
 
-      micStreamRef.current = await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
       });
+      micStreamRef.current = stream;
 
       await audioCtxRef.current.audioWorklet.addModule('/mic-worklet.js');
-      const srcNode = audioCtxRef.current.createMediaStreamSource(micStreamRef.current);
+      const srcNode = audioCtxRef.current.createMediaStreamSource(stream);
+      // Persist in ref so V8 GC does not collect the source node
+      sourceNodeRef.current = srcNode;
+
       const micNode = new AudioWorkletNode(audioCtxRef.current, 'mic-frames');
       srcNode.connect(micNode);
 
       micNode.port.onmessage = (e) => {
+        // Compute live RMS amplitude for visual level meters & soundwaves
+        const frame = new Int16Array(e.data);
+        let sum = 0;
+        for (let i = 0; i < frame.length; i++) {
+          sum += frame[i] * frame[i];
+        }
+        const rms = Math.sqrt(sum / frame.length) / 32768;
+        const normalizedLevel = Math.min(1, rms * 8);
+
+        const now = performance.now();
+        if (now - lastLevelUpdateRef.current > 50) {
+          lastLevelUpdateRef.current = now;
+          setAudioLevel(normalizedLevel);
+        }
+
         if (!isPressingRef.current) return;
+        audioFramesCountRef.current++;
+
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(
             JSON.stringify({
@@ -429,7 +521,10 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   // ── Start Listening (Hold to Ask) ───────────────────────────────────────────
   const startListening = useCallback(async () => {
     stopPlayback();
-    responseGateRef.current.start();
+    pendingCommitRef.current = null;
+    audioFramesCountRef.current = 0;
+    const token = responseGateRef.current.start();
+    activeRequestTokenRef.current = token;
     voiceAskRecordedRef.current = false;
     currentReplyTextRef.current = '';
     setResponseMessage(null);
@@ -437,6 +532,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     setGuardRedirect(null);
     setErrorNotice(null);
     setShowSuggestions(false);
+    setAudioLevel(0);
     setVoiceState('listening');
     isPressingRef.current = true;
 
@@ -447,21 +543,47 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   // ── Stop Listening (Release to Send) ────────────────────────────────────────
   const stopListening = useCallback(() => {
     isPressingRef.current = false;
+    setAudioLevel(0);
 
     const token = responseGateRef.current.current();
+    const hasAudio = audioFramesCountRef.current > 0;
+
     sendAfterCancel(() => {
       if (!responseGateRef.current.isCurrent(token)) return;
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
-        if (responseGateRef.current.markSent(token)) wsRef.current.send(JSON.stringify({ type: 'response.create' }));
+
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        if (hasAudio) {
+          ws.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
+          if (responseGateRef.current.markSent(token)) {
+            ws.send(JSON.stringify({ type: 'response.create' }));
+          }
+          setVoiceState('speaking');
+          startResponseTimeout(token, 'Voice relay response timed out · Answered from verified plan figures');
+        } else {
+          // No audio was captured (quick release or silent mic)
+          setVoiceState('idle');
+        }
+      } else if (ws && ws.readyState === WebSocket.CONNECTING) {
+        // WebSocket is still handshaking — queue commit for onopen without false "offline" abort
+        pendingCommitRef.current = { token, hasAudio };
+        if (hasAudio) {
+          setVoiceState('speaking');
+          startResponseTimeout(token, 'Voice relay connection timed out · Answered from verified plan figures');
+        } else {
+          setVoiceState('idle');
+        }
       } else {
-        // Socket is not open - reset voice state so user is not stuck in 'listening'
-        setVoiceState('idle');
-        setErrorNotice('Voice relay is currently offline. You can select suggestion chips or type your question below.');
-        setShowSuggestions(true);
+        // Socket is closed or unavailable — provide immediate graceful fallback if audio was spoken
+        if (hasAudio) {
+          executeFallback(transcript || 'Can you explain this part of our plan?', 'Voice relay offline · Answered from verified plan figures');
+        } else {
+          setVoiceState('idle');
+          setShowSuggestions(true);
+        }
       }
     });
-  }, [sendAfterCancel]);
+  }, [executeFallback, sendAfterCancel, startResponseTimeout, transcript]);
 
   // ── Push to Ask (Direct Question via Text or Suggestion Chip) ───────────────
   const pushToAsk = useCallback(
@@ -574,6 +696,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     detectedTerm,
     errorNotice,
     showSuggestions,
+    audioLevel,
     startListening,
     stopListening,
     stopSpeaking: stopPlayback,
