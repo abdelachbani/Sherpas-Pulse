@@ -72,13 +72,27 @@ Every financial advisor faces a critical **"third job"**: once a comprehensive p
 
 ## 3. How Sherpas Pulse Secures 100/100 Points
 
-| Evaluation Criteria | Weight | How Sherpas Pulse Wins Maximum Score |
+*Directly aligned with Borja's official Hackathon Scoring Rubric (weights set Nov 11, 2026):*
+
+| Hackathon Rubric Criterion | Weight | How Sherpas Pulse Wins Maximum Score |
+|---|:---:|---|
+| **1. Captivating** *(Engancha)* | **20 pts** | Replaces static text with a **100% Mobile-First Financial Wrapped** experience (6 vertical 25s stories, dynamic progress, soundscapes, and Demo Pitch HUD). Captures and holds family attention on the devices they actually use. |
+| **2. Understanding** *(Comprensión)* | **20 pts** | **Dual Persona Calibration:** Micro-cards feature an instant toggle between *Everyday Analogies (Beginner)* and *Financial Mechanics (Expert)*, explaining statutory rules (IRC §408A, IRC §529, umbrella excess limits) without losing either partner. |
+| **3. Motivation to Act** *(Ganas de actuar)* | **20 pts** | Eliminates paralysis via **"The First Domino"** (a single 5-minute win with quantified dollar ROI) + an interactive **Multi-Touch Follow-Up Cadence (Days 1, 3, 14, 30)** with 1-click `.ics` calendar downloads and hesitation-driven WhatsApp/Email drafts. |
+| **4. Personal** *(Personal)* | **15 pts** | **"Two Paces, One Plan"**: Dedicated rhythms for Timothy (Analytical) and Melanie (Peace of Mind), with scannable **Cross-Device QR Pairing** so each partner reviews on their own phone, plus a tactile **Cash Tank Allocator** and **Family Sync** consensus screen. |
+| **5. Creativity** *(Creatividad)* | **15 pts** | Strictly avoided typical "chatbot tours". Introduced Zero-Prompt Inactivity Calibration (detecting 4s hesitation pauses), tactile liquidity reservoir drainage, and an out-of-the-box **Advisor Pre-Meeting Telemetry Dashboard (`/case/:caseId/advisor`)** that saves 40 minutes of screen sharing. |
+| **6. Your Friday Plan** *(Plan del viernes)* | **10 pts** | **The Friday Decision Matrix**: Clear, transparent architectural choices documented in-app and in code, articulating exactly what we ruled out (PDF chatbots, desktop slide decks, generative LLM math) and why. |
+
+---
+
+### 3.1 The Friday Decision Matrix: What We Ruled Out & Why
+
+| What We Deliberately Ruled Out | Why We Ruled It Out | What We Built Instead |
 |---|---|---|
-| **Understanding** | **25 pts** | Replaces static PDFs with 25s vertical stories. Implicit Calibration translates complex terms into everyday analogies upon detecting hesitation. |
-| **Creativity** | **20 pts** | First 100% mobile-first experience for Sherpas; Asynchronous Couple Alignment ("Two Paces, One Plan"); Tactile Cash Tank Allocator; Responsive Mobile-First Architecture. |
-| **Motivation to Act** | **20 pts** | Replaces 8 overwhelming tasks with "The First Domino" (quantified 5-minute win), 3-step checklist, and 48-hour Multi-Touch Smart Nudges. |
-| **Grounding (Zero Hallucination)** | **20 pts** | Decoupled deterministic TypeScript extraction layer (`extractor.ts`); Interactive Grounding Inspector on all metrics; Boomerang Guardrail Router. |
-| **Ready to Use** | **15 pts** | Runs out-of-the-box (`npm install && npm run dev`); supports all 4 synthetic households dynamically via MCP; plug-and-play advisor telemetry. |
+| **The PDF Chatbot ("Chat with your plan")** | Sherpas already has conversational AI. When clients are confused, they suffer from *"blank-page syndrome"*—they don't know what to ask about Roth conversions or umbrella limits. Chat is passive and places the cognitive burden on the client. | **Zero-Prompt Implicit Calibration:** Automatically senses when a user lingers (>4s) or taps an underlined term and slides up an everyday analogy with their exact MCP figures. |
+| **40-Minute Desktop Slide Decks** | Screen-sharing static spreadsheets eats up the entire meeting, leaving zero time for human empathy. Moreover, Sherpas has zero mobile presence today. | **100% Mobile-First Wrapped Stories:** Vertical, touch-first cards that clients actually complete at home in 3 minutes. |
+| **Generative LLM Math Calculations** | In wealth management, an LLM hallucinating compounding rates or incorrect tax limits destroys fiduciary trust and violates regulatory guidelines. | **100% Deterministic TypeScript Layer (`extractor.ts`):** Direct extraction from MCP files with interactive Grounding Badges inspecting the raw JSON path. |
+| **Single-Screen Couple Presentations** | Couples rarely think about money the same way. Timothy is analytical (debt payoff, 18% APR, tax efficiency); Melanie seeks family peace of mind (kids' 529 college, term life shield). Forcing them into one presentation leaves one disengaged. | **"Two Paces, One Plan" + QR Pairing:** Each partner explores on their own phone at their own rhythm, converging on a shared Family Sync screen. |
 
 ---
 
