@@ -106,7 +106,7 @@ export function TapToDefine({ term, children }: Props) {
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-controls={popoverId}
-        className="cursor-pointer rounded-sm text-inherit underline decoration-dotted decoration-blue-400/80 underline-offset-4 transition-colors hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-default disabled:no-underline"
+        className="inline-flex min-h-11 min-w-11 cursor-pointer items-center align-middle rounded-sm text-inherit underline decoration-dotted decoration-blue-400/80 underline-offset-4 transition-colors hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-default disabled:no-underline"
       >
         {children ?? term}
       </button>

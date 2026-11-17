@@ -46,6 +46,10 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
   }, []);
 
   useEffect(() => {
+    if (preferredStyle) setViewingStyle(preferredStyle);
+  }, [preferredStyle]);
+
+  useEffect(() => {
     if (voice.detectedTerm) {
       const card = calibrationCards[voice.detectedTerm];
       if (card) setActiveCalibration(card);

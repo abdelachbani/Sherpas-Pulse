@@ -40,7 +40,7 @@ function AllocationPageContent() {
   const setCase = useAppStore((s) => s.setCase);
   const partner = useAppStore((s) => s.partner) || 'primary';
   const setAllocation = useAppStore((s) => s.setAllocation);
-  const addTelemetryEvent = useAppStore((s) => s.addTelemetryEvent);
+  const trackAllocationChange = useAppStore((s) => s.trackAllocationChange);
 
   const activeCase = (currentCase?.id === caseId ? currentCase : CASES.find((c) => c.id === caseId))!;
 
@@ -76,8 +76,17 @@ function AllocationPageContent() {
     if (toIdx < 0 || toIdx >= strategies.length) return;
     const copy = [...strategies];
     const [moved] = copy.splice(fromIdx, 1);
+    if (!moved) return;
     copy.splice(toIdx, 0, moved);
     setStrategies(copy);
+    trackAllocationChange({
+      action: 'reorder',
+      partner,
+      strategyId: moved.id,
+      fromPriority: fromIdx + 1,
+      toPriority: toIdx + 1,
+      caseId: activeCase.id,
+    }, 'allocation');
   }
 
   function handleLockIn() {
@@ -94,11 +103,12 @@ function AllocationPageContent() {
     setAllocation(partner, alloc);
     setHasLockedIn(true);
 
-    addTelemetryEvent({
-      type: 'allocation_set',
-      payload: { partner: currentPartnerName, allocations: alloc.allocations },
-      timestamp: Date.now(),
-    });
+    trackAllocationChange({
+      action: 'lock_in',
+      partner: currentPartnerName,
+      allocations: alloc.allocations,
+      caseId: activeCase.id,
+    }, 'allocation');
   }
 
   function handleSimulatePartner2() {
@@ -119,6 +129,12 @@ function AllocationPageContent() {
 
     const targetPartner = partner === 'primary' ? 'secondary' : 'primary';
     setAllocation(targetPartner, partner2Alloc);
+    trackAllocationChange({
+      action: 'partner_simulated',
+      partner: otherPartnerName,
+      allocations: partner2Alloc.allocations,
+      caseId: activeCase.id,
+    }, 'allocation');
 
     navigate(`/case/${activeCase.id}/sync`);
   }

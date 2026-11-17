@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAppStore } from '../../stores/appStore';
 
 export type VoiceState = 'idle' | 'listening' | 'speaking';
 
@@ -72,6 +73,7 @@ const b64 = (buf: ArrayBuffer): string => {
 };
 
 export function useVoiceSession(caseId: string): VoiceSessionResult {
+  const trackVoiceAsk = useAppStore((state) => state.trackVoiceAsk);
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
   const [transcript, setTranscript] = useState('');
   const [responseMessage, setResponseMessage] = useState<string | null>(null);
@@ -88,6 +90,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const playHeadRef = useRef<number>(0);
   const isPressingRef = useRef<boolean>(false);
   const currentReplyTextRef = useRef<string>('');
+  const voiceAskRecordedRef = useRef(false);
 
   // ── Stop playback helper ────────────────────────────────────────────────────
   const stopPlayback = useCallback(() => {
@@ -180,6 +183,14 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
           const text = ev.delta || ev.transcript || ev.item?.content?.[0]?.text;
           if (text) {
             setTranscript((prev) => t.endsWith('completed') ? text : (prev + text).trim());
+            if (
+              t.includes('input_audio_transcription')
+              && t.endsWith('completed')
+              && !voiceAskRecordedRef.current
+            ) {
+              trackVoiceAsk({ inputMode: 'voice' });
+              voiceAskRecordedRef.current = true;
+            }
           }
         }
 
@@ -229,7 +240,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     };
 
     return ws;
-  }, [caseId, playChunk]);
+  }, [caseId, playChunk, trackVoiceAsk]);
 
   // Connect on mount or caseId change
   useEffect(() => {
@@ -292,6 +303,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   // ── Start Listening (Hold to Ask) ───────────────────────────────────────────
   const startListening = useCallback(async () => {
     stopPlayback();
+    voiceAskRecordedRef.current = false;
     currentReplyTextRef.current = '';
     setResponseMessage(null);
     setTranscript('');
@@ -321,6 +333,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       stopPlayback();
       const clean = question.trim();
       if (!clean) return;
+      trackVoiceAsk({ inputMode: 'typed_or_suggestion' });
 
       currentReplyTextRef.current = '';
       setTranscript(clean);
@@ -364,7 +377,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         setTimeout(sendPayload, 300);
       }
     },
-    [connectWs, stopPlayback]
+    [connectWs, stopPlayback, trackVoiceAsk]
   );
 
   const disconnect = useCallback(() => {

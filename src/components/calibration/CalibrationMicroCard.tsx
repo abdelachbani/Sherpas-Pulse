@@ -12,6 +12,7 @@ import { motion, useIsPresent } from 'framer-motion';
 import { Lightbulb, Check, ShieldCheck, Sparkles } from 'lucide-react';
 import type { CalibrationCard, GroundingRef } from '../../types';
 import { useDialogFocus } from '../shared/useDialogFocus';
+import { FinancialText } from '../shared/FinancialText';
 
 interface Props {
   card: CalibrationCard;
@@ -49,8 +50,8 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
             <Sparkles className="w-3 h-3" />
             <span>Financial term</span>
           </div>
-          <h2 id={titleId} className="text-xl font-bold text-white tracking-tight">{card.term}</h2>
-          <p className="text-sm text-slate-400 font-medium">{card.headline}</p>
+          <h2 id={titleId} className="text-xl font-bold text-white tracking-tight"><FinancialText text={card.term} /></h2>
+          <p className="text-sm text-slate-400 font-medium"><FinancialText text={card.headline} /></p>
         </div>
       </div>
 
@@ -59,14 +60,14 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
         <Lightbulb className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
         <div>
           <span className="font-semibold text-blue-300 block mb-1">Everyday Analogy:</span>
-          {card.analogy}
+          <FinancialText text={card.analogy} />
         </div>
       </div>
 
       {/* Sherpas take */}
       <div className="mt-3 p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700 text-slate-300 text-sm leading-relaxed">
         <span className="font-semibold text-slate-200 block mb-1">What this means in your plan:</span>
-        {card.sherpasTake}
+        <FinancialText text={card.sherpasTake} />
       </div>
 
       {/* Plan numbers */}
@@ -81,10 +82,10 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
                 key={idx}
                 className="p-3 rounded-xl bg-slate-800/80 border border-slate-700"
               >
-                <div className="text-xs text-slate-400">{num.label}</div>
+                <div className="text-xs text-slate-400"><FinancialText text={num.label} /></div>
                 <div className="text-base font-bold text-white mt-0.5">
-                  {num.value}
-                  {num.unit && <span className="text-xs font-normal text-slate-400 ml-1">{num.unit}</span>}
+                  <FinancialText text={String(num.value)} />
+                  {num.unit && <span className="text-xs font-normal text-slate-400 ml-1"><FinancialText text={num.unit} /></span>}
                 </div>
               </div>
             ))}

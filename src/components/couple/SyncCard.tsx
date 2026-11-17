@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import type { SyncAgreement, SyncTieBreaker, GroundingRef } from '../../types';
+import { FinancialText } from '../shared/FinancialText';
 
 interface SyncCardProps {
   item: SyncAgreement | SyncTieBreaker;
@@ -16,10 +17,10 @@ export function SyncCard({ item, partner1Name, partner2Name, index = 0, priority
   return (
     <motion.article initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }} className={`rounded-2xl border p-5 bg-slate-900 ${agreed ? 'border-emerald-500/40' : 'border-amber-500/40'}`}>
       <p className={`text-xs uppercase tracking-wider font-bold ${agreed ? 'text-emerald-300' : 'text-amber-300'}`}>{agreed ? 'Shared priority' : 'Different choices'}</p>
-      <h3 className="mt-2 text-lg font-semibold text-white">{item.title}</h3>
+      <h3 className="mt-2 text-lg font-semibold text-white"><FinancialText text={item.title} /></h3>
       {item.status === 'agreement' ? (
         <>
-          <p className="mt-2 text-sm leading-relaxed text-slate-300">{item.explanation}</p>
+          <p className="mt-2 text-sm leading-relaxed text-slate-300"><FinancialText text={item.explanation} /></p>
           <div className="mt-4 rounded-xl bg-slate-800 p-4 text-sm text-slate-200">
             <p>{partner1Name} &amp; {partner2Name}</p>
             <p className="mt-1 font-semibold text-white">${item.agreedAmount.toLocaleString()}{priority != null ? ` · Priority #${priority}` : ''}</p>
@@ -34,7 +35,7 @@ export function SyncCard({ item, partner1Name, partner2Name, index = 0, priority
               </div>
             ))}
           </div>
-          <p className="mt-4 text-sm leading-relaxed text-slate-300">{item.advisorQuestion}</p>
+          <p className="mt-4 text-sm leading-relaxed text-slate-300"><FinancialText text={item.advisorQuestion} /></p>
         </>
       )}
     </motion.article>

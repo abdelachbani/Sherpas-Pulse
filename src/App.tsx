@@ -16,6 +16,7 @@ import TradeoffPage from './pages/TradeoffPage';
 import FamilySyncPage from './pages/FamilySyncPage';
 import ActionPage from './pages/ActionPage';
 import { SplitScreenToggle, type SplitMode, type SplitTarget } from './components/shared/SplitScreenToggle';
+import { CalibrationBanner } from './components/shared/CalibrationBanner';
 
 export default function App() {
   const household = useAppStore((state) => state.currentCase?.financialHealth.case.household);
@@ -104,6 +105,7 @@ export default function App() {
           </Routes>
         )}
         </div>
+        <CalibrationBanner />
       </div>
     </BrowserRouter>
   );

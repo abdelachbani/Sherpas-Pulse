@@ -2,6 +2,7 @@ import { ChevronRight, ShieldCheck } from 'lucide-react';
 import type { StoryCard as StoryCardType, GroundingRef, ViewingStyle, PillarScore, DataPoint } from '../../types';
 import { PillarBars } from './StoryDataViz';
 import { formatStoryValue } from '../../lib/storyFormatting';
+import { FinancialText } from '../shared/FinancialText';
 
 interface Props {
   card: StoryCardType;
@@ -28,8 +29,9 @@ export function StoryCard({ card, pillars = [], viewingStyle, onInspectGrounding
   }
 
   function dataPoint(point: DataPoint, index: number) {
+    const formattedValue = `${formatStoryValue(point.value)}${point.unit ? ` ${point.unit}` : ''}`;
     return <div key={`${point.label}-${index}`} className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 py-4 last:border-0">
-      <div className="min-w-0"><p className="text-sm text-slate-300">{point.label}</p><p className="mt-1 text-base leading-relaxed text-white">{formatStoryValue(point.value)}{point.unit ? ` ${point.unit}` : ''}</p></div>
+      <div className="min-w-0"><p className="text-sm text-slate-300"><FinancialText text={point.label} /></p><p className="mt-1 text-base leading-relaxed text-white"><FinancialText text={formattedValue} /></p></div>
       {point.grounding && groundingButton(point.grounding, point.label)}
     </div>;
   }
@@ -39,14 +41,14 @@ export function StoryCard({ card, pillars = [], viewingStyle, onInspectGrounding
       <div className="mx-auto flex w-full max-w-xl flex-col gap-6 py-5">
         <header className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm font-medium text-[#b9c7ff]"><span className="capitalize">{card.pillar.replace('-', ' ')} · {card.storyIndex + 1} / 6</span>{card.grounding && groundingButton(card.grounding, card.title)}</div>
-          <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-4xl" style={{ fontFamily: 'Poppins, sans-serif' }}>{card.title}</h1>
-          <p className="text-base leading-relaxed text-slate-300">{card.subtitle}</p>
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-4xl" style={{ fontFamily: 'Poppins, sans-serif' }}><FinancialText text={card.title} /></h1>
+          <p className="text-base leading-relaxed text-slate-300"><FinancialText text={card.subtitle} /></p>
         </header>
 
         {card.highlightNumber != null && !highlightIsScore && <div className="rounded-2xl bg-[#eef1ff] p-6 text-[#161827]">
-          {card.highlightLabel && <p className="text-sm font-medium text-[#4565d6]">{card.highlightLabel}</p>}
-          <p className="mt-1 break-words text-3xl font-semibold leading-tight sm:text-4xl" style={{ fontFamily: 'Poppins, sans-serif' }}>{formatStoryValue(card.highlightNumber)}{card.highlightUnit ? ` ${card.highlightUnit}` : ''}</p>
-          {card.tagline && <p className="mt-3 text-sm leading-relaxed text-slate-600">{card.tagline}</p>}
+          {card.highlightLabel && <p className="text-sm font-medium text-[#4565d6]"><FinancialText text={card.highlightLabel} /></p>}
+          <p className="mt-1 break-words text-3xl font-semibold leading-tight sm:text-4xl" style={{ fontFamily: 'Poppins, sans-serif' }}><FinancialText text={`${formatStoryValue(card.highlightNumber)}${card.highlightUnit ? ` ${card.highlightUnit}` : ''}`} /></p>
+          {card.tagline && <p className="mt-3 text-sm leading-relaxed text-slate-600"><FinancialText text={card.tagline} /></p>}
         </div>}
 
         {card.interactiveType === 'vibe_check' && <fieldset className="space-y-3"><legend className="mb-3 text-base font-semibold">Choose your viewing style</legend>{([

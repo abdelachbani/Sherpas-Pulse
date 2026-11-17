@@ -39,6 +39,7 @@ import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
 import { extractWhatIfScenarios } from '../lib/mcp/extractor';
 import { GroundingInspector } from '../components/calibration/GroundingInspector';
+import { FinancialText } from '../components/shared/FinancialText';
 import type { WhatIfScenario, GroundingRef } from '../types';
 
 export default function TradeoffPage() {
@@ -56,6 +57,7 @@ function TradeoffPageContent() {
   const currentCase = useAppStore((s) => s.currentCase);
   const setCase = useAppStore((s) => s.setCase);
   const addTelemetryEvent = useAppStore((s) => s.addTelemetryEvent);
+  const trackTradeoffChange = useAppStore((s) => s.trackTradeoffChange);
 
   // Active case resolution: prefer URL param, then appStore, then default to Michael Carter
   const activeCase =
@@ -158,15 +160,11 @@ function TradeoffPageContent() {
       setActiveChoice('B');
     }
 
-    addTelemetryEvent({
-      type: 'allocation_set',
-      payload: {
-        action: 'preset_applied',
-        preset,
-        caseId: activeCase.id,
-      },
-      timestamp: Date.now(),
-    });
+    trackTradeoffChange({
+      action: 'preset_applied',
+      preset,
+      caseId: activeCase.id,
+    }, 'tradeoff');
   }
 
   // Handle What-If Chip click
@@ -184,15 +182,37 @@ function TradeoffPageContent() {
       if (isSamantha) setTimelineYear(2030);
     }
 
-    addTelemetryEvent({
-      type: 'term_tap',
-      payload: {
-        chip: choice,
-        caseId: activeCase.id,
-        scenario: activeScenario.id,
-      },
-      timestamp: Date.now(),
-    });
+    trackTradeoffChange({
+      action: 'choice_select',
+      choice,
+      caseId: activeCase.id,
+      scenarioId: activeScenario.id,
+    }, 'tradeoff');
+  }
+
+  function handlePriorityChange(option: 'A' | 'B', value: number) {
+    if (value === (option === 'A' ? starsA : starsB)) return;
+    if (option === 'A') setStarsA(value);
+    else setStarsB(value);
+
+    trackTradeoffChange({
+      action: 'priority_change',
+      option,
+      value,
+      caseId: activeCase.id,
+      scenarioId: activeScenario.id,
+    }, 'tradeoff');
+  }
+
+  function handleTimelineChange(year: number) {
+    if (year === timelineYear) return;
+    setTimelineYear(year);
+    trackTradeoffChange({
+      action: 'timeline_change',
+      year,
+      caseId: activeCase.id,
+      scenarioId: activeScenario.id,
+    }, 'tradeoff');
   }
 
   // Calculate year metrics and milestone projection
@@ -535,20 +555,38 @@ function TradeoffPageContent() {
         {scenarios.length > 1 && (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {scenarios.map((sc) => (
-              <button
+            <div
                 key={sc.id}
-                onClick={() => {
-                  setActiveScenarioId(sc.id);
-                }}
                 className={`min-w-0 min-h-11 p-3 rounded-2xl text-left border text-xs transition-all ${
                   activeScenario.id === sc.id
                     ? 'bg-indigo-600/30 border-indigo-400 text-white shadow-md'
                     : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-white'
                 }`}
               >
-                <div className="font-bold break-words">{sc.title}</div>
-                <div className="text-xs text-indigo-300 mt-0.5">{sc.tag}</div>
-              </button>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-bold break-words"><FinancialText text={sc.title} /></div>
+                  <div className="text-xs text-indigo-300 mt-0.5"><FinancialText text={sc.tag} /></div>
+                </div>
+                <button
+                  type="button"
+                  aria-pressed={activeScenario.id === sc.id}
+                  onClick={() => {
+                    setActiveScenarioId(sc.id);
+                    if (sc.id !== activeScenario.id) {
+                      trackTradeoffChange({
+                        action: 'scenario_select',
+                        caseId: activeCase.id,
+                        scenarioId: sc.id,
+                      }, 'tradeoff');
+                    }
+                  }}
+                  className="min-h-11 shrink-0 rounded-lg bg-slate-800 px-3 font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#819cff]"
+                >
+                  {activeScenario.id === sc.id ? 'Selected' : 'Select'}
+                </button>
+              </div>
+            </div>
             ))}
           </div>
         )}
@@ -574,98 +612,110 @@ function TradeoffPageContent() {
           {/* The Two What-If Interactive Chips */}
           <div className="grid grid-cols-1 gap-2.5">
             {/* Option A Chip */}
-            <motion.button type="button" aria-pressed={activeChoice === 'A'}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleSelectChip('A')}
-              className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+            <motion.article
+              className={`p-3.5 rounded-2xl border transition-all ${
                 activeChoice === 'A'
                   ? 'bg-indigo-950/70 border-indigo-400 ring-2 ring-indigo-500/20 shadow-lg'
-                  : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-300'
+                  : 'bg-slate-950/60 border-slate-800 text-slate-300'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="p-1.5 rounded-xl bg-indigo-500/20 text-indigo-300">
-                    {isMichael ? (
-                      <Home className="w-4 h-4" />
-                    ) : (
-                      <GraduationCap className="w-4 h-4" />
-                    )}
-                  </span>
-                  <div>
-                    <span className="text-xs font-bold uppercase text-indigo-300 tracking-wider">
-                      Option A
+              <motion.button
+                type="button"
+                aria-pressed={activeChoice === 'A'}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleSelectChip('A')}
+                className="w-full cursor-pointer text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#819cff]"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-xl bg-indigo-500/20 text-indigo-300">
+                      {isMichael ? (
+                        <Home className="w-4 h-4" />
+                      ) : (
+                        <GraduationCap className="w-4 h-4" />
+                      )}
                     </span>
-                    <h3 className="text-xs font-bold text-white">
-                      {isMichael
-                        ? 'Buy $550,000 Home in 2027'
-                        : 'College Tuition for Teens Now'}
-                    </h3>
+                    <div>
+                      <span className="text-xs font-bold uppercase text-indigo-300 tracking-wider">
+                        Option A
+                      </span>
+                      <h3 className="text-xs font-bold text-white">
+                        {isMichael
+                          ? 'Buy $550,000 Home in 2027'
+                          : 'College Tuition for Teens Now'}
+                      </h3>
+                    </div>
                   </div>
-                </div>
 
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                    activeChoice === 'A'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-800 text-slate-400'
-                  }`}
-                >
-                  {weightA}% Weight
-                </span>
-              </div>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                      activeChoice === 'A'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {weightA}% Weight
+                  </span>
+                </div>
+              </motion.button>
 
               <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-                {activeScenario.optionA.impact}
+                <FinancialText text={activeScenario.optionA.impact} />
               </p>
-            </motion.button>
+            </motion.article>
 
             {/* Option B Chip */}
-            <motion.button type="button" aria-pressed={activeChoice === 'B'}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleSelectChip('B')}
-              className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+            <motion.article
+              className={`p-3.5 rounded-2xl border transition-all ${
                 activeChoice === 'B'
                   ? 'bg-emerald-950/70 border-emerald-400 ring-2 ring-emerald-500/20 shadow-lg'
-                  : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-300'
+                  : 'bg-slate-950/60 border-slate-800 text-slate-300'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-300">
-                    {isMichael ? (
-                      <Clock className="w-4 h-4" />
-                    ) : (
-                      <Palmtree className="w-4 h-4" />
-                    )}
-                  </span>
-                  <div>
-                    <span className="text-xs font-bold uppercase text-emerald-400 tracking-wider">
-                      Option B
+              <motion.button
+                type="button"
+                aria-pressed={activeChoice === 'B'}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleSelectChip('B')}
+                className="w-full cursor-pointer text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#819cff]"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-300">
+                      {isMichael ? (
+                        <Clock className="w-4 h-4" />
+                      ) : (
+                        <Palmtree className="w-4 h-4" />
+                      )}
                     </span>
-                    <h3 className="text-xs font-bold text-white">
-                      {isMichael
-                        ? 'Retire Early at 58'
-                        : 'Second Home in 2030'}
-                    </h3>
+                    <div>
+                      <span className="text-xs font-bold uppercase text-emerald-400 tracking-wider">
+                        Option B
+                      </span>
+                      <h3 className="text-xs font-bold text-white">
+                        {isMichael
+                          ? 'Retire Early at 58'
+                          : 'Second Home in 2030'}
+                      </h3>
+                    </div>
                   </div>
-                </div>
 
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                    activeChoice === 'B'
-                      ? 'bg-emerald-500 text-slate-950 font-black'
-                      : 'bg-slate-800 text-slate-400'
-                  }`}
-                >
-                  {weightB}% Weight
-                </span>
-              </div>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                      activeChoice === 'B'
+                        ? 'bg-emerald-500 text-slate-950 font-black'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {weightB}% Weight
+                  </span>
+                </div>
+              </motion.button>
 
               <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-                {activeScenario.optionB.impact}
+                <FinancialText text={activeScenario.optionB.impact} />
               </p>
-            </motion.button>
+            </motion.article>
           </div>
 
           {/* ── Priority Balance Bar ────────────────────────────────────────── */}
@@ -744,7 +794,7 @@ function TradeoffPageContent() {
                   <button
                     key={star}
                     type="button"
-                    onClick={() => setStarsA(star)}
+                    onClick={() => handlePriorityChange('A', star)}
                     aria-pressed={starsA === star}
                     aria-label={`Rate option A ${star} out of 5`}
                     className="p-1 hover:scale-110 transition-transform cursor-pointer"
@@ -772,7 +822,7 @@ function TradeoffPageContent() {
               step={1}
               value={starsA}
               aria-label="Importance of option A"
-              onChange={(e) => setStarsA(Number(e.target.value))}
+              onChange={(e) => handlePriorityChange('A', Number(e.target.value))}
               className="w-full accent-indigo-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none mt-1"
             />
           </div>
@@ -795,7 +845,7 @@ function TradeoffPageContent() {
                   <button
                     key={star}
                     type="button"
-                    onClick={() => setStarsB(star)}
+                    onClick={() => handlePriorityChange('B', star)}
                     aria-pressed={starsB === star}
                     aria-label={`Rate option B ${star} out of 5`}
                     className="p-1 hover:scale-110 transition-transform cursor-pointer"
@@ -823,7 +873,7 @@ function TradeoffPageContent() {
               step={1}
               value={starsB}
               aria-label="Importance of option B"
-              onChange={(e) => setStarsB(Number(e.target.value))}
+              onChange={(e) => handlePriorityChange('B', Number(e.target.value))}
               className="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none mt-1"
             />
           </div>
@@ -854,7 +904,7 @@ function TradeoffPageContent() {
             step={1}
             value={timelineYear}
             aria-label="Timeline year"
-            onChange={(e) => setTimelineYear(Number(e.target.value))}
+            onChange={(e) => handleTimelineChange(Number(e.target.value))}
             className="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-800 rounded-lg appearance-none"
           />
 
@@ -863,7 +913,7 @@ function TradeoffPageContent() {
             {isMichael ? (
               <>
                 <button
-                  onClick={() => setTimelineYear(2026)}
+                  onClick={() => handleTimelineChange(2026)}
                   className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2026
                       ? 'bg-indigo-600 text-white font-bold'
@@ -873,7 +923,7 @@ function TradeoffPageContent() {
                   2026 Start
                 </button>
                 <button
-                  onClick={() => setTimelineYear(2027)}
+                  onClick={() => handleTimelineChange(2027)}
                   className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2027
                       ? 'bg-indigo-600 text-white font-bold'
@@ -883,7 +933,7 @@ function TradeoffPageContent() {
                   2027 Home
                 </button>
                 <button
-                  onClick={() => setTimelineYear(2035)}
+                  onClick={() => handleTimelineChange(2035)}
                   className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2035
                       ? 'bg-indigo-600 text-white font-bold'
@@ -893,7 +943,7 @@ function TradeoffPageContent() {
                   2035 Growth
                 </button>
                 <button
-                  onClick={() => setTimelineYear(2047)}
+                  onClick={() => handleTimelineChange(2047)}
                   className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2047
                       ? 'bg-indigo-600 text-white font-bold'
@@ -903,7 +953,7 @@ function TradeoffPageContent() {
                   2047 Retire 58
                 </button>
                 <button
-                  onClick={() => setTimelineYear(2050)}
+                  onClick={() => handleTimelineChange(2050)}
                   className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2050
                       ? 'bg-indigo-600 text-white font-bold'
@@ -916,7 +966,7 @@ function TradeoffPageContent() {
             ) : (
               <>
                 <button
-                  onClick={() => setTimelineYear(2026)}
+                  onClick={() => handleTimelineChange(2026)}
                   className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2026
                       ? 'bg-indigo-600 text-white font-bold'
@@ -926,7 +976,7 @@ function TradeoffPageContent() {
                   2026 Ethan
                 </button>
                 <button
-                  onClick={() => setTimelineYear(2028)}
+                  onClick={() => handleTimelineChange(2028)}
                   className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2028
                       ? 'bg-indigo-600 text-white font-bold'
@@ -936,7 +986,7 @@ function TradeoffPageContent() {
                   2028 Ava
                 </button>
                 <button
-                  onClick={() => setTimelineYear(2030)}
+                  onClick={() => handleTimelineChange(2030)}
                   className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2030
                       ? 'bg-indigo-600 text-white font-bold'
@@ -946,7 +996,7 @@ function TradeoffPageContent() {
                   2030 2nd Home
                 </button>
                 <button
-                  onClick={() => setTimelineYear(2044)}
+                  onClick={() => handleTimelineChange(2044)}
                   className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2044
                       ? 'bg-indigo-600 text-white font-bold'
@@ -956,7 +1006,7 @@ function TradeoffPageContent() {
                   2044 Retire 65
                 </button>
                 <button
-                  onClick={() => setTimelineYear(2050)}
+                  onClick={() => handleTimelineChange(2050)}
                   className={`min-h-11 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     timelineYear === 2050
                       ? 'bg-indigo-600 text-white font-bold'
@@ -991,39 +1041,39 @@ function TradeoffPageContent() {
             </div>
 
             <h4 className="text-xs font-bold text-white">
-              {milestoneData.title}
+              <FinancialText text={milestoneData.title} />
             </h4>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              {milestoneData.narrative}
+              <FinancialText text={milestoneData.narrative} />
             </p>
 
             {/* 3 Key Extracted Metrics */}
             <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800/80">
               <div className="p-2 rounded-xl bg-slate-900/90 text-center">
                 <div className="text-xs text-slate-400 truncate">
-                  {milestoneData.stat1Label}
+                  <FinancialText text={milestoneData.stat1Label} />
                 </div>
                 <div className="text-xs font-bold text-white mt-0.5 truncate">
-                  {milestoneData.stat1Val}
+                  <FinancialText text={milestoneData.stat1Val} />
                 </div>
               </div>
 
               <div className="p-2 rounded-xl bg-slate-900/90 text-center">
                 <div className="text-xs text-slate-400 truncate">
-                  {milestoneData.stat2Label}
+                  <FinancialText text={milestoneData.stat2Label} />
                 </div>
                 <div className="text-xs font-bold text-emerald-400 mt-0.5 truncate">
-                  {milestoneData.stat2Val}
+                  <FinancialText text={milestoneData.stat2Val} />
                 </div>
               </div>
 
               <div className="p-2 rounded-xl bg-slate-900/90 text-center">
                 <div className="text-xs text-slate-400 truncate">
-                  {milestoneData.stat3Label}
+                  <FinancialText text={milestoneData.stat3Label} />
                 </div>
                 <div className="text-xs font-bold text-indigo-300 mt-0.5 truncate">
-                  {milestoneData.stat3Val}
+                  <FinancialText text={milestoneData.stat3Val} />
                 </div>
               </div>
             </div>

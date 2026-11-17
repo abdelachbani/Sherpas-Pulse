@@ -8,6 +8,7 @@
 import { motion } from 'framer-motion';
 import { GripVertical, ShieldCheck, ArrowUp, ArrowDown, Info } from 'lucide-react';
 import type { CashStrategyOption } from '../../types';
+import { FinancialText } from '../shared/FinancialText';
 
 interface Props {
   strategy: CashStrategyOption;
@@ -54,7 +55,9 @@ export function CashAllocatorChip({
             #{priorityIndex + 1}
           </span>
           <div>
-            <h3 className="font-bold text-white text-sm tracking-tight">{strategy.label}</h3>
+            <h3 className="font-bold text-white text-sm tracking-tight">
+              <FinancialText text={strategy.label} />
+            </h3>
             <span className="text-xs uppercase font-semibold tracking-wider opacity-80 block">
               {strategy.urgency} Priority
             </span>
@@ -91,7 +94,7 @@ export function CashAllocatorChip({
       </div>
 
       <p className="text-sm text-slate-300 mt-1 leading-relaxed bg-black/20 p-2 rounded-xl">
-        {strategy.benefitSummary}
+        <FinancialText text={strategy.benefitSummary} />
       </p>
 
       {/* Grounding Info trigger */}

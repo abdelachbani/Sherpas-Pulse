@@ -24,6 +24,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import type { VoiceState } from '../../lib/voice/useVoiceSession';
+import { FinancialText } from './FinancialText';
 
 interface Props {
   caseId?: string;
@@ -226,7 +227,7 @@ export function VoicePushButton({
             {/* Listening Live Transcript */}
             {isListening && (
               <p className="text-xs text-rose-200 font-medium leading-relaxed italic">
-                {transcript || 'Listening... Say your question now'}
+                {transcript ? <FinancialText text={transcript} /> : 'Listening... Say your question now'}
               </p>
             )}
 
@@ -235,7 +236,7 @@ export function VoicePushButton({
               <div className="space-y-2">
                 {transcript && (
                   <div className="text-xs text-slate-400">
-                    You asked: <span className="text-slate-200 italic">"{transcript}"</span>
+                    You asked: <span className="text-slate-200 italic">"<FinancialText text={transcript} />"</span>
                   </div>
                 )}
                 <div className="text-xs text-slate-100 leading-relaxed font-normal bg-slate-950/70 p-3 rounded-2xl border border-slate-800">
@@ -243,7 +244,7 @@ export function VoicePushButton({
                     <ShieldCheck className="w-3 h-3" />
                     <span>Plan Verified Numbers</span>
                   </div>
-                  {guardRedirect || responseMessage}
+                  <FinancialText text={guardRedirect || responseMessage || ''} />
                 </div>
 
                 {/* 1-Tap shortcut to Calibration Micro-Card */}
@@ -274,16 +275,19 @@ export function VoicePushButton({
                 </span>
                 <div className="grid grid-cols-2 gap-1.5">
                   {sampleQuestions.map((q) => (
-                    <button
-                      key={q.label}
-                      onClick={() => onSelectSuggestion?.(q.query)}
-                      className="min-h-11 p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-colors cursor-pointer"
-                    >
-                      <div className="text-xs font-bold text-white flex items-center gap-1 truncate">
+                    <div key={q.label} className="rounded-xl bg-slate-800/80 border border-slate-700 p-2">
+                      <div className="text-xs font-bold text-white flex items-center gap-1">
                         <span>{q.icon}</span>
-                        <span>{q.label}</span>
+                        <span className="min-w-0"><FinancialText text={q.label} /></span>
                       </div>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => onSelectSuggestion?.(q.query)}
+                        className="mt-1 min-h-11 w-full text-left text-xs font-medium text-blue-300 hover:text-blue-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+                      >
+                        Ask this question
+                      </button>
+                    </div>
                   ))}
                 </div>
 

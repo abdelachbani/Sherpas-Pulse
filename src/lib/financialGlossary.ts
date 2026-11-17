@@ -3,14 +3,39 @@ const DEFINITIONS: Record<string, string> = {
   'roth ira': 'An individual retirement account funded with money you have already paid taxes on. Qualified withdrawals in retirement are generally tax-free.',
   '529': 'A tax-advantaged account designed to help save for education costs, such as college tuition.',
   '529 plan': 'A tax-advantaged account designed to help save for education costs, such as college tuition.',
+  '529 education plan': 'A tax-advantaged account designed to help save for eligible education costs, such as college tuition.',
   umbrella: 'Extra liability insurance that can help protect your savings if a large claim goes beyond the limits of your auto or home policy.',
   'umbrella liability': 'Extra liability insurance that can help protect your savings if a large claim goes beyond the limits of your auto or home policy.',
+  'umbrella policy': 'Extra liability insurance that can help protect your savings if a large claim goes beyond the limits of your auto or home policy.',
+  'credit card': 'A payment card that lets you borrow up to a limit and repay later. If you carry a balance, interest may be charged.',
   'sharpe ratio': 'A way to compare an investment return with the amount of risk taken to get it. A higher ratio can mean more return for each unit of risk.',
   'expense ratio': 'The yearly fee a fund charges to manage your investment, shown as a percentage of the money in the fund.',
   'emergency fund': 'Cash set aside for unexpected costs or a loss of income, so you have a buffer before relying on debt or long-term savings.',
   'debt avalanche': 'A payoff approach where you make minimum payments on every debt and put extra money toward the debt with the highest interest rate first.',
   'debt snowball': 'A payoff approach where you make minimum payments on every debt and put extra money toward the smallest balance first, for quicker progress wins.',
+  'emergency funds': 'Cash set aside for unexpected costs or a loss of income, so you have a buffer before relying on debt or long-term savings.',
+  'revolving apr': 'The yearly interest rate charged on a balance that can go up or down, such as a credit card balance.',
+  apr: 'The annual percentage rate: a yearly measure of the cost of borrowing, including interest and sometimes certain fees.',
+  'mortality ratio': 'A comparison of life insurance coverage with an estimated amount a family may need. The estimate depends on its assumptions.',
+  'leveraged etf': 'An exchange-traded fund that uses financial instruments to magnify an index’s movement, often over a single day. Its longer-term returns can differ substantially from a simple multiple of the index.',
+  'withdrawal rate': 'The amount taken from savings over a period, expressed as a share of the total investments.',
+  'index fund': 'An investment fund designed to track a group of investments, such as a market index, instead of selecting each investment individually.',
+  'index funds': 'Investment funds designed to track a group of investments, such as a market index, instead of selecting each investment individually.',
+  'brokerage account': 'An investment account that lets you buy and sell investments. Unlike retirement accounts, it generally has no special retirement tax treatment.',
+  'high-yield savings account': 'A savings account that pays interest, often at a higher rate than a standard savings account. Rates and terms can change.',
 };
+
+const FINANCIAL_TERMS = Object.keys(DEFINITIONS)
+  .sort((left, right) => right.length - left.length)
+  .map((term) => ({
+    term,
+    pattern: new RegExp(`^${term.split(/\s+/).map(escapeRegExp).join('\\s+')}`, 'i'),
+  }));
+
+export interface FinancialTextSegment {
+  text: string;
+  term?: string;
+}
 
 export function getFinancialTermDefinition(term: string): string {
   const cleanTerm = term.trim();
@@ -18,4 +43,49 @@ export function getFinancialTermDefinition(term: string): string {
 
   return DEFINITIONS[key]
     ?? `“${cleanTerm}” is a financial term whose exact meaning depends on how it is used in your plan. Your advisor can explain how it applies to your situation.`;
+}
+
+export function splitFinancialTerms(text: string): FinancialTextSegment[] {
+  const segments: FinancialTextSegment[] = [];
+  let segmentStart = 0;
+  let index = 0;
+
+  while (index < text.length) {
+    const matchedTerm = FINANCIAL_TERMS.find(({ pattern }) => {
+      const match = pattern.exec(text.slice(index));
+      if (!match) return false;
+
+      const precedingCharacter = index > 0 ? text[index - 1] : undefined;
+      const followingCharacter = text[index + match[0].length];
+      return !isWordCharacter(precedingCharacter) && !isWordCharacter(followingCharacter);
+    });
+
+    if (!matchedTerm) {
+      index += 1;
+      continue;
+    }
+
+    if (index > segmentStart) {
+      segments.push({ text: text.slice(segmentStart, index) });
+    }
+
+    const matchedText = matchedTerm.pattern.exec(text.slice(index))![0];
+    segments.push({ text: matchedText, term: matchedText });
+    index += matchedText.length;
+    segmentStart = index;
+  }
+
+  if (segmentStart < text.length) {
+    segments.push({ text: text.slice(segmentStart) });
+  }
+
+  return segments;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function isWordCharacter(character: string | undefined): boolean {
+  return character !== undefined && /[a-z0-9]/i.test(character);
 }

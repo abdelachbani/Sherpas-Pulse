@@ -1,4 +1,5 @@
 import type { PillarScore } from '../../types';
+import { FinancialText } from '../shared/FinancialText';
 
 /** A score is only shown when supplied by the case. */
 export function ScoreRing({ score }: { score: number }) {
@@ -24,7 +25,7 @@ export function PillarBars({ pillars }: { pillars: PillarScore[] }) {
       <h2 className="text-base font-semibold text-white">Pillar scores</h2>
       {pillars.map((p) => (
         <div key={p.pillar} className="space-y-2">
-          <div className="flex justify-between gap-3 text-sm"><span className="capitalize text-slate-200">{p.pillar.replace(/-/g, ' ')}</span><span className="font-semibold text-white">{p.score}/100</span></div>
+          <div className="flex justify-between gap-3 text-sm"><span className="capitalize text-slate-200"><FinancialText text={p.pillar.replace(/-/g, ' ')} /></span><span className="font-semibold text-white">{p.score}/100</span></div>
           <div role="progressbar" aria-label={`${p.pillar} score`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.max(0, Math.min(100, p.score))} className="h-2 overflow-hidden rounded-full bg-white/10">
             <div className="h-full rounded-full bg-[#819cff]" style={{ width: `${Math.max(0, Math.min(100, p.score))}%` }} />
           </div>
