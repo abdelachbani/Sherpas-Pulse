@@ -11,7 +11,6 @@ __pycache__/
 dist/
 build/
 .next/
-assets/01-sherpas-hackathon-upv-es.html
 
 # OS and editors
 .DS_Store
