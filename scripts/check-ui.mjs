@@ -40,7 +40,7 @@ async function inspect(label, width, screenshot = false) {
   const metrics = await evaluate(`(() => {
     const root = document.querySelector('#app-content');
     const bad = [...document.querySelectorAll('button, a, input')].filter(e => {const r=e.getBoundingClientRect();const s=getComputedStyle(e);return r.width>0 && r.height>0 && s.visibility!=='hidden' && !e.closest('.skip-link') && (r.left < -1 || r.right > innerWidth+1);}).map(e=>e.textContent.trim().slice(0,60));
-    const heading = document.querySelector('h1')?.textContent;
+    const heading = document.querySelector('h1')?.textContent || document.querySelector('[aria-label="Chapter checkpoint"] h2')?.textContent;
     const story = document.querySelector('.story-shell');
     const footer = story?.querySelector('footer')?.getBoundingClientRect();
     const pixel = document.createElement('canvas');pixel.width=1;pixel.height=1;
@@ -50,6 +50,7 @@ async function inspect(label, width, screenshot = false) {
     const bg = element => { const chain=[]; for(let e=element;e;e=e.parentElement){ const st=getComputedStyle(e);if(st.backgroundImage!=='none')return null;chain.unshift(rgb(st.backgroundColor)); }let color=[255,255,255];for(const c of chain)color=color.map((v,i)=>c[i]*c[3]+v*(1-c[3]));return color; };
     const contrastFailures=[];
     for(const e of document.querySelectorAll('p, span, h1, h2, h3, label, button, summary, a, legend')) {
+      if(e.closest('.sr-only'))continue;
       if(![...e.childNodes].some(n=>n.nodeType===Node.TEXT_NODE && n.textContent.trim()) || e.closest('[disabled]') || !e.checkVisibility({opacityProperty:true,visibilityProperty:true}))continue;
       const r=e.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)continue;
       const b=bg(e);if(!b)continue; const st=getComputedStyle(e), c=rgb(st.color);if(c[3]<1)continue;
@@ -57,12 +58,15 @@ async function inspect(label, width, screenshot = false) {
       const large=parseFloat(st.fontSize)>=24 || (parseFloat(st.fontSize)>=18.66 && Number(st.fontWeight)>=700);
       if(ratio<(large?3:4.5)-0.05)contrastFailures.push({text:e.textContent.trim().slice(0,55),ratio:Math.round(ratio*100)/100});
     }
-    const smallTargets=[...document.querySelectorAll('button, a[href], summary')].filter(e=>{const r=e.getBoundingClientRect();return !e.closest('[disabled],.skip-link') && e.checkVisibility({opacityProperty:true,visibilityProperty:true}) && r.top>=0 && r.bottom<=innerHeight && (r.width<43.5 || r.height<43.5);}).map(e=>(e.getAttribute('aria-label')||e.textContent).trim().slice(0,50));
+    const smallTargets=[...document.querySelectorAll('button, a[href], summary')].filter(e=>{const r=e.getBoundingClientRect();return !e.closest('[disabled],.skip-link,[data-inline-term],.sr-only') && e.checkVisibility({opacityProperty:true,visibilityProperty:true}) && r.top>=0 && r.bottom<=innerHeight && (r.width<43.5 || r.height<43.5);}).map(e=>(e.getAttribute('aria-label')||e.textContent).trim().slice(0,50));
     const unlabelledInputs=[...document.querySelectorAll('input:not([type=hidden])')].filter(e=>e.checkVisibility() && !e.getAttribute('aria-label') && !e.getAttribute('aria-labelledby') && !e.labels?.length).map(e=>e.type);
-    return { heading, width:innerWidth, contrastFailures, smallTargets, unlabelledInputs, overflow:document.documentElement.scrollWidth>innerWidth+1 || (root && root.scrollWidth>root.clientWidth+1), offscreenControls:bad, storyFooterVisible: !footer || (footer.bottom<=innerHeight+1 && footer.top>=0), brokenImages:[...document.images].filter(i=>!i.complete || i.naturalWidth===0).map(i=>i.src), text:document.body.innerText };
+    const card=document.querySelector('.story-card');
+    const cardFits=!card || (card.scrollHeight<=card.clientHeight+1 && card.firstElementChild.getBoundingClientRect().bottom<=card.getBoundingClientRect().bottom+1);
+    const stageNoScroll=!story || root.scrollHeight<=root.clientHeight+1;
+    return { heading, width:innerWidth, cardFits, stageNoScroll, contrastFailures, smallTargets, unlabelledInputs, overflow:document.documentElement.scrollWidth>innerWidth+1 || (root && root.scrollWidth>root.clientWidth+1), offscreenControls:bad, storyFooterVisible: !footer || (footer.bottom<=innerHeight+1 && footer.top>=0), brokenImages:[...document.images].filter(i=>!i.complete || i.naturalWidth===0).map(i=>i.src), text:document.body.innerText };
   })()`);
   const errors = exceptions.splice(0);
-  const pass = Boolean(metrics.heading) && !metrics.overflow && !metrics.offscreenControls.length && metrics.storyFooterVisible && !metrics.brokenImages.length && !metrics.contrastFailures.length && !metrics.smallTargets.length && !metrics.unlabelledInputs.length && !errors.length;
+  const pass = Boolean(metrics.heading) && metrics.cardFits && metrics.stageNoScroll && !metrics.overflow && !metrics.offscreenControls.length && metrics.storyFooterVisible && !metrics.brokenImages.length && !metrics.contrastFailures.length && !metrics.smallTargets.length && !metrics.unlabelledInputs.length && !errors.length;
   const { text, ...small } = metrics;
   results.push({ label, width, pass, ...small, errors });
   if (screenshot) { const shot = await call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }); await writeFile(join(out, label.replace(/[^a-z0-9-]/gi,'-') + '-' + width + '.png'), Buffer.from(shot.data,'base64')); }
@@ -77,48 +81,87 @@ try {
   ws=new WebSocket(tab.webSocketDebuggerUrl);await new Promise((r,j)=>{ws.addEventListener('open',r,{once:true});ws.addEventListener('error',j,{once:true});});
   ws.addEventListener('message', e=>{const m=JSON.parse(e.data);if(m.id){const p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);}}if(m.method==='Runtime.exceptionThrown')exceptions.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text);});
   await call('Page.enable');await call('Runtime.enable');
+  await call('Page.addScriptToEvaluateOnNewDocument', { source: `
+    window.__speechCalls=[];window.__questions=[];
+    Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{speak(u){window.__speechCalls.push(u.text)},cancel(){},get speaking(){return false}}});
+    class TestSocket extends EventTarget {
+      static CONNECTING=0;static OPEN=1;static CLOSING=2;static CLOSED=3;
+      constructor(){super();this.readyState=0;this.serial=0;this.reply=null;setTimeout(()=>{if(this.readyState===3)return;this.readyState=1;this.onopen?.({});},10)}
+      send(raw){const e=JSON.parse(raw);if(e.type==='conversation.item.create')window.__questions.push(e.item?.content?.[0]?.text);if(e.type==='response.cancel'){const id=this.reply;setTimeout(()=>this.onmessage?.({data:JSON.stringify({type:'response.done',response:{id,status:'cancelled'}})}),5);}if(e.type==='response.create'){const id='ui-response-'+(++this.serial);this.reply=id;this.onmessage?.({data:JSON.stringify({type:'response.created',response:{id}})});setTimeout(()=>{if(this.readyState!==1)return;this.onmessage?.({data:JSON.stringify({type:'response.output_audio_transcript.delta',response_id:id,delta:'Your question has reached the assistant.'})});this.onmessage?.({data:JSON.stringify({type:'response.done',response:{id,status:'completed'}})});},700)}}
+      close(){this.readyState=3;this.onclose?.({code:1000,reason:'Test closed'})}
+    } window.WebSocket=TestSocket;
+  `});
+  await call('Page.bringToFront');
+  const state=()=>evaluate(`(() => {const s=document.querySelector('.story-shell');return s?{phase:s.dataset.phase,chapter:Number(s.dataset.chapterIndex),index:Number(s.dataset.frameIndex),count:Number(s.dataset.frameCount),progress:Number(document.querySelector('nav [aria-current="step"] [role="progressbar"]')?.getAttribute('aria-valuenow'))}:null})()`);
+  const key=async name=>{await call('Input.dispatchKeyEvent',{type:'keyDown',key:name,code:name});await call('Input.dispatchKeyEvent',{type:'keyUp',key:name,code:name});await pause(160);};
+  const clickAria=async label=>evaluate(`(() => {const b=[...document.querySelectorAll('button')].find(b=>b.getAttribute('aria-label')===${JSON.stringify(label)});if(!b)return false;b.click();return true})()`);
+  const edge=async right=>{const r=await evaluate(`(()=>{const r=document.querySelector('.story-shell > main').getBoundingClientRect();return {x:${right?'true':'false'}?r.right-4:r.left+4,y:r.top+r.height*.7}})()`);await call('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...r});await call('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...r});await pause(170);};
   const cases=['timothy-melanie-weah','daniel-emily-johnson','michael-carter','samantha-lewis'];
-  for (const width of (process.env.UI_CHECK_INTERACTIONS_ONLY ? [] : (process.env.UI_CHECK_WIDTHS ? process.env.UI_CHECK_WIDTHS.split(',').map(Number) : [1440,1024,768,390,320]))) {
-    await call('Emulation.setDeviceMetricsOverride',{width,height:width>=1024?900:844,deviceScaleFactor:1,mobile:false});
+  const widths=process.env.UI_CHECK_INTERACTIONS_ONLY?[]:(process.env.UI_CHECK_WIDTHS?process.env.UI_CHECK_WIDTHS.split(',').map(Number):[320,390,430,768,844,1440]);
+  for(const width of widths){
+    await call('Emulation.setDeviceMetricsOverride',{width,height:width===320?568:width===430?932:width===768?1024:width===844?390:width>=1024?900:844,deviceScaleFactor:1,mobile:false});
     await navigate('/');await inspect('home',width,true);
+    results.push({label:'desktop-only-split',width,pass:await evaluate(`Boolean(document.querySelector('button[aria-label="Split Screen"]'))===${width>=1024}`)});
     for(const id of cases){
       await navigate('/case/'+id);await inspect(id+'-entry',width,width===390);
       await navigate('/case/'+id+'/stories');
-      for(let chapter=0;chapter<6;chapter++){
-        const before=await inspect(id+'-chapter-'+(chapter+1),width,width===390 || (width===1440 && id===cases[0]));
-        if(chapter===0){
-          await evaluate('document.querySelector(".story-card")?.scrollTo(0, 200)');await pause(150);
-          const after=await evaluate('document.querySelector("h1")?.textContent');
-          results.push({label:id+'-scroll-does-not-navigate',width,pass:after===before.heading});
+      let steps=0;
+      while(await state()){
+        const current=await state();if(++steps>120)throw new Error('Story navigation did not finish');
+        if(current.phase==='checkpoint'){
+          await pause(160);await inspect(id+'-summary-'+current.chapter,width,width===390);
+          const referenceCount=await evaluate(`document.querySelector('[aria-label="Chapter summary"]')?.children.length ?? 0`);
+          const p1=(await state()).progress;await pause(120);const after=await state();
+          results.push({label:id+'-checkpoint-waits-'+current.chapter,width,pass:after.phase==='checkpoint' && after.chapter===current.chapter && p1===100 && after.progress===100 && referenceCount>0});
+          if(!await click('Continue'))throw new Error('Checkpoint needs Continue');await pause(200);
+        }else{
+          await inspect(id+'-frame-'+current.index,width,width===390 && current.index<2);
+          results.push({label:id+'-no-debug-source',width,pass:await evaluate(`!document.body.innerText.includes('View source') && !document.body.innerText.includes('View plan source') && !document.querySelector('.story-shell > footer')`)});
+          await edge(true);
         }
-        if(chapter<5){if(!await click('Next'))throw new Error('Missing Next');await pause(600);}
       }
-      for(const route of (id===cases[0]||id===cases[1]?['allocate','sync','action']:['tradeoff','action'])){
-        await navigate('/case/'+id+'/'+route);await inspect(id+'-'+route,width,width===390);
-      }
+      for(const route of (id===cases[0]||id===cases[1]?['allocate','sync','action']:['tradeoff','action'])){await navigate('/case/'+id+'/'+route);await inspect(id+'-'+route,width,width===390);}
     }
   }
+  // Actual timing, narration and input behavior at one viewport, using a local test relay.
   await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
   await navigate('/case/timothy-melanie-weah/stories');
-  await click('Next'); await pause(600);
-  await click('View source'); await pause(400);
-  results.push({ label: 'source-dialog-opens-and-focuses', pass: await evaluate(`Boolean(document.querySelector('[role="dialog"]')?.contains(document.activeElement))`) });
-  await call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
-  await call('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' }); await pause(300);
-  results.push({ label: 'source-dialog-escape-and-restore', pass: await evaluate(`!document.querySelector('[role="dialog"]') && document.activeElement?.textContent.includes('View source')`) });
-  await click('Terms'); await pause(400);
-  results.push({ label: 'terms-dialog-opens-and-focuses', pass: await evaluate(`Boolean(document.querySelector('[role="dialog"]')?.contains(document.activeElement))`) });
-  await call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
-  await call('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' }); await evaluate(`new Promise(resolve => { const start = Date.now(); const check = () => !document.querySelector('[role="dialog"]') || Date.now()-start > 2000 ? resolve(true) : setTimeout(check, 50); check(); })`);
-  results.push({ label: 'terms-dialog-escape', pass: await evaluate(`!document.querySelector('[role="dialog"]')`) });
-  await click('Play');
-  results.push({ label: 'autoplay-is-opt-in', pass: await evaluate('[...document.querySelectorAll("button")].some(b => b.textContent.trim() === "Pause" && b.getAttribute("aria-pressed") === "true")') });
-  await click('Pause'); await pause(200);
-  await call('Page.bringToFront');
-  await call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowRight', code: 'ArrowRight' }); await pause(600);
-  results.push({ label: 'keyboard-next', pass: await evaluate(`document.querySelector('h1')?.textContent === 'What matters to you'`) });
+  const initial=await state();await pause(650);const progressed=await state();
+  results.push({label:'continuous-progress',pass:initial.phase==='playing' && progressed.index===initial.index && progressed.progress>initial.progress && progressed.progress<100});
+  await clickAria('Pause story');await pause(100);const paused=await state();await pause(400);const still=await state();
+  results.push({label:'pause-freezes-progress',pass:paused.progress===still.progress});
+  await clickAria('Turn narration on');await pause(100);
+  const heard=await evaluate('window.__speechCalls.length');
+  await click('Terms');await pause(100);await key('Escape');await pause(100);
+  results.push({label:'terms-do-not-repeat-narration',pass:await evaluate(`window.__speechCalls.length===${heard} && ${heard}>0`)});
+  await edge(true);const moved=await state();await edge(false);const returned=await state();
+  results.push({label:'tap-right-left',pass:moved.index===initial.index+1 && returned.index===initial.index});
+  results.push({label:'quick-return-does-not-repeat-narration',pass:await evaluate(`window.__speechCalls.length===${heard}`)});
+  await clickAria('Resume story');
+  // Let the final scene run on its clock: timers must stop at the checkpoint.
+  while((await state()).phase!=='checkpoint'){await key('ArrowRight');}
+  await pause(250);const checked=await state();await pause(450);
+  results.push({label:'checkpoint-progress-complete-stable',pass:checked.progress===100 && (await state()).phase==='checkpoint'});
+  await click('I have a question');
+  await evaluate(`(()=>{const input=document.querySelector('input[placeholder="Ask about this chapter"]');const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;setter.call(input,'Can you explain this section?');input.dispatchEvent(new Event('input',{bubbles:true}))})()`);await pause(120);
+  await click('Ask');await pause(150);
+  results.push({label:'question-reaches-existing-assistant-path',pass:await evaluate(`window.__questions.includes('Can you explain this section?')`)});
+  await click('Continue');await pause(250);
+  const nextStarted=await state();await pause(900);const nextAfterReply=await state();
+  results.push({label:'late-reply-does-not-block-next-chapter',pass:nextAfterReply.chapter===nextStarted.chapter && nextAfterReply.progress>nextStarted.progress});
+  results.push({label:'continue-starts-next-chapter',pass:(await state()).chapter===1 && (await state()).phase==='playing'});
+  await navigate('/case/timothy-melanie-weah');
+  await evaluate(`([...document.querySelectorAll('button')].find(b=>b.textContent.includes('Express'))).click()`);await pause(100);await click('Explore your plan');await pause(300);
+  const summaryMode=await state();
+  const waitStart=Date.now();while((await state())?.phase!=='checkpoint' && Date.now()-waitStart<10000)await pause(100);
+  const automaticCheckpoint=await state();
+  results.push({label:'express-rhythm-and-automatic-checkpoint',pass:summaryMode.count===6 && automaticCheckpoint?.phase==='checkpoint'});
+  const completeSummary=await evaluate(`document.querySelector('[aria-label="Chapter summary"]')?.children.length ?? 0`);
+  results.push({label:'express-checkpoint-keeps-full-section-data',pass:completeSummary>=6});
+  await pause(8500);const waiting=await state();
+  results.push({label:'checkpoint-does-not-advance-with-time',pass:waiting.phase==='checkpoint' && waiting.chapter===automaticCheckpoint.chapter && waiting.progress===100});
   await navigate('/case/not-a-case/stories');
-  results.push({label:'unknown-case',pass:await evaluate('document.body.innerText.includes("not found") || document.body.innerText.includes("not available")')});
+  results.push({label:'unknown-case',pass:await evaluate(`document.body.innerText.includes('not found')`)});
   await writeFile(join(out,'report.json'),JSON.stringify(results,null,2));
   const failed=results.filter(r=>!r.pass);console.log(`APPLICATION QUALITY: ${results.length-failed.length}/${results.length} passed`);
   process.exitCode=failed.length?1:0;

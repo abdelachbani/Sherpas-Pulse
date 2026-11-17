@@ -33,10 +33,10 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
       aria-hidden={!isPresent}
       inert={!isPresent}
       tabIndex={-1}
-      initial={{ opacity: 0, y: 120 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 120 }}
-      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.12 }}
       className="absolute inset-x-0 bottom-0 z-40 bg-slate-900/95 border-t border-slate-700/80 rounded-t-3xl p-5 text-white   max-h-[85dvh] overflow-y-auto"
       onClick={(e) => e.stopPropagation()}
     >
@@ -59,16 +59,16 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
       <div className="mt-4 p-4 rounded-2xl bg-blue-950/20 border border-blue-500/30 text-blue-100 text-sm leading-relaxed flex gap-3">
         <Lightbulb className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
         <div>
-          <span className="font-semibold text-blue-300 block mb-1">Everyday Analogy:</span>
+          <span className="font-semibold text-blue-300 block mb-1">In plain language:</span>
           <FinancialText text={card.analogy} />
         </div>
       </div>
 
       {/* Sherpas take */}
-      <div className="mt-3 p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700 text-slate-300 text-sm leading-relaxed">
+      {card.sherpasTake && <div className="mt-3 p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700 text-slate-300 text-sm leading-relaxed">
         <span className="font-semibold text-slate-200 block mb-1">What this means in your plan:</span>
         <FinancialText text={card.sherpasTake} />
-      </div>
+      </div>}
 
       {/* Plan numbers */}
       {card.numbers.length > 0 && (

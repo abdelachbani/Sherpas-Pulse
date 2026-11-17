@@ -597,16 +597,7 @@ function TradeoffPageContent() {
             <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
               Competing Priorities
             </span>
-            {activeScenario.grounding && (
-              <button
-                type="button"
-                onClick={() => setActiveGrounding(activeScenario.grounding!)}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition-colors cursor-pointer"
-              >
-                <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                <span>Scenario estimate</span>
-              </button>
-            )}
+            <span className="text-xs text-slate-400">Scenario estimate</span>
           </div>
 
           {/* The Two What-If Interactive Chips */}
@@ -622,7 +613,7 @@ function TradeoffPageContent() {
               <motion.button
                 type="button"
                 aria-pressed={activeChoice === 'A'}
-                whileTap={{ scale: 0.98 }}
+
                 onClick={() => handleSelectChip('A')}
                 className="w-full cursor-pointer text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#819cff]"
               >
@@ -675,7 +666,7 @@ function TradeoffPageContent() {
               <motion.button
                 type="button"
                 aria-pressed={activeChoice === 'B'}
-                whileTap={{ scale: 0.98 }}
+
                 onClick={() => handleSelectChip('B')}
                 className="w-full cursor-pointer text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#819cff]"
               >
@@ -1028,16 +1019,7 @@ function TradeoffPageContent() {
                 {milestoneData.badge}
               </span>
 
-              {milestoneData.groundingRef && (
-                <button
-                  type="button"
-                  onClick={() => setActiveGrounding(milestoneData.groundingRef)}
-                  className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 cursor-pointer"
-                >
-                  <ShieldCheck className="w-3 h-3" />
-                  <span>Verify Data</span>
-                </button>
-              )}
+
             </div>
 
             <h4 className="text-xs font-bold text-white">

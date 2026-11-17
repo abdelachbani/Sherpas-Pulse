@@ -1,4 +1,15 @@
 const DEFINITIONS: Record<string, string> = {
+  'health score': 'A summary rating of the areas assessed in your financial plan. Read the individual areas as well: a single score does not describe every risk or guarantee future results.',
+  'financial health score': 'A summary rating of the areas assessed in your financial plan. Read the individual areas as well: a single score does not describe every risk or guarantee future results.',
+  'cash flow': 'Money coming in and going out over a period. A positive balance means income is higher than spending during that period.',
+  liquidity: 'How readily money or an asset can be available to pay for expenses, without waiting for a long-term investment to mature.',
+  debt: 'Money you owe. The balance, interest rate and repayment terms help explain its cost.',
+  investments: 'Assets held with the aim of earning income or growing in value. Their values and returns can change.',
+  'retirement age': 'The age recorded in your plan as your target for retirement. It is a goal, rather than a guarantee that every cost will be covered.',
+  retirement: 'The stage of life when you plan to reduce or stop working and rely more on savings, benefits or other income.',
+  'life insurance': 'A policy that pays an agreed benefit to named beneficiaries when the insured person dies, subject to its terms.',
+  contribution: 'Money added to a savings or investment account. An account may have rules or limits on contributions.',
+
   '401(k)': 'A workplace retirement account. Money can come straight from your paycheck, and your employer may add a contribution too.',
   'roth ira': 'An individual retirement account funded with money you have already paid taxes on. Qualified withdrawals in retirement are generally tax-free.',
   '529': 'A tax-advantaged account designed to help save for education costs, such as college tuition.',

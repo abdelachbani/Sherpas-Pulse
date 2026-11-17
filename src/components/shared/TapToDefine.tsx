@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { getFinancialTermDefinition } from '../../lib/financialGlossary';
 import { useAppStore } from '../../stores/appStore';
+import { StoryHelpContext } from '../stories/StoryHelpContext';
 
 interface Props {
   term: string;
@@ -15,6 +16,7 @@ interface PopoverPosition {
 }
 
 export function TapToDefine({ term, children }: Props) {
+  const storyHelp = useContext(StoryHelpContext);
   const trackTermConsulted = useAppStore((state) => state.trackTermConsulted);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -39,6 +41,12 @@ export function TapToDefine({ term, children }: Props) {
     trackTermConsulted(term);
     setIsOpen(true);
   }
+
+  useEffect(() => {
+    if (!isOpen || !storyHelp) return;
+    storyHelp.onOpen();
+    return storyHelp.onClose;
+  }, [isOpen, storyHelp]);
 
   useLayoutEffect(() => {
     if (!isOpen) return;
@@ -100,6 +108,7 @@ export function TapToDefine({ term, children }: Props) {
     <>
       <button
         ref={triggerRef}
+        data-inline-term="true"
         type="button"
         onClick={handleTriggerClick}
         disabled={!hasTerm}

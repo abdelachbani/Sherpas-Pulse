@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { useAppStore } from './stores/appStore';
-import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom';
 import CaseSelectPage from './pages/CaseSelectPage';
 import HouseholdEntryPage from './pages/HouseholdEntryPage';
 import StoriesPage from './pages/StoriesPage';
@@ -16,17 +16,24 @@ import TradeoffPage from './pages/TradeoffPage';
 import FamilySyncPage from './pages/FamilySyncPage';
 import ActionPage from './pages/ActionPage';
 import { SplitScreenToggle, type SplitMode, type SplitTarget } from './components/shared/SplitScreenToggle';
+import { useDesktopLayout } from './components/shared/useDesktopLayout';
 import { CalibrationBanner } from './components/shared/CalibrationBanner';
 
 export default function App() {
+  return <BrowserRouter><ApplicationShell /></BrowserRouter>;
+}
+
+function ApplicationShell() {
+  const { pathname } = useLocation();
+  const isWrapped = /\/case\/[^/]+\/stories\/?$/.test(pathname);
+  const desktop = useDesktopLayout();
   const household = useAppStore((state) => state.currentCase?.financialHealth.case.household);
   const adults = household?.filter((member) => member.role === 'client' || member.role === 'co-client') ?? [];
   const [splitMode, setSplitMode] = useState<SplitMode>('single');
   const [splitTarget, setSplitTarget] = useState<SplitTarget>('advisor');
 
   return (
-    <BrowserRouter>
-      <div className="app-shell relative bg-slate-950 text-white">
+      <div className="app-shell relative bg-slate-950 text-white" data-wrapped={isWrapped ? 'true' : undefined}>
         {/* Live Projector Split Screen Toggle */}
         <a className="skip-link" href="#app-content">Skip to content</a>
         <header className="app-toolbar">
@@ -47,7 +54,7 @@ export default function App() {
         </header>
 
         <div id="app-content" className="app-content" tabIndex={-1}>
-        {splitMode === 'split' ? (
+        {desktop && splitMode === 'split' ? (
           /* Split Screen Projector Mode for Live Demo */
           <div className="flex flex-col lg:flex-row items-start justify-center gap-6 min-h-full p-4 sm:p-8 bg-slate-950">
             {/* Left Screen: Primary Partner / Stories */}
@@ -105,8 +112,7 @@ export default function App() {
           </Routes>
         )}
         </div>
-        <CalibrationBanner />
+        {!isWrapped && <CalibrationBanner />}
       </div>
-    </BrowserRouter>
   );
 }

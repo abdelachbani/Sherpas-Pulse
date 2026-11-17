@@ -1,0 +1,28 @@
+/* The chapter heading stays still; each sourced detail reveals within it. */
+.story-reveal { animation: story-reveal 650ms ease-out both; }
+.story-highlight { border-left: 3px solid #4565d6; padding: 0.25rem 0 0.25rem 1rem; }
+.story-details { border-block: 1px solid #dfe1e9; }
+.story-detail { padding: 0.75rem 0; }
+.story-detail + .story-detail { border-top: 1px solid #dfe1e9; }
+.story-meter { height: 5px; margin-top: 0.65rem; background: #dfe4f3; overflow: hidden; }
+.story-meter-fill { height: 100%; background: #4565d6; transform-origin: left; animation: story-meter 900ms 180ms ease-out both; }
+/* Each chapter uses a different visual rhythm, never fabricated data. */
+.story-reveal--vibe .story-detail { border-left: 3px solid #c5d0f6; padding-left: 1rem; }
+.story-reveal--overview .story-highlight { border-left: 0; padding-left: 0; }
+.story-reveal--overview .story-highlight > p:nth-child(2) { font-size: clamp(2rem, 8vw, 3.25rem); }
+.story-reveal--translator .story-detail { padding-left: 1rem; border-left: 3px solid #4565d6; }
+.story-reveal--advice .story-detail { padding-left: 1rem; border-left: 3px solid #b7c5f3; }
+.story-reveal--living-map .story-details { border-block: 0; border-left: 2px solid #b7c5f3; margin-left: 0.35rem; }
+.story-reveal--living-map .story-detail { position: relative; padding-left: 1.1rem; }
+.story-reveal--living-map .story-detail::before { content: ''; position: absolute; top: 1.1rem; left: -5px; width: 8px; height: 8px; border-radius: 50%; background: #4565d6; }
+.story-reveal--action .story-highlight { border-left-color: #172033; }
+@keyframes story-reveal { from { opacity: 0; clip-path: inset(0 0 100% 0); } to { opacity: 1; clip-path: inset(0); } }
+@keyframes story-meter { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .story-reveal, .story-meter-fill { animation: none; }
+}
+.story-reveal--vibe .story-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; border: 0; }
+.story-reveal--vibe .story-detail { border-left: 0; padding-left: 0; }
+.story-reveal--vibe .story-detail > p:last-child { margin-top: 10px; font-family: Poppins, sans-serif; font-size: clamp(2.5rem, 10vw, 4rem); font-weight: 500; line-height: 1.1; }
+.story-reveal--living-map .story-detail > p:last-child { font-family: Poppins, sans-serif; font-size: clamp(1.25rem, 5vw, 1.75rem); }
+@media (max-height: 600px) { .story-reveal--vibe .story-detail > p:last-child { font-size: 2.25rem; } }

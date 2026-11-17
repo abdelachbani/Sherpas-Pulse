@@ -113,7 +113,7 @@ function caseBrief(id) {
 
   const topMoves = (fh.score?.top_moves ?? [])
     .slice(0, 3)
-    .map((m, i) => `  ${i + 1}. ${m.title}: ${m.action} (target: $${m.target_amount.toLocaleString()}, score ${m.score_before}→${m.score_after})`)
+    .map((m, i) => `  ${i + 1}. ${m.title}: ${m.action} (${m.target_amount != null ? `target: $${m.target_amount.toLocaleString()}, ` : ""}score ${m.score_before}→${m.score_after})`)
     .join("\n");
 
   const caps = (fh.score?.caps_applied ?? [])

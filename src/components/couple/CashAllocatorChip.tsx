@@ -5,7 +5,6 @@
  * Shows title, target dollar amount, benefit summary from MCP, and drag handle.
  */
 
-import { motion } from 'framer-motion';
 import { GripVertical, ShieldCheck, ArrowUp, ArrowDown, Info } from 'lucide-react';
 import type { CashStrategyOption } from '../../types';
 import { FinancialText } from '../shared/FinancialText';
@@ -40,12 +39,7 @@ export function CashAllocatorChip({
   };
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+    <div
       className={`p-4 rounded-2xl border bg-slate-900/90  ${urgencyColors[strategy.urgency]}`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -96,17 +90,6 @@ export function CashAllocatorChip({
       <p className="text-sm text-slate-300 mt-1 leading-relaxed bg-black/20 p-2 rounded-xl">
         <FinancialText text={strategy.benefitSummary} />
       </p>
-
-      {/* Grounding Info trigger */}
-      {strategy.grounding && (
-        <button
-          onClick={onInspect}
-          className="mt-2.5 flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
-        >
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span>View plan source</span>
-        </button>
-      )}
-    </motion.div>
+    </div>
   );
 }

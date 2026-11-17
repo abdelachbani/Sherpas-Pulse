@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import type { SyncAgreement, SyncTieBreaker, GroundingRef } from '../../types';
 import { FinancialText } from '../shared/FinancialText';
 
@@ -15,7 +14,7 @@ interface SyncCardProps {
 export function SyncCard({ item, partner1Name, partner2Name, index = 0, priority }: SyncCardProps) {
   const agreed = item.status === 'agreement';
   return (
-    <motion.article initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }} className={`rounded-2xl border p-5 bg-slate-900 ${agreed ? 'border-emerald-500/40' : 'border-amber-500/40'}`}>
+    <article className={`rounded-2xl border p-5 bg-slate-900 ${agreed ? 'border-emerald-500/40' : 'border-amber-500/40'}`}>
       <p className={`text-xs uppercase tracking-wider font-bold ${agreed ? 'text-emerald-300' : 'text-amber-300'}`}>{agreed ? 'Shared priority' : 'Different choices'}</p>
       <h3 className="mt-2 text-lg font-semibold text-white"><FinancialText text={item.title} /></h3>
       {item.status === 'agreement' ? (
@@ -38,7 +37,7 @@ export function SyncCard({ item, partner1Name, partner2Name, index = 0, priority
           <p className="mt-4 text-sm leading-relaxed text-slate-300"><FinancialText text={item.advisorQuestion} /></p>
         </>
       )}
-    </motion.article>
+    </article>
   );
 }
 export default SyncCard;

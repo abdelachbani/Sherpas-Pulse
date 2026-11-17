@@ -9,7 +9,8 @@
  *      * Client Action Plan on left, Advisor Telemetry on right (Sherpas Dashboard)
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useDesktopLayout } from './useDesktopLayout';
 import { Smartphone, Monitor, Users, Activity, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -37,6 +38,9 @@ export function SplitScreenToggle({
   partner2Name = 'Partner 2',
   className = '',
 }: SplitScreenToggleProps) {
+  const desktop = useDesktopLayout();
+  useEffect(() => { if (!desktop && mode === 'split') onModeChange('single'); }, [desktop, mode, onModeChange]);
+  if (!desktop) return null;
   return (
     <div className={`flex flex-col items-center gap-2 ${className}`}>
       {/* Primary Toggle Bar */}
@@ -132,7 +136,8 @@ export function SplitScreenContainer({
   singleActiveTab = 'left',
   className = '',
 }: SplitScreenContainerProps) {
-  if (mode === 'single') {
+  const desktop = useDesktopLayout();
+  if (mode === 'single' || !desktop) {
     return (
       <div className={`w-full max-w-3xl mx-auto min-h-full flex flex-col ${className}`}>
         {singleActiveTab === 'left' ? leftContent : rightContent}
@@ -149,7 +154,7 @@ export function SplitScreenContainer({
           <span>Stage Projector Mode · Dual View Synchronized in Real-Time</span>
         </div>
         <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono">
-          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 " />
           <span>Live Telemetry Sync</span>
         </div>
       </div>

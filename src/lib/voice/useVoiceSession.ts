@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
+import { createResponseGate } from './responseGate';
 
 export type VoiceState = 'idle' | 'listening' | 'speaking';
 
@@ -91,9 +92,33 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const isPressingRef = useRef<boolean>(false);
   const currentReplyTextRef = useRef<string>('');
   const voiceAskRecordedRef = useRef(false);
+  const responseGateRef = useRef(createResponseGate());
+  const waitingSendRef = useRef<(() => void) | null>(null);
+  const waitingTimerRef = useRef<number | null>(null);
+  const clearWaitingSend = useCallback(() => {
+    waitingSendRef.current = null;
+    if (waitingTimerRef.current !== null) window.clearTimeout(waitingTimerRef.current);
+    waitingTimerRef.current = null;
+  }, []);
+  const sendAfterCancel = useCallback((send: () => void) => {
+    if (!responseGateRef.current.isBlocked()) { send(); return; }
+    clearWaitingSend();
+    waitingSendRef.current = send;
+    waitingTimerRef.current = window.setTimeout(() => {
+      clearWaitingSend();
+      responseGateRef.current.failWaiting();
+      setVoiceState('idle');
+      setErrorNotice('The previous response did not finish cancelling. Please reconnect before asking again.');
+    }, 5000);
+  }, [clearWaitingSend]);
 
   // ── Stop playback helper ────────────────────────────────────────────────────
   const stopPlayback = useCallback(() => {
+    clearWaitingSend();
+    const shouldCancel = responseGateRef.current.cancel();
+    if (shouldCancel && wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'response.cancel' }));
+    }
     for (const s of playSourcesRef.current) {
       try { s.stop(); } catch { /* The audio or socket may already be stopped during cleanup. */ }
     }
@@ -105,7 +130,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       try { window.speechSynthesis.cancel(); } catch { /* The audio or socket may already be stopped during cleanup. */ }
     }
     setVoiceState('idle');
-  }, []);
+  }, [clearWaitingSend]);
 
   // ── Audio playback of 24kHz PCM16 chunks ───────────────────────────────────
   const playChunk = useCallback((base64: string, ctx: AudioContext) => {
@@ -131,9 +156,10 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
       setVoiceState('speaking');
 
+      const generation = responseGateRef.current.current();
       src.onended = () => {
         playSourcesRef.current = playSourcesRef.current.filter((s) => s !== src);
-        if (playSourcesRef.current.length === 0 && !isPressingRef.current) {
+        if (playSourcesRef.current.length === 0 && !isPressingRef.current && generation === responseGateRef.current.current()) {
           setVoiceState('idle');
         }
       };
@@ -177,6 +203,19 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       try {
         const ev = JSON.parse(event.data);
         const t = ev.type || '';
+        const responseId = ev.response_id ?? ev.response?.id;
+        if (t === 'response.created') {
+          if (!responseGateRef.current.created(responseId)) return;
+          currentReplyTextRef.current = '';
+          return;
+        }
+        if (t.startsWith('response.') && t !== 'response.done' && !responseGateRef.current.accepts(responseId)) return;
+        if (t === 'response.done') {
+          const wasBlocked = responseGateRef.current.isBlocked();
+          if (responseGateRef.current.finish(responseId) && playSourcesRef.current.length === 0 && !isPressingRef.current) setVoiceState('idle');
+          if (wasBlocked && !responseGateRef.current.isBlocked()) { const queued = waitingSendRef.current; clearWaitingSend(); queued?.(); }
+          return;
+        }
 
         // Transcriptions
         if (t.includes('input_audio_transcription') || t.includes('conversation.item')) {
@@ -203,7 +242,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         }
 
         // Text transcript chunks
-        if ((t === 'response.output_audio_transcript.delta' || t === 'response.audio_transcript.delta') && ev.delta) {
+        if ((t === 'response.output_audio_transcript.delta' || t === 'response.audio_transcript.delta' || t === 'response.output_text.delta' || t === 'response.text.delta') && ev.delta) {
           currentReplyTextRef.current += ev.delta;
           setResponseMessage(currentReplyTextRef.current);
 
@@ -216,9 +255,6 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
           }
         }
 
-        if (t === 'response.created') {
-          currentReplyTextRef.current = '';
-        }
 
         if (t === 'error') {
           console.warn('[AI Voice Error event]', ev.error);
@@ -240,7 +276,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     };
 
     return ws;
-  }, [caseId, playChunk, trackVoiceAsk]);
+  }, [caseId, clearWaitingSend, playChunk, trackVoiceAsk]);
 
   // Connect on mount or caseId change
   useEffect(() => {
@@ -303,6 +339,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   // ── Start Listening (Hold to Ask) ───────────────────────────────────────────
   const startListening = useCallback(async () => {
     stopPlayback();
+    responseGateRef.current.start();
     voiceAskRecordedRef.current = false;
     currentReplyTextRef.current = '';
     setResponseMessage(null);
@@ -321,11 +358,15 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const stopListening = useCallback(() => {
     isPressingRef.current = false;
 
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
-      wsRef.current.send(JSON.stringify({ type: 'response.create' }));
-    }
-  }, []);
+    const token = responseGateRef.current.current();
+    sendAfterCancel(() => {
+      if (!responseGateRef.current.isCurrent(token)) return;
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
+        if (responseGateRef.current.markSent(token)) wsRef.current.send(JSON.stringify({ type: 'response.create' }));
+      }
+    });
+  }, [sendAfterCancel]);
 
   // ── Push to Ask (Direct Question via Text or Suggestion Chip) ───────────────
   const pushToAsk = useCallback(
@@ -333,6 +374,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       stopPlayback();
       const clean = question.trim();
       if (!clean) return;
+      const requestToken = responseGateRef.current.start();
       trackVoiceAsk({ inputMode: 'typed_or_suggestion' });
 
       currentReplyTextRef.current = '';
@@ -354,6 +396,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
       const ws = connectWs();
       const sendPayload = () => {
+        if (!responseGateRef.current.isCurrent(requestToken)) return;
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(
             JSON.stringify({
@@ -365,19 +408,18 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
               },
             })
           );
-          ws.send(JSON.stringify({ type: 'response.create' }));
+          if (responseGateRef.current.markSent(requestToken)) ws.send(JSON.stringify({ type: 'response.create' }));
         } else {
           setTimeout(sendPayload, 400);
         }
       };
 
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        sendPayload();
-      } else {
-        setTimeout(sendPayload, 300);
-      }
+      sendAfterCancel(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) sendPayload();
+        else setTimeout(sendPayload, 300);
+      });
     },
-    [connectWs, stopPlayback, trackVoiceAsk]
+    [connectWs, sendAfterCancel, stopPlayback, trackVoiceAsk]
   );
 
   const disconnect = useCallback(() => {

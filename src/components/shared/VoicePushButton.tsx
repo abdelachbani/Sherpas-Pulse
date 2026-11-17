@@ -41,6 +41,7 @@ interface Props {
   onOpenCalibration?: (termKey: string) => void;
   onClosePopup?: () => void;
   disabled?: boolean;
+  compact?: boolean;
   onOverlayChange?: (open: boolean) => void;
 }
 
@@ -96,6 +97,7 @@ export function VoicePushButton({
   onOpenCalibration,
   onClosePopup,
   disabled,
+  compact = false,
   onOverlayChange,
 }: Props) {
   const [customText, setCustomText] = useState('');
@@ -182,10 +184,10 @@ export function VoicePushButton({
       <AnimatePresence>
         {hasContent && (
           <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="absolute bottom-full mb-3 w-[340px] max-w-[calc(100vw-2rem)] max-h-[70dvh] overflow-y-auto p-3.5 rounded-3xl text-xs   border bg-slate-900/95 border-slate-700/80 text-white z-50 space-y-2.5"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={`absolute ${compact ? 'top-full right-0 mt-3' : 'bottom-full mb-3'} w-[340px] max-w-[calc(100vw-2rem)] max-h-[70dvh] overflow-y-auto p-3.5 rounded-2xl text-xs border bg-slate-900 border-slate-700 text-white z-50 space-y-2.5`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -198,12 +200,12 @@ export function VoicePushButton({
                   </>
                 ) : isListening ? (
                   <>
-                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                    <span className="w-2 h-2 rounded-full bg-rose-500 " />
                     <span className="text-rose-300">Listening to your voice...</span>
                   </>
                 ) : isSpeaking ? (
                   <>
-                    <Volume2 className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+                    <Volume2 className="w-3.5 h-3.5 text-blue-400 " />
                     <span className="text-blue-300">Sherpas Voice Answer</span>
                   </>
                 ) : (
@@ -317,16 +319,10 @@ export function VoicePushButton({
 
       {/* ── Push-to-Ask Dock Button ─────────────────────────────────────────── */}
       <div className="relative flex items-center justify-center">
-        {isListening && (
-          <motion.div
-            className="absolute inset-0 rounded-full bg-rose-500/40 pointer-events-none"
-            animate={{ scale: [1, 1.4, 1], opacity: [0.6, 0.1, 0.6] }}
-            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        )}
+
 
         <motion.button
-          animate={{ scale: isListening ? 0.94 : 1 }}
+
           transition={{ duration: 0.12 }}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -342,11 +338,11 @@ export function VoicePushButton({
             userSelect: 'none',
             WebkitTouchCallout: 'none',
           }}
-          className={`flex items-center gap-2 min-h-11 px-4 py-2 rounded-full text-xs font-bold  border transition-all cursor-pointer select-none ${
+          className={`flex items-center gap-2 min-h-11 ${compact ? 'px-3' : 'px-4'} py-2 rounded-full text-xs font-bold  border transition-all cursor-pointer select-none ${
             isListening
               ? 'bg-rose-600 text-white border-rose-400  ring-4 ring-rose-500/20'
               : isSpeaking
-              ? 'bg-blue-600 text-white border-blue-400  animate-pulse'
+              ? 'bg-blue-600 text-white border-blue-400  '
               : 'bg-slate-800/90 text-slate-200 border-slate-700 hover:border-slate-500 hover:text-white '
           }`}
           aria-label={isListening ? 'Release to ask' : 'Hold to ask'}
@@ -354,17 +350,17 @@ export function VoicePushButton({
           {isListening ? (
             <>
               <Square className="w-3.5 h-3.5 fill-white text-white" />
-              <span>Release to Send</span>
+              <span className={compact ? 'sr-only' : undefined}>Release to Send</span>
             </>
           ) : isSpeaking ? (
             <>
-              <Volume2 className="w-3.5 h-3.5 text-blue-300 animate-pulse" />
-              <span>Sherpas Answering...</span>
+              <Volume2 className="w-3.5 h-3.5 text-blue-300 " />
+              <span className={compact ? 'sr-only' : undefined}>Sherpas Answering...</span>
             </>
           ) : (
             <>
               <Mic className="w-3.5 h-3.5 text-blue-400" />
-              <span>Hold to Ask</span>
+              <span className={compact ? 'sr-only' : undefined}>Hold to Ask</span>
             </>
           )}
         </motion.button>

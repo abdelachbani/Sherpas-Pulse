@@ -101,7 +101,7 @@ function FamilySyncPageContent() {
           </div>
 
           <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 " />
             <span>{bothReviewed ? 'Reviews compared' : 'Waiting for both reviews'}</span>
           </div>
         </div>

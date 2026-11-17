@@ -23,3 +23,40 @@ export function voiceBlocksPlayback(voice: {
 }, panelOpen: boolean): boolean {
   return voice.isListening || voice.isSpeaking || Boolean(voice.responseMessage) || Boolean(voice.guardRedirect) || panelOpen;
 }
+
+/** A chapter can be narrated again after ten minutes away. */
+export function canNarrateStory(lastNarratedAt: number | undefined, now: number): boolean {
+  return lastNarratedAt === undefined || now - lastNarratedAt >= 10 * 60 * 1000;
+}
+
+export function storyTapDirection(startX: number, startY: number, endX: number, endY: number, width: number): 'previous' | 'next' | null {
+  if (Math.hypot(endX - startX, endY - startY) > 12 || width <= 0) return null;
+  return endX < width / 2 ? 'previous' : 'next';
+}
+
+export function advanceBeat(partIndex: number, partCount: number, checkpoint: boolean) {
+  if (checkpoint || partIndex >= partCount - 1) return { partIndex, checkpoint: true };
+  return { partIndex: partIndex + 1, checkpoint: false };
+}
+
+export function beatDuration(text: string): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.min(8000, Math.max(3000, words * 300));
+}
+
+export function nextChapterFrame(index: number, frames: { chapterId: string }[]) {
+  const next = frames.findIndex((frame, candidate) => candidate > index && frame.chapterId !== frames[index]?.chapterId);
+  return next < 0 ? { index, complete: true } : { index: next, complete: false };
+}
+
+export function advanceElapsed(elapsed: number, delta: number, paused: boolean, duration: number): number {
+  return Math.min(duration, Math.max(0, elapsed + (paused ? 0 : Math.max(0, delta))));
+}
+
+export function chapterProgress(durations: number[], partIndex: number, elapsed: number, checkpoint: boolean): number {
+  if (checkpoint) return 1;
+  const total = durations.reduce((sum, value) => sum + value, 0);
+  if (total <= 0) return 0;
+  const completed = durations.slice(0, partIndex).reduce((sum, value) => sum + value, 0);
+  return Math.min(1, Math.max(0, (completed + Math.min(Math.max(0, elapsed), durations[partIndex] ?? 0)) / total));
+}

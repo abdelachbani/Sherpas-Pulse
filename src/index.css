@@ -112,3 +112,34 @@ input[type="checkbox"] { accent-color: #4565d6; }
 .app-toolbar button { min-width: 44px; }
 .session-page summary { min-height: 44px; }
 .app-toolbar button { min-width: 44px; }
+
+/* The client Wrapped is a viewport, not a scrolling marketing page. */
+.app-shell[data-wrapped="true"] .app-content { overflow: hidden; }
+.story-shell > header { padding: 4px 16px 0; }
+.story-shell > header nav { margin-top: 0; }
+.story-shell > main { scrollbar-gutter: auto; }
+.story-card { height: 100%; touch-action: pan-x; }
+.story-card > div { padding-block: 18px; gap: 18px; }
+.story-card h1 { font-size: 26px; }
+.story-card button { min-width: auto; min-height: auto; color: #3650b3; outline-color: #4565d6; }
+.story-card button:hover { color: #293f90; }
+.story-shell button.sr-only:focus { position: absolute; top: 64px; left: 16px; z-index: 60; background: #fff; color: #172033; padding: 12px; }
+@media (max-width: 1023px) {
+  .app-shell[data-wrapped="true"] > .app-toolbar { display: none; }
+  .story-shell { border: 0; }
+}
+@media (max-height: 700px) {
+  .story-shell > header { padding-top: 0; }
+  .story-card > div { gap: 12px; padding-block: 12px; }
+  .story-card h1 { font-size: 23px; }
+  .story-card header p { margin-top: 4px; }
+  .story-card [aria-label="Case details"] > div { padding-block: 10px; }
+}
+.story-card [data-inline-term] { min-height: 0; min-width: 0; display: inline; padding: 0; font-size: inherit; line-height: inherit; vertical-align: baseline; }
+.story-card [data-inline-term]:hover { transform: none; }
+.story-card [data-inline-term]:focus-visible { outline: 2px solid #4565d6; outline-offset: 2px; box-shadow: none; }
+.story-shell [aria-label="Chapter checkpoint"] { padding-top: 12px; }
+.story-shell [aria-label="Chapter checkpoint"] h1 { font-size: clamp(20px, 4vw, 26px); line-height: 1.25; }
+@media (max-width: 639px) {
+  .story-shell > header > div > div > button[aria-pressed]:not([aria-label]) { padding-inline: 12px; }
+}
