@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { Activity, User, ExternalLink, ShieldCheck } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
 import { extractWhatIfScenarios } from '../lib/mcp/extractor';
@@ -70,10 +71,19 @@ function ActionContent() {
   </div>;
   const advisor = (
     <div className="p-5 sm:p-7 space-y-5 text-white">
-      <header>
-        <p className="text-xs font-bold uppercase tracking-wider text-indigo-300">Meeting preparation</p>
-        <h2 className="mt-2 text-2xl font-semibold">Discussion overview</h2>
-        <p className="mt-3 text-sm leading-relaxed text-slate-300">Use the plan recommendations and saved priorities to guide your conversation.</p>
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-indigo-400">Pillar 4 · Pre-Meeting View</p>
+          <h2 className="mt-1 text-2xl font-semibold">Advisor Telemetry & Discussion Overview</h2>
+          <p className="mt-1 text-sm leading-relaxed text-slate-300">Review client comprehension, calibrated technical doubts, and consensus before meeting.</p>
+        </div>
+        <Link
+          to={`/case/${activeCase.id}/advisor`}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg transition-colors shrink-0"
+        >
+          <Activity className="w-3.5 h-3.5" />
+          <span>Open Full Advisor Dashboard →</span>
+        </Link>
       </header>
       <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
         <h3 className="font-semibold">Plan recommendations</h3>
@@ -122,7 +132,7 @@ function ActionContent() {
     </div>
   );
   return (
-    <main className="session-page min-h-dvh bg-[#171827] text-white">
+    <main className="session-page min-h-dvh bg-[#171827] text-white pb-24">
       <div className="mx-auto flex max-w-4xl flex-col items-center gap-3 px-4 pt-6">
         <div className="grid w-full max-w-3xl grid-cols-2 rounded-xl border border-slate-700 bg-slate-900 p-1">
           {(['plan', 'advisor'] as const).map((item) => (
@@ -131,15 +141,40 @@ function ActionContent() {
               type="button"
               aria-pressed={tab === item}
               onClick={() => setTab(item)}
-              className={`min-h-11 rounded-lg text-sm font-semibold ${tab === item ? 'bg-indigo-600' : 'text-slate-300'}`}
+              className={`min-h-11 rounded-lg text-sm font-semibold transition-all ${tab === item ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:text-white'}`}
             >
-              {item === 'plan' ? 'Action plan' : 'Discussion overview'}
+              {item === 'plan' ? 'Client Action Plan' : 'Advisor Telemetry & Pre-Meeting'}
             </button>
           ))}
         </div>
       </div>
       <div className="w-full max-w-3xl mx-auto min-h-full flex flex-col pb-8">
         {tab === 'plan' ? plan : advisor}
+      </div>
+
+      {/* ── Fixed Bottom Mode Switcher Bar ──────────────────────────────────── */}
+      <div className="fixed bottom-0 inset-x-0 z-40 bg-slate-950/95 border-t border-slate-800 backdrop-blur-md py-3 px-4 shadow-2xl">
+        <div className="max-w-md mx-auto grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setTab('plan')}
+            className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              tab === 'plan'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>Client Action Plan</span>
+          </button>
+
+          <Link
+            to={`/case/${activeCase.id}/advisor`}
+            className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all border border-indigo-500/30"
+          >
+            <Activity className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Advisor Telemetry Mode →</span>
+          </Link>
+        </div>
       </div>
     </main>
   );

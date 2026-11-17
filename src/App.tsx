@@ -12,6 +12,7 @@ import AllocationPage from './pages/AllocationPage';
 import TradeoffPage from './pages/TradeoffPage';
 import FamilySyncPage from './pages/FamilySyncPage';
 import ActionPage from './pages/ActionPage';
+import AdvisorDashboardPage from './pages/AdvisorDashboardPage';
 import { CalibrationBanner } from './components/shared/CalibrationBanner';
 
 export default function App() {
@@ -54,6 +55,7 @@ function ApplicationShell() {
 
           {/* 5-Minute Win & Advisor Pre-Meeting Telemetry */}
           <Route path="/case/:caseId/action" element={<ActionPage />} />
+          <Route path="/case/:caseId/advisor" element={<AdvisorDashboardPage />} />
         </Routes>
       </div>
       {!isWrapped && <CalibrationBanner />}
