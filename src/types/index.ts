@@ -166,12 +166,22 @@ export type TelemetryEventType =
   | 'story_complete'
   | 'style_select'
   | 'language_mode_change'
+  | 'hesitation_pause'
   | 'grounding_view';
 
 export interface TermConsultationPayload {
   term: string;
   termKey: string;
   [key: string]: unknown;
+}
+
+export interface HesitationPausePayload extends Record<string, unknown> {
+  frameId: string;
+  chapterId: string;
+  chapterTitle: string;
+  chapterIndex: number;
+  partIndex: number;
+  inactiveMs: number;
 }
 
 export interface TelemetryEvent<
@@ -197,6 +207,9 @@ export interface TelemetrySummary {
     voiceAsks: number;
     languageModeChanges: number;
   };
+  hesitationPauses: number;
+  comprehensionIndex: number | null;
+  calibrationReason: 'term_consultations' | 'hesitation_pause' | null;
   shouldSuggestCalibration: boolean;
 }
 

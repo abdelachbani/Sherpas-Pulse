@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatSessionHandoff } from '../src/lib/sessionHandoff';
+import { buildAdvisorQuestions, formatSessionHandoff } from '../src/lib/sessionHandoff';
 
 test('uses the latest completed tradeoff for the selected case and describes its options', () => {
   const scenarios = [{ id: 'home', title: 'Home or retirement', optionA: { label: 'Home', impact: '' }, optionB: { label: 'Retirement', impact: '' } }];
@@ -19,4 +19,24 @@ test('shows ranked saved choices and their differences without inventing a revie
   const text = formatSessionHandoff('case', [], { primary, secondary }, []);
   assert.match(text, /may include demo partner/); assert.match(text, /Alex: #1 Protect — \$100/); assert.match(text, /Sam: #2 Protect — \$200/); assert.match(text, /Different choices: Protect/);
   assert.doesNotMatch(formatSessionHandoff('case', [], { primary, secondary: null }, []), /Different choices/);
+});
+
+test('suggests three advisor questions from the most repeated hesitation steps and terms', () => {
+  const events: any[] = [
+    { type: 'hesitation_pause', payload: { chapterId: 'health', chapterTitle: 'Financial health' }, timestamp: 1 },
+    { type: 'hesitation_pause', payload: { chapterId: 'health', chapterTitle: 'Financial health' }, timestamp: 2 },
+    { type: 'tap_to_define', payload: { term: 'Roth IRA', termKey: 'roth ira' }, timestamp: 3 },
+    { type: 'tap_to_define', payload: { term: 'Roth IRA', termKey: 'roth ira' }, timestamp: 4 },
+    { type: 'tap_to_define', payload: { term: '529', termKey: '529' }, timestamp: 5 },
+  ];
+
+  const questions = buildAdvisorQuestions(events, ['Build an emergency fund']);
+  assert.equal(questions.length, 3);
+  assert.match(questions[0], /Financial health/);
+  assert.match(questions[1], /Roth IRA/);
+  assert.match(questions[2], /529/);
+});
+
+test('returns three usable advisor questions when the session has no doubt signals', () => {
+  assert.equal(buildAdvisorQuestions([], []).length, 3);
 });

@@ -28,3 +28,49 @@ export function formatSessionHandoff(caseId: string, events: TelemetryEvent[], a
   }
   return lines.join('\n');
 }
+
+export function buildAdvisorQuestions(events: readonly TelemetryEvent[], recommendationTitles: readonly string[] = []): string[] {
+  const hesitationByStep = new Map<string, { title: string; count: number }>();
+  const termsByKey = new Map<string, { term: string; count: number }>();
+  let tradeoffChanges = 0;
+  let allocationChanges = 0;
+
+  for (const event of events) {
+    if (event.type === 'hesitation_pause') {
+      const title = typeof event.payload.chapterTitle === 'string' ? event.payload.chapterTitle.trim() : '';
+      if (!title) continue;
+      const key = typeof event.payload.chapterId === 'string' ? event.payload.chapterId : title.toLowerCase();
+      const step = hesitationByStep.get(key) ?? { title, count: 0 };
+      step.count += 1;
+      hesitationByStep.set(key, step);
+    } else if (event.type === 'tap_to_define') {
+      const term = typeof event.payload.term === 'string' ? event.payload.term.trim() : '';
+      if (!term) continue;
+      const key = typeof event.payload.termKey === 'string' ? event.payload.termKey.toLowerCase() : term.toLowerCase();
+      const entry = termsByKey.get(key) ?? { term, count: 0 };
+      entry.count += 1;
+      termsByKey.set(key, entry);
+    } else if (event.type === 'tradeoff_change') {
+      tradeoffChanges += 1;
+    } else if (event.type === 'allocation_change') {
+      allocationChanges += 1;
+    }
+  }
+
+  const candidates = [
+    ...[...hesitationByStep.values()]
+      .sort((a, b) => b.count - a.count)
+      .map(({ title }) => `Could we revisit “${title}” and clarify which part felt uncertain?`),
+    ...[...termsByKey.values()]
+      .sort((a, b) => b.count - a.count)
+      .map(({ term }) => `Could you explain how ${term} affects this household’s plan?`),
+    ...(tradeoffChanges ? ['Which trade-off felt hardest to decide, and what information would make it clearer?'] : []),
+    ...(allocationChanges ? ['Which priority should the household fund first, and why?'] : []),
+    ...recommendationTitles.filter(Boolean).map((title) => `What is the smallest first step toward “${title}”?`),
+    'Which part of the plan feels least clear right now?',
+    'What is one manageable next step the household can take?',
+    'What should we revisit at the next check-in?',
+  ];
+
+  return [...new Set(candidates)].slice(0, 3);
+}

@@ -5,6 +5,7 @@ import type { StoryCard as StoryCardType, CalibrationCard, GroundingRef, Viewing
 import type { VoiceSessionResult } from '../../lib/voice/useVoiceSession';
 import { useAppStore } from '../../stores/appStore';
 import { advanceBeat, advanceElapsed, beatDuration, canNarrateStory, chapterProgress, nextChapterFrame, storyTapDirection, voiceBlocksPlayback } from '../../lib/storyPlayback';
+import { hasReachedHesitationThreshold, HESITATION_PAUSE_MS } from '../../lib/telemetry';
 import { buildStoryFrames } from '../../lib/storyFrames';
 import { storyTerms } from '../../lib/storyTerms';
 import { formatStoryValue } from '../../lib/storyFormatting';
@@ -66,6 +67,12 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
   const [frameIndex, setFrameIndex] = useState(0);
   const elapsedRef = useRef(0);
   const [elapsed, setElapsed] = useState({ frameId: '', value: 0 });
+  const [activityRevision, setActivityRevision] = useState(0);
+  const lastActivityAt = useRef(Date.now());
+  const markStoryActivity = useCallback(() => {
+    lastActivityAt.current = Date.now();
+    setActivityRevision((revision) => revision + 1);
+  }, []);
   const frame = frames[Math.min(frameIndex, frames.length - 1)];
   const currentStory = frame?.card;
   const chapter = frame ? stories[frame.chapterIndex] : undefined;
@@ -92,10 +99,15 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
   const terms = useMemo(() => chapter ? storyTerms([chapter.title, chapter.subtitle, chapter.tagline ?? '', chapter.highlightLabel ?? '', ...chapter.dataPoints.flatMap((point) => [point.label, String(point.value)])]) : [], [chapter]);
 
   useEffect(() => {
-    const update = () => { setHidden(document.hidden); if (document.hidden) { setHolding(false); pointerStart.current = null; } };
+    const update = () => {
+      const isHidden = document.hidden;
+      setHidden(isHidden);
+      if (isHidden) { setHolding(false); pointerStart.current = null; }
+      else markStoryActivity();
+    };
     document.addEventListener('visibilitychange', update);
     return () => document.removeEventListener('visibilitychange', update);
-  }, []);
+  }, [markStoryActivity]);
   useEffect(() => { if (preferredStyle) setViewingStyle(preferredStyle); }, [preferredStyle]);
   useEffect(() => {
     if (voice.detectedTerm) {
@@ -166,7 +178,26 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
   const duration = currentStory ? frameDuration(currentStory) : 3000;
   const chapterDurations = frame ? frames.filter((item) => item.chapterId === frame.chapterId).map((item) => frameDuration(item.card)) : [];
   const chapterFraction = frame ? chapterProgress(chapterDurations, frame.partIndex, elapsed.frameId === frame.id ? elapsed.value : 0, checkpoint) : 0;
-  useEffect(() => { elapsedRef.current = 0; }, [frame?.id]);
+  useEffect(() => {
+    elapsedRef.current = 0;
+    lastActivityAt.current = Date.now();
+  }, [frame?.id]);
+  useEffect(() => {
+    if (!frame || !chapter || paused || holding || hidden || modalOpen || isAssistantActive || isVoiceNarrating || checkpoint) return;
+    const timer = window.setTimeout(() => {
+      const inactiveMs = Date.now() - lastActivityAt.current;
+      if (!hasReachedHesitationThreshold(inactiveMs)) return;
+      useAppStore.getState().trackHesitationPause({
+        frameId: frame.id,
+        chapterId: frame.chapterId,
+        chapterTitle: chapter.title,
+        chapterIndex: frame.chapterIndex,
+        partIndex: frame.partIndex,
+        inactiveMs,
+      }, chapter.id);
+    }, HESITATION_PAUSE_MS);
+    return () => window.clearTimeout(timer);
+  }, [activityRevision, frame, chapter, paused, holding, hidden, modalOpen, isAssistantActive, isVoiceNarrating, checkpoint]);
   useEffect(() => {
     if (paused || holding || hidden || modalOpen || isAssistantActive || checkpoint || !frame) return;
     let previous = performance.now();
@@ -205,7 +236,7 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
   if (!currentStory || !frame) return null;
 
   return (
-    <StoryHelpContext.Provider value={helpContext}><div data-phase={checkpoint ? "checkpoint" : "playing"} data-chapter-index={frame.chapterIndex} data-beat-progress={Math.min(1, (elapsed.frameId === frame.id ? elapsed.value : 0) / duration)} data-frame-id={frame.id} data-frame-index={frameIndex} data-frame-count={frames.length} className="story-shell relative mx-auto flex h-full w-full max-w-[960px] flex-col overflow-hidden bg-[#171827] shadow-2xl">
+    <StoryHelpContext.Provider value={helpContext}><div onPointerDownCapture={markStoryActivity} onPointerUpCapture={markStoryActivity} onPointerCancelCapture={markStoryActivity} onKeyDownCapture={markStoryActivity} onClickCapture={markStoryActivity} onWheelCapture={markStoryActivity} data-phase={checkpoint ? "checkpoint" : "playing"} data-chapter-index={frame.chapterIndex} data-beat-progress={Math.min(1, (elapsed.frameId === frame.id ? elapsed.value : 0) / duration)} data-frame-id={frame.id} data-frame-index={frameIndex} data-frame-count={frames.length} className="story-shell relative mx-auto flex h-full w-full max-w-[960px] flex-col overflow-hidden bg-[#171827] shadow-2xl">
       <header className="shrink-0 px-4 pt-3 sm:px-6">
         <div className="flex items-center justify-between gap-2">
           <button onClick={onNavigateBack} className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/80" aria-label="Back to case selection"><X className="h-4 w-4" /></button>

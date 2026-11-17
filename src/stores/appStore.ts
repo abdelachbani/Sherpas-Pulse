@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import type {
   CaseData,
   CoupleAllocation,
+  HesitationPausePayload,
   LanguageMode,
   TelemetryEvent,
   TelemetrySummary,
@@ -15,8 +16,10 @@ import type {
 import { CASES } from '../lib/mcp/cases';
 import {
   getTelemetrySummary as summarizeTelemetry,
+  loadTelemetrySession,
   mkEvent,
   mkTermConsultationEvent,
+  persistTelemetrySession,
 } from '../lib/telemetry';
 
 interface AppStore {
@@ -40,13 +43,22 @@ interface AppStore {
   trackTradeoffChange(payload: Record<string, unknown>, storyId?: string): void;
   trackAllocationChange(payload: Record<string, unknown>, storyId?: string): void;
   trackVoiceAsk(payload: Record<string, unknown>, storyId?: string): void;
+  trackHesitationPause(payload: HesitationPausePayload, storyId?: string): void;
   getTelemetrySummary(): TelemetrySummary;
   shouldSuggestCalibration(): boolean;
   setAllocation(partner: 'primary' | 'secondary', alloc: CoupleAllocation): void;
   reset(): void;
 }
 
-export const useAppStore = create<AppStore>((set, get) => ({
+export const useAppStore = create<AppStore>((set, get) => {
+  const appendTelemetryEvent = (event: TelemetryEvent, languageMode?: LanguageMode) => {
+    const state = get();
+    const telemetryEvents = [...state.telemetryEvents, event];
+    set(languageMode ? { languageMode, telemetryEvents } : { telemetryEvents });
+    persistTelemetrySession(state.currentCase?.id ?? null, telemetryEvents);
+  };
+
+  return {
   // ── Initial state ────────────────────────────────────────────────────────
   currentCase:        null,
   currentStoryIndex:  0,
@@ -60,10 +72,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setCase: (caseId) => {
     const found = CASES.find((c) => c.id === caseId) ?? null;
     if (get().currentCase?.id === found?.id) return;
+    const telemetryEvents = found ? loadTelemetrySession(found.id) : [];
     set({
       currentCase: found, currentStoryIndex: 0, viewingStyle: null, languageMode: 'standard', partner: null,
-      telemetryEvents: [], coupleAllocations: { primary: null, secondary: null },
+      telemetryEvents, coupleAllocations: { primary: null, secondary: null },
     });
+    persistTelemetrySession(found?.id ?? null, telemetryEvents);
   },
 
   setStoryIndex: (n) => set({ currentStoryIndex: n }),
@@ -72,39 +86,27 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   setLanguageMode: (mode) => {
     if (get().languageMode === mode) return;
-    set((state) => ({
-      languageMode: mode,
-      telemetryEvents: [
-        ...state.telemetryEvents,
-        mkEvent('language_mode_change', { languageMode: mode }),
-      ],
-    }));
+    appendTelemetryEvent(mkEvent('language_mode_change', { languageMode: mode }), mode);
   },
 
   setPartner: (p) => set({ partner: p }),
 
-  addTelemetryEvent: (e) =>
-    set((state) => ({ telemetryEvents: [...state.telemetryEvents, e] })),
+  addTelemetryEvent: (e) => appendTelemetryEvent(e),
 
-  trackTermConsulted: (term, storyId) =>
-    set((state) => ({
-      telemetryEvents: [...state.telemetryEvents, mkTermConsultationEvent(term, storyId)],
-    })),
+  trackTermConsulted: (term, storyId) => appendTelemetryEvent(mkTermConsultationEvent(term, storyId)),
 
-  trackTradeoffChange: (payload, storyId) =>
-    set((state) => ({
-      telemetryEvents: [...state.telemetryEvents, mkEvent('tradeoff_change', payload, storyId)],
-    })),
+  trackTradeoffChange: (payload, storyId) => appendTelemetryEvent(mkEvent('tradeoff_change', payload, storyId)),
 
-  trackAllocationChange: (payload, storyId) =>
-    set((state) => ({
-      telemetryEvents: [...state.telemetryEvents, mkEvent('allocation_change', payload, storyId)],
-    })),
+  trackAllocationChange: (payload, storyId) => appendTelemetryEvent(mkEvent('allocation_change', payload, storyId)),
 
-  trackVoiceAsk: (payload, storyId) =>
-    set((state) => ({
-      telemetryEvents: [...state.telemetryEvents, mkEvent('voice_ask', payload, storyId)],
-    })),
+  trackVoiceAsk: (payload, storyId) => appendTelemetryEvent(mkEvent('voice_ask', payload, storyId)),
+
+  trackHesitationPause: (payload, storyId) => {
+    const alreadyRecorded = get().telemetryEvents.some((event) =>
+      event.type === 'hesitation_pause' && event.payload.frameId === payload.frameId);
+    if (alreadyRecorded) return;
+    appendTelemetryEvent(mkEvent('hesitation_pause', payload, storyId));
+  },
 
   getTelemetrySummary: () => summarizeTelemetry(get().telemetryEvents),
 
@@ -115,7 +117,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       coupleAllocations: { ...state.coupleAllocations, [partner]: alloc },
     })),
 
-  reset: () =>
+  reset: () => {
+    persistTelemetrySession(null, []);
     set({
       currentCase:       null,
       currentStoryIndex: 0,
@@ -124,5 +127,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       partner:           null,
       telemetryEvents:   [],
       coupleAllocations: { primary: null, secondary: null },
-    }),
-}));
+    });
+  },
+  };
+});

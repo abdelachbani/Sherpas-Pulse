@@ -7,7 +7,8 @@ interface Props {
 }
 
 export function CalibrationBanner({ placement = 'fixed' }: Props) {
-  const shouldSuggestCalibration = useAppStore((state) => state.shouldSuggestCalibration());
+  const calibrationReason = useAppStore((state) => state.getTelemetrySummary().calibrationReason);
+  const shouldSuggestCalibration = calibrationReason !== null;
   const languageMode = useAppStore((state) => state.languageMode);
   const setLanguageMode = useAppStore((state) => state.setLanguageMode);
   const [dismissed, setDismissed] = useState(false);
@@ -49,7 +50,9 @@ export function CalibrationBanner({ placement = 'fixed' }: Props) {
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold">Want simpler language?</p>
         <p className="mt-1 text-xs leading-relaxed text-slate-300">
-          You have looked up three or more financial terms. Switch to everyday wording.
+          {calibrationReason === 'term_consultations'
+            ? 'You have looked up three or more financial terms. Switch to everyday wording.'
+            : 'Taking a moment on this card? Switch to everyday wording.'}
         </p>
       </div>
       <button

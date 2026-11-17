@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
 import { extractWhatIfScenarios } from '../lib/mcp/extractor';
-import { formatSessionHandoff } from '../lib/sessionHandoff';
+import { buildAdvisorQuestions, formatSessionHandoff } from '../lib/sessionHandoff';
+import { getTelemetrySummary as summarizeTelemetry, serialiseTelemetry } from '../lib/telemetry';
 import { simplifyFinancialText } from '../lib/financialGlossary';
 import { SplitScreenToggle, SplitScreenContainer, type SplitMode } from '../components/shared/SplitScreenToggle';
 import { FinancialText } from '../components/shared/FinancialText';
@@ -25,8 +26,9 @@ function ActionContent() {
   const allocations = useAppStore((s) => s.coupleAllocations);
   const languageMode = useAppStore((s) => s.languageMode);
   const events = useAppStore((s) => s.telemetryEvents);
-  const getTelemetrySummary = useAppStore((s) => s.getTelemetrySummary);
-  const telemetrySummary = getTelemetrySummary();
+  const matchingCase = currentCase?.id === caseId;
+  const sessionEvents = matchingCase ? events : [];
+  const telemetrySummary = summarizeTelemetry(sessionEvents);
   const checkboxPrefix = useId();
   const activeCase = (currentCase?.id === caseId ? currentCase : CASES.find((c) => c.id === caseId))!;
   const [done, setDone] = useState<number[]>([]);
@@ -34,14 +36,31 @@ function ActionContent() {
   const [tab, setTab] = useState<'plan' | 'advisor'>('plan');
   const [channel, setChannel] = useState<'whatsapp' | 'email'>('whatsapp');
   const [copied, setCopied] = useState(false);
+  const [telemetryCopied, setTelemetryCopied] = useState(false);
+  const [telemetryCopyError, setTelemetryCopyError] = useState<string | null>(null);
   useEffect(() => { if (caseId && currentCase?.id !== caseId) setCase(caseId); }, [caseId, currentCase, setCase]);
 
   const members = activeCase.financialHealth.case.household.filter((person) => person.role === 'client' || person.role === 'co-client');
   const names = members.map((person) => person.first_name).join(' & ');
   const moves = activeCase.financialHealth.score.top_moves;
-  const matchingCase = currentCase?.id === caseId;
-  const handoff = formatSessionHandoff(activeCase.id, matchingCase ? events : [], matchingCase ? allocations : { primary: null, secondary: null }, extractWhatIfScenarios(activeCase.financialHealth, activeCase.investmentAnalysis));
+  const advisorQuestions = buildAdvisorQuestions(sessionEvents, moves.map((move) => move.title));
+  const handoff = formatSessionHandoff(activeCase.id, sessionEvents, matchingCase ? allocations : { primary: null, secondary: null }, extractWhatIfScenarios(activeCase.financialHealth, activeCase.investmentAnalysis));
   const message = `${channel === 'email' ? `Subject: Plan priorities for ${names}\n\n` : ''}Here are the recommendations I would like to discuss:\n\n${moves.map((move, index) => `${index + 1}. ${move.title}: ${move.action}`).join('\n')}${handoff ? `\n\n${handoff}` : ''}\n\nLet's review the next steps together.`;
+  const copyTelemetry = async () => {
+    setTelemetryCopied(false);
+    setTelemetryCopyError(null);
+    if (!navigator.clipboard?.writeText) {
+      setTelemetryCopyError('Clipboard access is unavailable in this browser.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(serialiseTelemetry(sessionEvents));
+      setTelemetryCopied(true);
+    } catch (error) {
+      console.error('[advisor handoff] Could not copy telemetry JSON.', error);
+      setTelemetryCopyError('Could not copy telemetry JSON. Please try again.');
+    }
+  };
   const plan = <div className="p-5 sm:p-7 space-y-6 text-white">
     <header><p className="text-xs font-bold uppercase tracking-wider text-indigo-300">Your next steps</p><h1 className="mt-2 text-3xl font-semibold">{names}’s action plan</h1><p className="mt-3 text-sm leading-relaxed text-slate-300">Review the recommendations from your plan and mark the steps you have completed.</p></header>
     <section className="space-y-3"><div className="flex justify-between gap-3"><h2 className="text-lg font-semibold">Plan recommendations</h2><span className="text-sm text-slate-400">{done.length} / {moves.length} complete</span></div>
@@ -78,12 +97,26 @@ function ActionContent() {
           <div><dt className="text-slate-400">Allocation changes</dt><dd className="mt-1 font-semibold text-white">{telemetrySummary.interactions.allocationChanges}</dd></div>
           <div><dt className="text-slate-400">Voice asks</dt><dd className="mt-1 font-semibold text-white">{telemetrySummary.interactions.voiceAsks}</dd></div>
           <div><dt className="text-slate-400">Plain-language activations</dt><dd className="mt-1 font-semibold text-white">{telemetrySummary.interactions.languageModeChanges}</dd></div>
+          <div><dt className="text-slate-400">Hesitation pauses</dt><dd className="mt-1 font-semibold text-white">{telemetrySummary.hesitationPauses}</dd></div>
+          <div><dt className="text-slate-400">Estimated understanding</dt><dd className="mt-1 font-semibold text-white">{telemetrySummary.comprehensionIndex === null ? 'Not enough activity' : `${telemetrySummary.comprehensionIndex}%`}</dd></div>
         </dl>
+        <p className="mt-2 text-xs text-slate-400">Directional estimate based on terms consulted, hesitation pauses, and plan changes—not a direct assessment.</p>
         {telemetrySummary.termConsultations.uniqueTerms.length > 0 && (
           <p className="mt-4 text-sm leading-relaxed text-slate-300">
             Terms: <FinancialText text={telemetrySummary.termConsultations.uniqueTerms.join(', ')} />
           </p>
         )}
+        <div className="mt-5 border-t border-slate-700 pt-4">
+          <h4 className="font-semibold">Questions to discuss with the advisor</h4>
+          <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-slate-300">
+            {advisorQuestions.map((question) => <li key={question}>{question}</li>)}
+          </ol>
+        </div>
+        <button type="button" onClick={copyTelemetry} className="mt-5 min-h-11 w-full rounded-xl border border-indigo-400/40 bg-indigo-500/10 px-4 text-sm font-semibold text-indigo-200 hover:bg-indigo-500/20">
+          {telemetryCopied ? 'Telemetry JSON copied' : 'Copy telemetry JSON'}
+        </button>
+        {telemetryCopied && <p role="status" className="mt-2 text-sm text-emerald-300">Session telemetry copied to the clipboard.</p>}
+        {telemetryCopyError && <p role="alert" className="mt-2 text-sm text-rose-300">{telemetryCopyError}</p>}
         <p className="mt-3 text-xs text-slate-400">
           Calibration suggestion: {telemetrySummary.shouldSuggestCalibration ? 'Recommended' : 'Not triggered'}
         </p>
