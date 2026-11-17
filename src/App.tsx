@@ -14,6 +14,7 @@ import FamilySyncPage from './pages/FamilySyncPage';
 import ActionPage from './pages/ActionPage';
 import AdvisorDashboardPage from './pages/AdvisorDashboardPage';
 import { CalibrationBanner } from './components/shared/CalibrationBanner';
+import { DemoPitchHUD } from './components/shared/DemoPitchHUD';
 
 export default function App() {
   return <BrowserRouter><ApplicationShell /></BrowserRouter>;
@@ -34,6 +35,9 @@ function ApplicationShell() {
           </Link>
         </div>
       </header>
+
+      {/* Floating Demo Day Pitch HUD */}
+      <DemoPitchHUD />
 
       <div id="app-content" className="app-content" tabIndex={-1}>
         <Routes>
