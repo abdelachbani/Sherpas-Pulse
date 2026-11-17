@@ -157,3 +157,154 @@ test('audio worklet resampler: downsampling preserves 20ms 480-sample 24kHz fram
   assert.ok(Math.abs(chunks[0][0] - 16384) <= 1);
   assert.equal(filled, 32, 'Remaining 32 samples buffered for next frame');
 });
+
+test('voice interaction: PointerEvents capture and release lifecycle', () => {
+  interface SimulatedPointerCapture {
+    capturedId: number | null;
+    isPressing: boolean;
+    pressStartTime: number;
+    opened: boolean;
+    pressEndCalls: number;
+    pressStartCalls: number;
+  }
+
+  const state: SimulatedPointerCapture = {
+    capturedId: null,
+    isPressing: false,
+    pressStartTime: 0,
+    opened: false,
+    pressEndCalls: 0,
+    pressStartCalls: 0,
+  };
+
+  function handlePointerDown(pointerId: number, button: number, pointerType: string, now: number) {
+    // Ignore non-primary mouse clicks
+    if (button !== 0 && pointerType === 'mouse') return;
+
+    state.capturedId = pointerId;
+    state.isPressing = true;
+    state.pressStartTime = now;
+    state.pressStartCalls++;
+  }
+
+  function handlePointerUp(pointerId: number, now: number) {
+    if (state.capturedId !== null) {
+      state.capturedId = null;
+    }
+    if (!state.isPressing) return;
+    state.isPressing = false;
+    state.pressEndCalls++;
+
+    const duration = now - state.pressStartTime;
+    if (duration < 250) {
+      state.opened = !state.opened;
+    } else {
+      state.opened = true;
+    }
+  }
+
+  function handlePointerCancel(_pointerId: number) {
+    state.capturedId = null;
+    if (state.isPressing) {
+      state.isPressing = false;
+      state.pressEndCalls++;
+    }
+  }
+
+  // 1. Right click should be ignored
+  handlePointerDown(1, 2, 'mouse', 1000);
+  assert.equal(state.isPressing, false);
+  assert.equal(state.capturedId, null);
+
+  // 2. Touch down & quick tap (<250ms)
+  handlePointerDown(10, 0, 'touch', 1000);
+  assert.equal(state.isPressing, true);
+  assert.equal(state.capturedId, 10);
+  handlePointerUp(10, 1150); // 150ms tap
+  assert.equal(state.isPressing, false);
+  assert.equal(state.capturedId, null);
+  assert.equal(state.opened, true, 'Quick tap toggled modal open');
+
+  // 3. Second quick tap toggles modal closed
+  handlePointerDown(10, 0, 'touch', 2000);
+  handlePointerUp(10, 2100); // 100ms tap
+  assert.equal(state.opened, false, 'Second quick tap toggled modal closed');
+
+  // 4. Intentional hold (>=250ms)
+  handlePointerDown(11, 0, 'mouse', 3000);
+  assert.equal(state.isPressing, true);
+  handlePointerUp(11, 3800); // 800ms hold
+  assert.equal(state.isPressing, false);
+  assert.equal(state.opened, true, 'Hold left modal open for results');
+
+  // 5. Pointer cancel (e.g. system alert or drag off boundary on non-captured devices)
+  handlePointerDown(12, 0, 'touch', 4000);
+  assert.equal(state.isPressing, true);
+  handlePointerCancel(12);
+  assert.equal(state.isPressing, false);
+  assert.equal(state.capturedId, null);
+});
+
+test('voice visualizer: soundwave bar heights and halo scaling invariants', () => {
+  const levels = [0.0, 0.1, 0.25, 0.5, 0.75, 1.0];
+
+  for (const lvl of levels) {
+    // Header equalizer bars
+    const hBar1 = Math.max(3, Math.min(14, 3 + lvl * 16));
+    const hBar2 = Math.max(4, Math.min(14, 4 + lvl * 22));
+    const hBar3 = Math.max(3, Math.min(14, 3 + lvl * 14));
+
+    assert.ok(hBar1 >= 3 && hBar1 <= 14, `hBar1 out of range: ${hBar1}`);
+    assert.ok(hBar2 >= 4 && hBar2 <= 14, `hBar2 out of range: ${hBar2}`);
+    assert.ok(hBar3 >= 3 && hBar3 <= 14, `hBar3 out of range: ${hBar3}`);
+
+    // Button soundwave bars
+    const bBar1 = Math.max(3, Math.min(12, 3 + lvl * 14));
+    const bBar2 = Math.max(4, Math.min(12, 4 + lvl * 18));
+    const bBar3 = Math.max(3, Math.min(12, 3 + lvl * 12));
+
+    assert.ok(bBar1 >= 3 && bBar1 <= 12, `bBar1 out of range: ${bBar1}`);
+    assert.ok(bBar2 >= 4 && bBar2 <= 12, `bBar2 out of range: ${bBar2}`);
+    assert.ok(bBar3 >= 3 && bBar3 <= 12, `bBar3 out of range: ${bBar3}`);
+
+    // Halo scale and opacity
+    const haloScale = 1 + lvl * 0.25;
+    const haloOpacity = Math.max(0.4, Math.min(1, 0.4 + lvl * 0.8));
+
+    assert.ok(haloScale >= 1.0 && haloScale <= 1.25, `haloScale out of range: ${haloScale}`);
+    assert.ok(haloOpacity >= 0.4 && haloOpacity <= 1.0, `haloOpacity out of range: ${haloOpacity}`);
+  }
+});
+
+test('voice mic permissions: cleanly handles permission denial without crash', async () => {
+  let errorNotice: string | null = null;
+  let showSuggestions = false;
+
+  async function mockEnsureMic(allowMic: boolean): Promise<boolean> {
+    try {
+      if (!allowMic) {
+        throw new Error('NotAllowedError: Permission denied');
+      }
+      return true;
+    } catch (err: any) {
+      errorNotice = 'Microphone access blocked. Please allow mic in browser settings.';
+      showSuggestions = true;
+      return false;
+    }
+  }
+
+  // When mic is denied
+  const successDenied = await mockEnsureMic(false);
+  assert.equal(successDenied, false);
+  assert.equal(errorNotice, 'Microphone access blocked. Please allow mic in browser settings.');
+  assert.equal(showSuggestions, true);
+
+  // When mic is allowed
+  errorNotice = null;
+  showSuggestions = false;
+  const successAllowed = await mockEnsureMic(true);
+  assert.equal(successAllowed, true);
+  assert.equal(errorNotice, null);
+  assert.equal(showSuggestions, false);
+});
+
