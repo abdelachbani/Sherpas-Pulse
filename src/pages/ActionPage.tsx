@@ -8,6 +8,7 @@ import { buildAdvisorQuestions, formatSessionHandoff } from '../lib/sessionHando
 import { getTelemetrySummary as summarizeTelemetry, serialiseTelemetry } from '../lib/telemetry';
 import { simplifyFinancialText } from '../lib/financialGlossary';
 import { FinancialText } from '../components/shared/FinancialText';
+import { MultiTouchCadenceSection } from '../components/shared/MultiTouchCadenceSection';
 
 export default function ActionPage() {
   const { caseId } = useParams<{ caseId: string }>();
@@ -66,7 +67,16 @@ function ActionContent() {
       {moves.length === 0 && <p className="text-sm text-slate-300">No recommendations are available for this plan.</p>}
       {moves.map((move, index) => <article key={`${move.title}-${index}`} className="rounded-2xl border border-slate-700 bg-slate-900 p-4 sm:p-5"><div className="flex items-start gap-3"><input id={`${checkboxPrefix}-move-${index}`} type="checkbox" aria-label={`Mark recommendation ${index + 1} complete`} checked={done.includes(index)} onChange={() => setDone((previous) => previous.includes(index) ? previous.filter((i) => i !== index) : [...previous, index])} className="mt-1 h-5 w-5 accent-indigo-500" /><div><h3 className="font-semibold text-white"><FinancialText text={move.title} /></h3><p className="mt-2 text-sm leading-relaxed text-slate-300"><FinancialText text={move.action} /></p></div></div></article>)}
     </section>
-    <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5"><h2 className="text-lg font-semibold">Share your priorities</h2><p className="mt-2 text-sm text-slate-300">Copy a draft to discuss with your advisor or family.</p><div className="mt-4 flex gap-2">{(['whatsapp', 'email'] as const).map((item) => <button key={item} type="button" aria-pressed={channel === item} onClick={() => { setChannel(item); setCopied(false); }} className={`min-h-11 rounded-xl px-4 text-sm font-semibold ${channel === item ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300'}`}>{item === 'email' ? 'Email' : 'WhatsApp'}</button>)}</div><div className="mt-4 whitespace-pre-wrap rounded-xl bg-slate-950 p-4 text-sm leading-relaxed text-slate-300"><FinancialText text={message} /></div><button type="button" onClick={async () => { await navigator.clipboard.writeText(languageMode === 'simple' ? simplifyFinancialText(message) : message); setCopied(true); }} className="mt-4 min-h-11 w-full rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-500">{copied ? 'Copied' : 'Copy draft'}</button></section>
+    <MultiTouchCadenceSection
+      caseId={activeCase.id}
+      clientNames={names}
+      primaryHesitationTerm={telemetrySummary.termConsultations.uniqueTerms[0] ?? 'Umbrella Liability'}
+      firstWinTitle={moves[0]?.title ?? 'Pay off high-interest debt'}
+      firstWinDollars={moves[0] ? `$${moves[0].target_amount.toLocaleString()}/yr` : '$3,240/yr'}
+      agreedTopic={activeCase.household.length > 1 ? 'liquidating high-interest card debt' : 'retirement savings roadmap'}
+      divergedTopic={activeCase.household.length > 1 ? 'College 529 vs. Umbrella Liability' : 'home purchase timing'}
+      isAdvisorView={false}
+    />
     <button type="button" onClick={() => { resetStore(); navigate('/'); }} className="min-h-11 w-full rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-200">Start a new household session</button>
   </div>;
   const advisor = (

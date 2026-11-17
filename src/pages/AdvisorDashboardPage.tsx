@@ -40,6 +40,7 @@ import { buildAdvisorQuestions, formatSessionHandoff } from '../lib/sessionHando
 import { getTelemetrySummary as summarizeTelemetry, serialiseTelemetry } from '../lib/telemetry';
 import type { TelemetryEvent } from '../types';
 import { FinancialText } from '../components/shared/FinancialText';
+import { MultiTouchCadenceSection } from '../components/shared/MultiTouchCadenceSection';
 
 // Realistic demo fallback events per household for when the advisor opens directly
 const DEMO_FALLBACK_EVENTS: Record<string, TelemetryEvent[]> = {
@@ -461,64 +462,17 @@ export default function AdvisorDashboardPage() {
           </div>
         </section>
 
-        {/* ── Pillar D: Multi-Touch Smart Nudges (WhatsApp & Email Generator) ─ */}
-        <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                <MessageSquare className="w-4 h-4" />
-              </span>
-              <div>
-                <h2 className="text-base font-bold text-white">Multi-Touch Smart Nudges (48h Follow-up)</h2>
-                <p className="text-xs text-slate-400">
-                  Auto-personalized follow-up message tailored to where the client hesitated ({primaryHesitationTerm}).
-                </p>
-              </div>
-            </div>
-
-            <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800">
-              <button
-                onClick={() => setChannel('whatsapp')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  channel === 'whatsapp' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>WhatsApp</span>
-              </button>
-              <button
-                onClick={() => setChannel('email')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  channel === 'email' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5" />
-                <span>Email</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 whitespace-pre-wrap text-xs text-slate-300 leading-relaxed font-mono">
-            {activeNudgeText}
-          </div>
-
-          <button
-            onClick={handleCopyDraft}
-            className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.98] cursor-pointer"
-          >
-            {copiedDraft ? (
-              <>
-                <Check className="w-4 h-4 text-emerald-300" />
-                <span>Nudge Draft Copied to Clipboard!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4" />
-                <span>Copy Personalized {channel === 'whatsapp' ? 'WhatsApp' : 'Email'} Nudge</span>
-              </>
-            )}
-          </button>
-        </section>
+        {/* ── Pillar D: Multi-Touch Smart Nudges (Days 1 to 30 Follow-up Cadence) ── */}
+        <MultiTouchCadenceSection
+          caseId={activeCase.id}
+          clientNames={names}
+          primaryHesitationTerm={primaryHesitationTerm}
+          firstWinTitle={firstMove ? firstMove.title : 'Pay off high-interest debt'}
+          firstWinDollars={firstMove ? `$${firstMove.target_amount.toLocaleString()}/yr` : '$3,240/yr'}
+          agreedTopic={isCouple ? 'Liquidating $18k high-interest credit card debt' : 'Retirement savings allocation'}
+          divergedTopic={isCouple ? 'College Savings (529) vs. Umbrella Protection' : 'Home purchase timing'}
+          isAdvisorView={true}
+        />
 
         {/* ── Pillar E: Raw Telemetry Stream & JSON Exporter ────────────────── */}
         <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 sm:p-6 space-y-4">
