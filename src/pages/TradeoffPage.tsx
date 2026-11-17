@@ -99,9 +99,6 @@ function TradeoffPageContent() {
       optionB: { label: 'Goal B', impact: 'Impact of alternative goal.' },
     };
 
-  // Choice leaning: 'A' | 'B' | 'balanced'
-  const [activeChoice, setActiveChoice] = useState<'A' | 'B' | 'balanced'>('A');
-
   // Priority Importance Slider (1 to 5 stars) for each option
   const [starsA, setStarsA] = useState<number>(4);
   const [starsB, setStarsB] = useState<number>(3);
@@ -116,7 +113,6 @@ function TradeoffPageContent() {
   useEffect(() => {
     if (scenarios[0]?.id) {
       setActiveScenarioId(scenarios[0].id);
-      setActiveChoice('A');
       setStarsA(4);
       setStarsB(3);
       setTimelineYear(isMichael ? 2027 : 2026);
@@ -127,6 +123,11 @@ function TradeoffPageContent() {
   const totalStars = starsA + starsB;
   const weightA = totalStars > 0 ? Math.round((starsA / totalStars) * 100) : 50;
   const weightB = 100 - weightA;
+  const activeChoice = starsA === starsB ? 'balanced' : starsA > starsB ? 'A' : 'B';
+  const priorities = [
+    { option: 'A', title: activeScenario.optionA.label, stars: starsA, weight: weightA },
+    { option: 'B', title: activeScenario.optionB.label, stars: starsB, weight: weightB },
+  ].sort((a, b) => b.stars - a.stars);
 
   // Star descriptive labels
   function getStarLabel(stars: number): string {
@@ -149,15 +150,12 @@ function TradeoffPageContent() {
     if (preset === 'favorA') {
       setStarsA(5);
       setStarsB(2);
-      setActiveChoice('A');
     } else if (preset === 'balanced') {
       setStarsA(4);
       setStarsB(4);
-      setActiveChoice('balanced');
     } else {
       setStarsA(2);
       setStarsB(5);
-      setActiveChoice('B');
     }
 
     trackTradeoffChange({
@@ -169,7 +167,6 @@ function TradeoffPageContent() {
 
   // Handle What-If Chip click
   function handleSelectChip(choice: 'A' | 'B') {
-    setActiveChoice(choice);
     if (choice === 'A') {
       setStarsA(Math.max(starsA, 4));
       setStarsB(Math.min(starsB, 3));
@@ -600,6 +597,16 @@ function TradeoffPageContent() {
             <span className="text-xs text-slate-400">Scenario estimate</span>
           </div>
 
+          <ol data-priority-order aria-label="Current priority order" aria-live="polite" className="divide-y divide-slate-700 border-y border-slate-700">
+            {priorities.map((priority, index) => (
+              <li key={priority.option} data-option={priority.option} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-3 py-3 text-sm">
+                <span className="tabular-nums font-semibold text-indigo-200">{activeChoice === 'balanced' ? 'Tie' : index + 1}</span>
+                <span className="min-w-0 break-words font-medium">{priority.title}</span>
+                <span className="text-slate-300 tabular-nums">{priority.weight}%</span>
+              </li>
+            ))}
+          </ol>
+
           {/* The Two What-If Interactive Chips */}
           <div className="grid grid-cols-1 gap-2.5">
             {/* Option A Chip */}
@@ -631,9 +638,7 @@ function TradeoffPageContent() {
                         Option A
                       </span>
                       <h3 className="text-xs font-bold text-white">
-                        {isMichael
-                          ? 'Buy $550,000 Home in 2027'
-                          : 'College Tuition for Teens Now'}
+                        <FinancialText text={activeScenario.optionA.label} />
                       </h3>
                     </div>
                   </div>
@@ -684,9 +689,7 @@ function TradeoffPageContent() {
                         Option B
                       </span>
                       <h3 className="text-xs font-bold text-white">
-                        {isMichael
-                          ? 'Retire Early at 58'
-                          : 'Second Home in 2030'}
+                        <FinancialText text={activeScenario.optionB.label} />
                       </h3>
                     </div>
                   </div>
@@ -770,8 +773,8 @@ function TradeoffPageContent() {
           {/* Slider for Option A */}
           <div className="space-y-1.5 p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-indigo-300 truncate">
-                {isMichael ? 'Austin Home in 2027' : 'College Tuition Now'}
+              <span className="min-w-0 font-semibold text-indigo-300">
+                <FinancialText text={activeScenario.optionA.label} />
               </span>
               <span className="text-xs font-bold text-amber-300">
                 {starsA} / 5 Stars
@@ -821,8 +824,8 @@ function TradeoffPageContent() {
           {/* Slider for Option B */}
           <div className="space-y-1.5 p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-emerald-300 truncate">
-                {isMichael ? 'Retire at 58' : 'Second Home in 2030'}
+              <span className="min-w-0 font-semibold text-emerald-300">
+                <FinancialText text={activeScenario.optionB.label} />
               </span>
               <span className="text-xs font-bold text-amber-300">
                 {starsB} / 5 Stars

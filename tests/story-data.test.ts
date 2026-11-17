@@ -7,6 +7,9 @@ for (const item of CASES) {
   const stories = extractStoryData(fh, item.investmentAnalysis);
   assert.equal(stories.length, 6);
   assert.match(JSON.stringify(stories[0]), new RegExp(fh.case.household[0].first_name));
+  assert.match(stories[0].voiceScript ?? '', /I’m Sherpi/);
+  assert.match(stories[0].voiceScript ?? '', /pause/);
+  assert.doesNotMatch(stories[0].voiceScript ?? '', /choose how/i);
   assert(stories[1].dataPoints.some((point) => point.value === fh.score.published_score));
   assert(stories.some((story) => JSON.stringify(story).includes(fh.score.top_moves[0].action)));
   assert(stories.some((story) => story.dataPoints.some((point) => point.value === fh.goals?.goalsSummary?.[0]?.value)));

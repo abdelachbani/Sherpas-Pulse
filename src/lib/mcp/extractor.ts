@@ -78,39 +78,39 @@ export function extractStoryData(
   return [
     {
       id: 'story-vibe', storyIndex: 0, pillar: 'vibe', interactiveType: 'vibe_check',
-      title: `Welcome, ${names}`, subtitle: 'Choose how you would like to explore your plan.',
+      title: `Welcome, ${names}`, subtitle: 'Your plan unfolds one chapter at a time, with a pause for questions after each chapter.',
       tagline: 'Your Sherpas plan', dataPoints: householdPoints,
-      voiceScript: `Welcome, ${names}. Choose how you would like to explore your plan.`,
+      voiceScript: `Hi ${names}, I’m Sherpi. I’ll guide you through your financial plan. After each chapter, we’ll pause for your questions.`,
     },
     {
       id: 'story-overview', storyIndex: 1, pillar: 'overview', interactiveType: 'superpower_vs_leak',
       title: 'Your financial health', subtitle: 'Your published score and the areas behind it.',
       highlightNumber: fh.score.published_score, highlightUnit: '/100', highlightLabel: fh.score.band,
       dataPoints: [{ label: 'Health score', value: fh.score.published_score, unit: '/100', grounding: scoreRef }, ...pillarPoints],
-      voiceScript: `Your published financial health score is ${fh.score.published_score} out of 100.`, grounding: scoreRef,
+      voiceScript: `Let’s start with your financial health. Your score is ${fh.score.published_score} out of 100. Look at the areas of your plan as they come into view.`, grounding: scoreRef,
     },
     {
       id: 'story-translator', storyIndex: 2, pillar: 'translator', interactiveType: 'real_life_analogy',
       title: 'What matters to you', subtitle: 'Goals recorded in your plan.',
-      dataPoints: goalPoints, voiceScript: 'Here are the goals recorded in your plan.',
+      dataPoints: goalPoints, voiceScript: 'Now let’s look at what you’re planning for. As each goal appears, think about which one you’d like to discuss first.',
     },
     {
       id: 'story-advice', storyIndex: 3, pillar: 'advice', interactiveType: 'liquidity_tank_preview',
       title: 'Areas to discuss', subtitle: 'Your plan lists these possible moves.',
-      dataPoints: movePoints, voiceScript: 'Your plan lists these possible moves to discuss with your advisor.',
+      dataPoints: movePoints, voiceScript: 'Here are the moves your plan identifies. At the pause, ask me to explain any of them before discussing them with your advisor.',
     },
     {
       id: 'story-living-map', storyIndex: 4, pillar: 'living-map', interactiveType: 'time_machine',
       title: 'Your milestones', subtitle: 'Dates and retirement ages recorded in your plan.',
       dataPoints: [...milestonePoints, ...householdPoints.filter((point) => point.label.endsWith('retirement age'))],
-      voiceScript: 'These are the milestones and retirement ages recorded in your plan.',
+      voiceScript: 'Let’s put your goals on a timeline. These are the dates and retirement ages recorded in your plan.',
     },
     {
       id: 'story-action', storyIndex: 5, pillar: 'action', interactiveType: 'wrapped_summary',
       title: 'Your next conversation', subtitle: 'Review the first listed move with your advisor.',
       highlightNumber: moves[0]?.title, highlightLabel: moves[0] ? 'First listed move' : undefined,
       dataPoints: movePoints.slice(0, 1),
-      voiceScript: moves[0] ? `Your first listed move is: ${moves[0].action}. Discuss it with your advisor.` : 'Discuss your next steps with your advisor.',
+      voiceScript: 'Here’s where to start your next conversation with your advisor. We’ll pause once more to review it and talk through anything that’s still unclear.',
       grounding: moves[0] ? ref('score.top_moves[0].action', moves[0].title, moves[0].action) : undefined,
     },
   ];

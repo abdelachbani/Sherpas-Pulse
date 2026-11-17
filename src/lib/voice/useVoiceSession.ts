@@ -188,6 +188,9 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   // ── Stop playback helper ────────────────────────────────────────────────────
   const stopPlayback = useCallback(() => {
     clearWaitingSend();
+    const discardInput = isPressingRef.current || pendingCommitRef.current?.hasAudio;
+    isPressingRef.current = false;
+    audioFramesCountRef.current = 0;
     if (responseTimeoutTimerRef.current !== null) {
       window.clearTimeout(responseTimeoutTimerRef.current);
       responseTimeoutTimerRef.current = null;
@@ -195,6 +198,10 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     inFlightQuestionRef.current = null;
     pendingCommitRef.current = null;
     setAudioLevel(0);
+
+    if (discardInput && wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'input_audio_buffer.clear' }));
+    }
 
     const shouldCancel = responseGateRef.current.cancel();
     if (shouldCancel && wsRef.current?.readyState === WebSocket.OPEN) {
@@ -272,7 +279,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         type: 'session.update',
         session: {
           type: 'realtime',
-          instructions: 'You are an empathetic, world-class Sherpas wealth advisor talking to this family about their financial plan. Speak in short, concise, natural conversational sentences. Always use the figures from their verified plan. Answer in the same language the client speaks (Spanish or English).',
+          instructions: 'You are Sherpi, the Sherpas guide helping this household understand its financial plan. Use short, natural sentences and explain the figures from the plan. Help the household prepare questions for their advisor. Answer in the same language the client speaks (Spanish or English).',
           audio: {
             input: {
               format: { type: 'audio/pcm', rate: 24000 },
@@ -542,6 +549,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
   // ── Stop Listening (Release to Send) ────────────────────────────────────────
   const stopListening = useCallback(() => {
+    if (!isPressingRef.current) return;
     isPressingRef.current = false;
     setAudioLevel(0);
 
@@ -599,6 +607,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       currentReplyTextRef.current = '';
       setTranscript(clean);
       setResponseMessage(null);
+      setGuardRedirect(null);
       setErrorNotice(null);
       setShowSuggestions(false);
       setVoiceState('speaking');

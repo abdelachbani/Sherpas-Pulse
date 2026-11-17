@@ -21,6 +21,13 @@ test('shows ranked saved choices and their differences without inventing a revie
   assert.doesNotMatch(formatSessionHandoff('case', [], { primary, secondary: null }, []), /Different choices/);
 });
 
+test('orders saved single-household options by their rating', () => {
+  const scenarios = [{ id: 'home', title: 'Home or retirement', optionA: { label: 'Home', impact: '' }, optionB: { label: 'Retirement', impact: '' } }];
+  const events: any[] = [{ type: 'allocation_set', payload: { caseId: 'case', scenarioId: 'home', choice: 'B', starsA: 2, starsB: 5, weightA: 29, weightB: 71 }, timestamp: 1 }];
+  const lines = formatSessionHandoff('case', events, { primary: null, secondary: null }, scenarios).split('\n');
+  assert(lines.indexOf('Retirement: 5/5 (71%)') < lines.indexOf('Home: 2/5 (29%)'));
+});
+
 test('suggests three advisor questions from the most repeated hesitation steps and terms', () => {
   const events: any[] = [
     { type: 'hesitation_pause', payload: { chapterId: 'health', chapterTitle: 'Financial health' }, timestamp: 1 },

@@ -20,16 +20,18 @@ import {
 import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
 import { extractCashAllocationOptions } from '../lib/mcp/extractor';
+import { restoreAllocationOrder } from '../lib/allocationOrder';
 import { CashAllocatorChip } from '../components/couple/CashAllocatorChip';
 import { GroundingInspector } from '../components/calibration/GroundingInspector';
 import type { CashStrategyOption, GroundingRef, CoupleAllocation } from '../types';
 
 export default function AllocationPage() {
   const { caseId } = useParams<{ caseId: string }>();
+  const partner = useAppStore((s) => s.partner) || 'primary';
   if (!CASES.some((item) => item.id === caseId)) {
     return <main className="session-page min-h-dvh bg-[#171827] text-white p-8"><div className="max-w-3xl mx-auto"><h1 className="text-2xl font-semibold">Household not found</h1><p className="mt-3 text-sm text-slate-300">This household link is unavailable. Choose a household to continue.</p><a className="inline-flex min-h-11 items-center mt-6 text-indigo-300 underline" href="/">Choose a household</a></div></main>;
   }
-  return <AllocationPageContent key={caseId} />;
+  return <AllocationPageContent key={`${caseId}:${partner}`} />;
 }
 
 function AllocationPageContent() {
@@ -40,6 +42,7 @@ function AllocationPageContent() {
   const setCase = useAppStore((s) => s.setCase);
   const partner = useAppStore((s) => s.partner) || 'primary';
   const setAllocation = useAppStore((s) => s.setAllocation);
+  const savedAllocation = useAppStore((s) => s.currentCase?.id === caseId ? s.coupleAllocations[partner] : null);
   const trackAllocationChange = useAppStore((s) => s.trackAllocationChange);
 
   const activeCase = (currentCase?.id === caseId ? currentCase : CASES.find((c) => c.id === caseId))!;
@@ -52,9 +55,9 @@ function AllocationPageContent() {
 
   const rawOptions = extractCashAllocationOptions(activeCase.financialHealth);
 
-  const [strategies, setStrategies] = useState<CashStrategyOption[]>(rawOptions);
+  const [strategies, setStrategies] = useState<CashStrategyOption[]>(() => restoreAllocationOrder(rawOptions, savedAllocation));
   const [activeGrounding, setActiveGrounding] = useState<GroundingRef | null>(null);
-  const [hasLockedIn, setHasLockedIn] = useState(false);
+  const [hasLockedIn, setHasLockedIn] = useState(() => savedAllocation !== null);
 
   const client = activeCase.financialHealth.case.household.find((m) => m.role === 'client');
   const coClient = activeCase.financialHealth.case.household.find((m) => m.role === 'co-client');
@@ -79,6 +82,12 @@ function AllocationPageContent() {
     if (!moved) return;
     copy.splice(toIdx, 0, moved);
     setStrategies(copy);
+    if (hasLockedIn) {
+      setAllocation(partner, {
+        partner: currentPartnerName,
+        allocations: copy.map((s, idx) => ({ strategyId: s.id, label: s.label, amount: s.amount, priority: idx + 1 })),
+      });
+    }
     trackAllocationChange({
       action: 'reorder',
       partner,

@@ -11,8 +11,13 @@ export function formatSessionHandoff(caseId: string, events: TelemetryEvent[], a
     const b = scenario?.optionB.label ?? 'Option B';
     lines.push(`Trade-off: ${scenario?.title ?? String(p.scenarioId)}`);
     lines.push(`Choice: ${p.choice === 'balanced' ? 'Balanced' : p.choice === 'A' ? a : b}`);
-    if (typeof p.starsA === 'number' && typeof p.weightA === 'number') lines.push(`${a}: ${p.starsA}/5 (${p.weightA}%)`);
-    if (typeof p.starsB === 'number' && typeof p.weightB === 'number') lines.push(`${b}: ${p.starsB}/5 (${p.weightB}%)`);
+    const ratings = [
+      { label: a, stars: p.starsA, weight: p.weightA },
+      { label: b, stars: p.starsB, weight: p.weightB },
+    ].flatMap(({ label, stars, weight }) => typeof stars === 'number' && typeof weight === 'number' ? [{ label, stars, weight }] : []);
+    for (const { label, stars, weight } of ratings.sort((one, two) => two.stars - one.stars)) {
+      lines.push(`${label}: ${stars}/5 (${weight}%)`);
+    }
     if (typeof p.timelineYear === 'number') lines.push(`Timeline year: ${p.timelineYear}`);
   }
   const saved = [allocations.primary, allocations.secondary].filter((item): item is CoupleAllocation => item !== null);

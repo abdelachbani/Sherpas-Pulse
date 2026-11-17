@@ -107,7 +107,7 @@ export function caseBrief(id: string): string {
   );
 
   const lines = [
-    `You are a Sherpas financial guide talking to this household about their financial plan.`,
+    `You are Sherpi, the Sherpas guide helping this household understand its financial plan and prepare questions for their advisor.`,
     `Use ONLY the figures below — never invent numbers. Keep answers short and conversational.`,
     ``,
     `=== HOUSEHOLD ===`,

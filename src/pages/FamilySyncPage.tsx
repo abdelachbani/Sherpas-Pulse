@@ -19,9 +19,6 @@ import {
   Sparkles,
   ArrowRight,
   ArrowLeft,
-  ShieldCheck,
-  CalendarCheck,
-  TrendingUp,
 } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
@@ -90,7 +87,7 @@ function FamilySyncPageContent() {
   } · ${tieBreakersCount} Advisor Discussion Point${tieBreakersCount === 1 ? '' : 's'}`;
 
   return (
-    <div className="session-page min-h-dvh bg-[#171827] text-white max-w-3xl mx-auto p-5 sm:p-6 flex flex-col justify-between select-none relative">
+    <main className="session-page min-h-dvh bg-[#171827] text-white max-w-3xl mx-auto p-5 sm:p-6 flex flex-col justify-between relative">
       {/* ── Top Header ──────────────────────────────────────────────────────── */}
       <div className="pt-2">
         {/* Category Pill & Status */}
@@ -177,6 +174,8 @@ function FamilySyncPageContent() {
           </div>
         </div>
 
+        {bothReviewed && agreements.length === 0 && <p className="text-sm text-slate-300">No matching priorities were found in these reviews.</p>}
+
         {/* ── Amber Zone Section ── */}
         <div className="space-y-2.5 pt-2">
           <div className="flex items-center justify-between px-1">
@@ -231,6 +230,6 @@ function FamilySyncPageContent() {
         grounding={activeGrounding}
         onClose={() => setActiveGrounding(null)}
       />
-    </div>
+    </main>
   );
 }

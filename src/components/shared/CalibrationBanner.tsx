@@ -1,3 +1,4 @@
+import '../../pages/advisor-dashboard.css';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Sparkles } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
@@ -25,7 +26,7 @@ export function CalibrationBanner({ placement = 'fixed' }: Props) {
       <aside
         role="status"
         aria-live="polite"
-        className={`${placementClass} flex items-center gap-3 rounded-2xl border border-emerald-400/30 bg-slate-950/95 p-3 text-white shadow-xl backdrop-blur-xl`}
+        className={`${placementClass} calibration-banner flex items-center gap-3 rounded-2xl border border-emerald-400/30 bg-slate-950/95 p-3 text-white shadow-xl backdrop-blur-xl`}
       >
         <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />
         <div>
@@ -44,7 +45,7 @@ export function CalibrationBanner({ placement = 'fixed' }: Props) {
     <aside
       role="status"
       aria-live="polite"
-      className={`${placementClass} flex items-center gap-3 rounded-2xl border border-blue-400/30 bg-slate-950/95 p-4 text-white shadow-2xl backdrop-blur-xl`}
+      className={`${placementClass} calibration-banner flex items-center gap-3 rounded-2xl border border-blue-400/30 bg-slate-950/95 p-4 text-white shadow-2xl backdrop-blur-xl`}
     >
       <Sparkles className="h-5 w-5 shrink-0 text-blue-300" aria-hidden="true" />
       <div className="min-w-0 flex-1">
@@ -58,7 +59,7 @@ export function CalibrationBanner({ placement = 'fixed' }: Props) {
       <button
         type="button"
         onClick={() => setLanguageMode('simple')}
-        className="min-h-11 shrink-0 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+        className="min-h-11 shrink-0 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-blue-500"
       >
         Simplify
       </button>

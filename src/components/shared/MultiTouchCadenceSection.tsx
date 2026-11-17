@@ -1,3 +1,4 @@
+import '../../pages/advisor-dashboard.css';
 /**
  * src/components/shared/MultiTouchCadenceSection.tsx
  *
@@ -19,7 +20,7 @@ interface Props {
   clientNames: string;
   primaryHesitationTerm: string;
   firstWinTitle: string;
-  firstWinDollars: string;
+  firstWinDollars?: string;
   agreedTopic?: string;
   divergedTopic?: string;
   isAdvisorView?: boolean;
@@ -68,7 +69,7 @@ export function MultiTouchCadenceSection({
   const handleDownloadCalendar = () => {
     downloadCalendarInvite({
       title: firstWinTitle,
-      description: `Impact: ${firstWinDollars} annual savings.\nAction: Take 5 minutes to complete your Sherpas step.`,
+      description: `Take five minutes to review this step in your Sherpas plan.${firstWinDollars ? `\nAmount listed: ${firstWinDollars}.` : ''}`,
       clientNames,
     });
     setCalendarDownloaded(true);
@@ -76,7 +77,7 @@ export function MultiTouchCadenceSection({
   };
 
   return (
-    <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 sm:p-6 space-y-5 text-white">
+    <section className="cadence-section rounded-3xl border border-slate-800 bg-slate-900/90 p-5 sm:p-6 space-y-5 text-white">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
@@ -110,7 +111,7 @@ export function MultiTouchCadenceSection({
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               channel === 'whatsapp'
-                ? 'bg-emerald-600 text-white shadow-sm'
+                ? 'bg-indigo-700 text-white'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -156,7 +157,7 @@ export function MultiTouchCadenceSection({
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className={`text-[10px] font-mono font-bold uppercase ${isSelected ? 'text-indigo-300' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-mono font-bold uppercase ${isSelected ? 'text-indigo-300' : 'text-slate-400'}`}>
                   Day {t.day}
                 </span>
                 {t.id === 'day-3' && (
@@ -168,7 +169,7 @@ export function MultiTouchCadenceSection({
               <div className={`text-xs font-bold mt-1 line-clamp-1 ${isSelected ? 'text-white' : 'text-slate-300'}`}>
                 {t.label.split(': ')[1]}
               </div>
-              <div className="text-[10px] text-slate-500 mt-1 line-clamp-1">{t.badge}</div>
+              <div className="text-[10px] text-slate-400 mt-1 line-clamp-1">{t.badge}</div>
             </button>
           );
         })}
@@ -176,10 +177,10 @@ export function MultiTouchCadenceSection({
 
       {/* Active Touchpoint Message Preview */}
       <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 space-y-3">
-        <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-800/80">
+        <div className="flex flex-wrap gap-2 items-center justify-between text-xs pb-2 border-b border-slate-800/80">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-slate-300">{activeTouch.label}</span>
-            <span className="text-slate-500">·</span>
+            <span className="text-slate-400">·</span>
             <span className="text-slate-400">{activeTouch.purpose}</span>
           </div>
           <span className="font-mono text-[10px] text-indigo-400 uppercase tracking-wider font-semibold">

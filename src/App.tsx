@@ -4,7 +4,7 @@
  * Sherpas Pulse - 100% Mobile-First Financial Diagnostic & Alignment Web App
  */
 
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom';
 import { Scale } from 'lucide-react';
 import CaseSelectPage from './pages/CaseSelectPage';
@@ -27,32 +27,31 @@ function ApplicationShell() {
   const { pathname } = useLocation();
   const isWrapped = /\/case\/[^/]+\/stories\/?$/.test(pathname);
   const [showRationale, setShowRationale] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    contentRef.current?.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [pathname]);
 
   return (
     <div className="app-shell relative bg-slate-950 text-white" data-wrapped={isWrapped ? 'true' : undefined}>
       <a className="skip-link" href="#app-content">Skip to content</a>
       <header className="app-toolbar">
-        <div className="app-toolbar-inner flex items-center justify-between">
+        <div className="app-toolbar-inner">
           <Link className="app-wordmark" to="/" aria-label="Sherpas Pulse home">
             <img src="/brand/sherpas.svg" alt="Sherpas" width="104" height="30" />
             <span>Pulse</span>
           </Link>
 
-          <button
-            type="button"
-            onClick={() => setShowRationale(true)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700/80 hover:border-slate-500 text-[11px] font-semibold text-slate-300 hover:text-white transition-all cursor-pointer mr-16 sm:mr-32"
-            title="The Friday Decision Matrix: What we built vs what we ruled out"
-          >
-            <Scale className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Why Sherpas Pulse?</span>
-            <span className="sm:hidden">Why Pulse?</span>
-          </button>
+          {!isWrapped && <div className="app-toolbar-actions">
+            <button type="button" className="app-rationale" onClick={() => setShowRationale(true)} aria-label="Why Sherpas Pulse?" aria-haspopup="dialog">
+              <Scale size={17} aria-hidden="true" />
+              <span className="hidden sm:inline">Why Sherpas Pulse?</span>
+            </button>
+            <DemoPitchHUD />
+          </div>}
         </div>
       </header>
-
-      {/* Floating Demo Day Pitch HUD */}
-      <DemoPitchHUD />
 
       {/* Friday Decision Matrix Rationale Modal */}
       <FridayDecisionMatrixModal
@@ -60,7 +59,7 @@ function ApplicationShell() {
         onClose={() => setShowRationale(false)}
       />
 
-      <div id="app-content" className="app-content" tabIndex={-1}>
+      <div id="app-content" className="app-content" tabIndex={-1} ref={contentRef}>
         <Routes>
           {/* Case Selection */}
           <Route path="/" element={<CaseSelectPage />} />

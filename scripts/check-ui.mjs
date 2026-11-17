@@ -68,7 +68,8 @@ async function inspect(label, width, screenshot = false) {
     const card=document.querySelector('.story-card');
     const cardFits=!card || (card.scrollHeight<=card.clientHeight+1 && card.firstElementChild.getBoundingClientRect().bottom<=card.getBoundingClientRect().bottom+1);
     const stageNoScroll=!story || root.scrollHeight<=root.clientHeight+1;
-    return { heading, width:innerWidth, cardFits, stageNoScroll, contrastFailures, smallTargets, unlabelledInputs, overflow:document.documentElement.scrollWidth>innerWidth+1 || (root && root.scrollWidth>root.clientWidth+1), offscreenControls:bad, storyFooterVisible: !footer || (footer.bottom<=innerHeight+1 && footer.top>=0), brokenImages:[...document.images].filter(i=>!i.complete || i.naturalWidth===0).map(i=>i.src), text:document.body.innerText };
+    const clippedBy=cardFits ? undefined : Math.max(card.scrollHeight-card.clientHeight, Math.ceil(card.firstElementChild.getBoundingClientRect().bottom-card.getBoundingClientRect().bottom));
+    return { heading, width:innerWidth, cardFits, clippedBy, stageNoScroll, contrastFailures, smallTargets, unlabelledInputs, overflow:document.documentElement.scrollWidth>innerWidth+1 || (root && root.scrollWidth>root.clientWidth+1), offscreenControls:bad, storyFooterVisible: !footer || (footer.bottom<=innerHeight+1 && footer.top>=0), brokenImages:[...document.images].filter(i=>!i.complete || i.naturalWidth===0).map(i=>i.src), text:document.body.innerText };
   })()`);
   const errors = exceptions.splice(0);
   const pass = Boolean(metrics.heading) && metrics.cardFits && metrics.stageNoScroll && !metrics.overflow && !metrics.offscreenControls.length && metrics.storyFooterVisible && !metrics.brokenImages.length && !metrics.contrastFailures.length && !metrics.smallTargets.length && !metrics.unlabelledInputs.length && !errors.length;
@@ -87,11 +88,12 @@ try {
   ws.addEventListener('message', e=>{const m=JSON.parse(e.data);if(m.id){const p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);}}if(m.method==='Runtime.exceptionThrown')exceptions.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text);});
   await call('Page.enable');await call('Runtime.enable');
   await call('Page.addScriptToEvaluateOnNewDocument', { source: `
-    window.__speechCalls=[];window.__questions=[];
+    window.__speechCalls=[];window.__questions=[];window.__micRequests=0;
+    Object.defineProperty(navigator.mediaDevices,'getUserMedia',{configurable:true,value:async()=>{window.__micRequests++;throw new DOMException('Denied for UI test','NotAllowedError')}});
     Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{speak(u){window.__speechCalls.push(u.text)},cancel(){},get speaking(){return false}}});
     class TestSocket extends EventTarget {
       static CONNECTING=0;static OPEN=1;static CLOSING=2;static CLOSED=3;
-      constructor(){super();this.readyState=0;this.serial=0;this.reply=null;setTimeout(()=>{if(this.readyState===3)return;this.readyState=1;this.onopen?.({});},10)}
+      constructor(){super();this.readyState=0;this.serial=0;this.reply=null;setTimeout(()=>{if(this.readyState===3)return;this.readyState=1;this.onopen?.({});if(location.search.includes('ui-relay=offline'))this.onmessage?.({data:JSON.stringify({type:'error',error:{message:'Simulated relay unavailable'}})});},10)}
       send(raw){const e=JSON.parse(raw);if(e.type==='conversation.item.create')window.__questions.push(e.item?.content?.[0]?.text);if(e.type==='response.cancel'){const id=this.reply;setTimeout(()=>this.onmessage?.({data:JSON.stringify({type:'response.done',response:{id,status:'cancelled'}})}),5);}if(e.type==='response.create'){const id='ui-response-'+(++this.serial);this.reply=id;this.onmessage?.({data:JSON.stringify({type:'response.created',response:{id}})});setTimeout(()=>{if(this.readyState!==1)return;this.onmessage?.({data:JSON.stringify({type:'response.output_audio_transcript.delta',response_id:id,delta:'Your question has reached the assistant.'})});this.onmessage?.({data:JSON.stringify({type:'response.done',response:{id,status:'completed'}})});},700)}}
       close(){this.readyState=3;this.onclose?.({code:1000,reason:'Test closed'})}
     } window.WebSocket=TestSocket;
@@ -102,10 +104,36 @@ try {
   const clickAria=async label=>evaluate(`(() => {const b=[...document.querySelectorAll('button')].find(b=>b.getAttribute('aria-label')===${JSON.stringify(label)});if(!b)return false;b.click();return true})()`);
   const edge=async right=>{const r=await evaluate(`(()=>{const r=document.querySelector('.story-shell > main').getBoundingClientRect();return {x:${right?'true':'false'}?r.right-4:r.left+4,y:r.top+r.height*.7}})()`);await call('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...r});await call('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...r});await pause(170);};
   const cases=['timothy-melanie-weah','daniel-emily-johnson','michael-carter','samantha-lewis'];
+  await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
+  await navigate('/case/michael-carter/tradeoff');
+  await clickAria('Rate option B 5 out of 5');await pause(150);
+  results.push({ label:'tradeoff-rating-reorders-priorities', pass:await evaluate(`document.querySelector('[data-priority-order] > li')?.dataset.option==='B'`) });
+  const beforeRouteChange=await evaluate(`(() => { const root=document.querySelector('#app-content'); root.scrollTop=root.scrollHeight; return root.scrollTop })()`);
+  await click('Continue to Your Action Plan');await pause(250);
+  results.push({ label:'route-transition-starts-at-top', pass:beforeRouteChange>100 && await evaluate(`location.pathname.endsWith('/action') && document.querySelector('#app-content').scrollTop===0`) });
+  await evaluate(`document.querySelector('main a[href$="/advisor"]')?.click()`);await pause(380);
+  results.push({label:'advisor-receives-the-priority-order',pass:await evaluate(`(() => { const text=document.querySelector('[aria-label="Saved priority order"]')?.textContent ?? ''; return text.includes('5/5 (56%)') && text.indexOf('5/5 (56%)') < text.indexOf('4/5 (44%)') })()`)});
+  if(!process.env.UI_CHECK_NAVIGATION_ONLY){
   const widths=process.env.UI_CHECK_INTERACTIONS_ONLY?[]:(process.env.UI_CHECK_WIDTHS?process.env.UI_CHECK_WIDTHS.split(',').map(Number):[320,390,430,768,844,1440]);
   for(const width of widths){
     await call('Emulation.setDeviceMetricsOverride',{width,height:width===320?568:width===430?932:width===768?1024:width===844?390:width>=1024?900:844,deviceScaleFactor:1,mobile:false});
     await navigate('/');await inspect('home',width,true);
+    for (const [trigger, name] of [['Open demo navigator', 'Demo Pitch HUD'], ['Why Sherpas Pulse?', 'The Friday Decision Matrix']]) {
+      await clickAria(trigger);await pause(200);
+      const bounds=await evaluate(`(() => { const d=document.querySelector('[aria-label="'+${JSON.stringify(name)}+'"][role="dialog"]'); if(!d)return false; const r=d.getBoundingClientRect(); return r.left>=0 && r.right<=innerWidth+1 && r.top>=0 && r.bottom<=innerHeight+1 && d.contains(document.activeElement) })()`);
+      await key('Escape');
+      const dismissed=await evaluate(`!document.querySelector('[aria-label="'+${JSON.stringify(name)}+'"][role="dialog"]') || !document.querySelector('[aria-label="'+${JSON.stringify(name)}+'"][role="dialog"]').checkVisibility()`);
+      results.push({label:name+'-fits-and-dismisses',width,pass:bounds && dismissed});
+    }
+    await navigate('/case/'+cases[0]);await click('Scan QR');await pause(230);
+    const qrFits=await evaluate(`(() => { const qr=document.querySelector('[aria-label="Scan to open on partner phone"]'); const r=qr?.getBoundingClientRect(); return !!r && qr.contains(document.activeElement) && r.left>=0 && r.right<=innerWidth+1 })()`);
+    await key('Escape');
+    results.push({label:'partner-qr-opens-and-fits',width,pass:qrFits});
+    await navigate('/case/'+cases[0]+'/advisor');await inspect('advisor',width,true);
+    await click('Email');
+    const cadenceWorks=await evaluate(`(() => { const tab=document.querySelectorAll('[role="tablist"][aria-label="Follow-up touchpoints"] [role="tab"]')[1]; if(!tab)return false; tab.click(); return true })()`);
+    await pause(180);
+    results.push({label:'advisor-cadence-switches-touchpoint-and-channel',width,pass:cadenceWorks && await evaluate(`document.querySelectorAll('[role="tablist"][aria-label="Follow-up touchpoints"] [role="tab"]')[1]?.getAttribute('aria-selected')==='true' && document.body.innerText.includes('Subject:')`)});
     results.push({label:'clean-responsive-layout',width,pass:await evaluate(`!document.querySelector('button[aria-label="Split Screen"]') && Boolean(document.querySelector('.app-shell'))`)});
     for(const id of cases){
       await navigate('/case/'+id);await inspect(id+'-entry',width,width===390);
@@ -130,13 +158,20 @@ try {
   }
   // Actual timing, narration and input behavior at one viewport, using a local test relay.
   await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
+  await navigate('/case/timothy-melanie-weah/stories?ui-relay=offline');
+  const offlineStart=await state();await pause(450);const offlineNext=await state();
+  results.push({label:'unavailable-relay-does-not-open-sherpi-or-stop-playback',pass:offlineNext.progress>offlineStart.progress && await evaluate(`!document.querySelector('section[aria-label="Ask Sherpi"]')`)});
   await navigate('/case/timothy-melanie-weah/stories');
+  const sherpiButton=await clickAria('Ask Sherpi');await pause(250);
+  results.push({label:'sherpi-available-during-playback',pass:sherpiButton && await evaluate(`Boolean(document.querySelector('[aria-label="Ask Sherpi"][aria-expanded="true"]')) && Boolean(document.querySelector('[aria-label="Ask a question about your plan"]'))`)});
+  await clickAria('Close voice assistant');await pause(200);
   const initial=await state();await pause(650);const progressed=await state();
   results.push({label:'continuous-progress',pass:initial.phase==='playing' && progressed.index===initial.index && progressed.progress>initial.progress && progressed.progress<100});
   await clickAria('Pause story');await pause(100);const paused=await state();await pause(400);const still=await state();
   results.push({label:'pause-freezes-progress',pass:paused.progress===still.progress});
   await clickAria('Turn narration on');await pause(100);
   const heard=await evaluate('window.__speechCalls.length');
+  results.push({label:'narration-introduces-sherpi',pass:await evaluate(`window.__speechCalls[0]?.includes('I’m Sherpi')`)});
   await click('Terms');await pause(100);await key('Escape');await pause(100);
   results.push({label:'terms-do-not-repeat-narration',pass:await evaluate(`window.__speechCalls.length===${heard} && ${heard}>0`)});
   await edge(true);const moved=await state();await edge(false);const returned=await state();
@@ -146,6 +181,7 @@ try {
   // Let the final scene run on its clock: timers must stop at the checkpoint.
   while((await state()).phase!=='checkpoint'){await key('ArrowRight');}
   await pause(250);const checked=await state();await pause(450);
+  results.push({label:'sherpi-guides-the-chapter-recap',pass:await evaluate(`Boolean(document.querySelector('[aria-label="Chapter checkpoint"] .sherpi-avatar'))`)});
   results.push({label:'checkpoint-progress-complete-stable',pass:checked.progress===100 && (await state()).phase==='checkpoint'});
   await click('I have a question');
   await evaluate(`(()=>{const input=document.querySelector('input[placeholder="Ask about this chapter"]');const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;setter.call(input,'Can you explain this section?');input.dispatchEvent(new Event('input',{bubbles:true}))})()`);await pause(120);
@@ -165,8 +201,18 @@ try {
   results.push({label:'express-checkpoint-keeps-full-section-data',pass:completeSummary>=6});
   await pause(8500);const waiting=await state();
   results.push({label:'checkpoint-does-not-advance-with-time',pass:waiting.phase==='checkpoint' && waiting.chapter===automaticCheckpoint.chapter && waiting.progress===100});
+  await navigate('/case/timothy-melanie-weah/stories');
+  const dock=await evaluate(`(() => { const r=document.querySelector('button[aria-label="Ask Sherpi"]').getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2} })()`);
+  await call('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...dock});
+  await call('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...dock});await pause(330);
+  results.push({label:'sherpi-quick-tap-does-not-request-microphone',pass:await evaluate(`window.__micRequests===0 && Boolean(document.querySelector('section[aria-label="Ask Sherpi"]'))`)});
+  await clickAria('Close voice assistant');
+  await call('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...dock});await pause(400);
+  await call('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...dock});await pause(160);
+  results.push({label:'sherpi-hold-requests-microphone-and-shows-denial',pass:await evaluate(`window.__micRequests===1 && document.querySelector('section[aria-label="Ask Sherpi"]')?.textContent.includes('Microphone access blocked')`)});
   await navigate('/case/not-a-case/stories');
   results.push({label:'unknown-case',pass:await evaluate(`document.body.innerText.includes('not found')`)});
+  }
   await writeFile(join(out,'report.json'),JSON.stringify(results,null,2));
   const failed=results.filter(r=>!r.pass);console.log(`APPLICATION QUALITY: ${results.length-failed.length}/${results.length} passed`);
   process.exitCode=failed.length?1:0;

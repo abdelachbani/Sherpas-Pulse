@@ -6,7 +6,7 @@
 
 ## Sherpas Pulse interface
 
-The React application explains each household's plan in six chapters. Stories advance manually; Play enables optional automatic playback. Financial scenario calculations and voice transport remain separate from the interface.
+The React application explains each household's plan in six chapters. Scenes play automatically within each chapter. Tap the edges or use the arrow keys to navigate, or pause at any time. At the end of a chapter, the progress bar holds at 100% while you review the figures, ask a question, or choose to continue.
 
 - Run the interface: `npm ci`, then `npm run dev`.
 - Run checks: `npm test`, `npm run lint`, and `npm run build`.

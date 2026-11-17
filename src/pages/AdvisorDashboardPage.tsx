@@ -15,9 +15,7 @@ import { useState, useEffect, useId } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   Activity,
-  AlertTriangle,
   ArrowLeft,
-  CheckCircle2,
   Copy,
   Check,
   HelpCircle,
@@ -26,22 +24,18 @@ import {
   ShieldCheck,
   Users,
   User,
-  MessageSquare,
-  Mail,
-  ChevronRight,
-  RefreshCw,
   FileText,
-  ExternalLink,
   Printer,
 } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
-import { extractWhatIfScenarios, extractHouseholdSync } from '../lib/mcp/extractor';
+import { extractWhatIfScenarios } from '../lib/mcp/extractor';
 import { buildAdvisorQuestions, formatSessionHandoff } from '../lib/sessionHandoff';
 import { getTelemetrySummary as summarizeTelemetry, serialiseTelemetry } from '../lib/telemetry';
 import type { TelemetryEvent } from '../types';
 import { FinancialText } from '../components/shared/FinancialText';
 import { MultiTouchCadenceSection } from '../components/shared/MultiTouchCadenceSection';
+import './advisor-dashboard.css';
 
 // Realistic demo fallback events per household for when the advisor opens directly
 const DEMO_FALLBACK_EVENTS: Record<string, TelemetryEvent[]> = {
@@ -88,7 +82,6 @@ export default function AdvisorDashboardPage() {
   const setCase = useAppStore((s) => s.setCase);
   const liveEvents = useAppStore((s) => s.telemetryEvents);
   const allocations = useAppStore((s) => s.coupleAllocations);
-  const resetStore = useAppStore((s) => s.reset);
 
   const activeCase = CASES.find((c) => c.id === caseId) ?? currentCase ?? CASES[0];
   const isCouple = activeCase.householdType === 'couple';
@@ -107,22 +100,20 @@ export default function AdvisorDashboardPage() {
 
   const telemetrySummary = summarizeTelemetry(sessionEvents);
 
-  const [channel, setChannel] = useState<'whatsapp' | 'email'>('whatsapp');
-  const [copiedDraft, setCopiedDraft] = useState(false);
   const [copiedJson, setCopiedJson] = useState(false);
   const [showEventLog, setShowEventLog] = useState(false);
+  const [copyError, setCopyError] = useState(false);
 
   const fh = activeCase.financialHealth;
-  const ia = activeCase.investmentAnalysis;
   const household = fh.case.household;
   const clients = household.filter((p) => p.role === 'client' || p.role === 'co-client');
   const householdNames = clients.map((p) => p.first_name).join(' & ');
 
-  // Household Sync extraction
-  const syncData = extractHouseholdSync(
+  const handoff = formatSessionHandoff(
     activeCase.id,
-    allocations.primary,
-    allocations.secondary
+    hasLiveEvents ? liveEvents : [],
+    currentCase?.id === activeCase.id ? allocations : { primary: null, secondary: null },
+    extractWhatIfScenarios(fh, activeCase.investmentAnalysis),
   );
 
   // Zoom call cheat-sheet questions
@@ -131,67 +122,49 @@ export default function AdvisorDashboardPage() {
     fh.score.top_moves.map((m) => m.title)
   );
 
-  // Auto-generate Smart Nudge follow-up message tailored to hesitation/calibration
-  const primaryHesitationTerm =
-    telemetrySummary.termConsultations.uniqueTerms[0] || '18% APR Debt';
-  const nudgeSubject = `Quick note on your ${householdNames} Sherpas plan review`;
-  const whatsappNudge = `Hi ${clients[0]?.first_name || 'there'}! I noticed on your Sherpas mobile review that you were looking closely into ${primaryHesitationTerm}. That's usually the highest-impact domino for families in your situation. I've prepared two clear scenarios to walk through in our upcoming call so you won't need to look at any slides. Looking forward to our chat!`;
-  const emailNudge = `Hi ${householdNames},\n\nI saw you recently reviewed your Sherpas plan on mobile and spent time calibrating ${primaryHesitationTerm}.\n\nTo make our upcoming meeting as high-value as possible, I have already modeled the exact dollar impact on your Living Map. We can skip screen-sharing and jump directly into your decision.\n\nBest regards,\nYour Sherpas Wealth Advisor`;
-
-  const activeNudgeText = channel === 'whatsapp' ? whatsappNudge : `Subject: ${nudgeSubject}\n\n${emailNudge}`;
-
-  async function handleCopyDraft() {
-    try {
-      await navigator.clipboard.writeText(activeNudgeText);
-      setCopiedDraft(true);
-      setTimeout(() => setCopiedDraft(false), 2000);
-    } catch {
-      console.warn('Clipboard write failed');
-    }
-  }
+  const primaryHesitationTerm = telemetrySummary.termConsultations.uniqueTerms[0] ?? 'your plan priorities';
 
   async function handleCopyJson() {
+    setCopyError(false);
     try {
       await navigator.clipboard.writeText(serialiseTelemetry(sessionEvents));
       setCopiedJson(true);
       setTimeout(() => setCopiedJson(false), 2000);
     } catch {
-      console.warn('Clipboard write failed');
+      setCopyError(true);
     }
   }
 
   // Comprehension rating
-  const compIndex = telemetrySummary.comprehensionIndex ?? 78;
+  const compIndex = telemetrySummary.comprehensionIndex;
   const compLabel =
-    compIndex >= 80 ? 'High Clarity' : compIndex >= 65 ? 'Focused Hesitation' : 'High Friction / Calibration Needed';
+    compIndex == null ? 'More activity needed' : compIndex >= 80 ? 'High Clarity' : compIndex >= 65 ? 'Focused Hesitation' : 'High Friction / Calibration Needed';
   const compColor =
-    compIndex >= 80 ? 'text-emerald-400' : compIndex >= 65 ? 'text-amber-400' : 'text-rose-400';
+    compIndex == null ? 'text-slate-300' : compIndex >= 80 ? 'text-emerald-400' : compIndex >= 65 ? 'text-amber-400' : 'text-rose-400';
 
   return (
-    <main className="min-h-dvh bg-slate-950 text-white pb-24">
+    <main className="advisor-dashboard min-h-dvh bg-slate-950 text-white pb-24">
       {/* ── Top Header ──────────────────────────────────────────────────────── */}
       <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-4 py-4 sm:px-6">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="advisor-header-inner max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
                 <Activity className="w-4 h-4" />
               </span>
               <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
-                Advisor Pre-Meeting Telemetry
+                Advisor workspace
               </span>
-              <span className="text-xs text-slate-500">·</span>
-              <span className="text-xs text-slate-400 font-mono">{activeCase.id}</span>
             </div>
             <h1 className="text-2xl font-black text-white mt-1">
-              {householdNames}’s Pre-Meeting Dashboard
+              Meeting prep for {householdNames}
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              Plug-and-play comprehension diagnostics & talking points for your upcoming consultation.
+              Review what the household explored and prepare for your next conversation.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="advisor-header-actions flex items-center gap-2">
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
                 hasLiveEvents
@@ -200,7 +173,7 @@ export default function AdvisorDashboardPage() {
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${hasLiveEvents ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              <span>{hasLiveEvents ? `Live Session (${liveEvents.length} events)` : 'Demo Telemetry Mode'}</span>
+              <span>{hasLiveEvents ? `Live Session (${liveEvents.length} events)` : 'Sample activity'}</span>
             </span>
 
             <button
@@ -226,7 +199,7 @@ export default function AdvisorDashboardPage() {
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* ── Household Vital Signs Row ────────────────────────────────────── */}
-        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <section className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
             <div className="text-[11px] text-slate-400 font-medium">Financial Health Score</div>
             <div className="text-xl font-black text-white mt-1 flex items-baseline gap-1">
@@ -234,50 +207,44 @@ export default function AdvisorDashboardPage() {
               <span className="text-xs text-slate-400 font-normal">/ 100</span>
             </div>
             <div className="text-[10px] text-amber-400 mt-0.5 font-semibold">
-              Gate: 18% Chase Debt
+              {fh.score.band}
             </div>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <div className="text-[11px] text-slate-400 font-medium">Liquid Surplus Cash</div>
-            <div className="text-xl font-black text-white mt-1">$60,222</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">from $150k total liquid</div>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <div className="text-[11px] text-slate-400 font-medium">Household Dynamic</div>
+            <div className="text-[11px] text-slate-400 font-medium">Household review</div>
             <div className="text-xl font-black text-white mt-1">
               {isCouple ? 'Couple' : 'Single'}
             </div>
             <div className="text-[10px] text-indigo-400 mt-0.5 font-semibold">
-              {isCouple ? 'Asynchronous Two-Pace' : 'Single Trade-off'}
+              {isCouple ? 'Partner priorities' : 'Individual priorities'}
             </div>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <div className="text-[11px] text-slate-400 font-medium">Advisor Action</div>
-            <div className="text-xl font-black text-emerald-400 mt-1">Ready</div>
-            <div className="text-[10px] text-emerald-400/80 mt-0.5 font-semibold">
-              Skip screen-sharing
+            <div className="text-[11px] text-slate-400 font-medium">Recommendations</div>
+            <div className="text-xl font-black text-white mt-1">{fh.score.top_moves.length}</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">
+              In the financial plan
             </div>
           </div>
         </section>
 
         {/* ── Pillar A: Comprehension Telemetry Metric Cards ────────────────── */}
-        <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 sm:p-6 space-y-4">
+        <section className="no-print rounded-3xl border border-slate-800 bg-slate-900/90 p-5 sm:p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                 <ShieldCheck className="w-4 h-4" />
               </span>
               <div>
-                <h2 className="text-base font-bold text-white">Client Comprehension Telemetry</h2>
+                <h2 className="text-base font-bold text-white">Review activity</h2>
                 <p className="text-xs text-slate-400">
-                  Behavioral telemetry captured during the client's self-guided mobile exploration.
+                  Questions, terms and pauses from the review.
                 </p>
               </div>
             </div>
-            <span className="text-[11px] font-mono text-slate-500">{sessionEvents.length} events logged</span>
+            <span className="text-[11px] font-mono text-slate-400">{sessionEvents.length} events logged</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
@@ -286,11 +253,11 @@ export default function AdvisorDashboardPage() {
               <div>
                 <div className="text-xs font-semibold text-slate-400">Estimated Comprehension Index</div>
                 <div className={`text-3xl font-black mt-2 ${compColor}`}>
-                  {compIndex}%
+                  {compIndex == null ? "—" : `${compIndex}%`}
                 </div>
                 <div className={`text-xs font-bold mt-0.5 ${compColor}`}>{compLabel}</div>
               </div>
-              <p className="text-[10px] text-slate-500 mt-3 leading-relaxed">
+              <p className="text-[10px] text-slate-400 mt-3 leading-relaxed">
                 Calculated from friction signals (hesitations & term consultations) balanced by decision engagement.
               </p>
             </div>
@@ -316,12 +283,12 @@ export default function AdvisorDashboardPage() {
                       </span>
                     ))
                   ) : (
-                    <span className="text-xs text-slate-500 italic">No technical terms required calibration</span>
+                    <span className="text-xs text-slate-400 italic">No technical terms required calibration</span>
                   )}
                 </div>
               </div>
-              <p className="text-[10px] text-slate-500 mt-3 leading-relaxed">
-                Client tapped these underlined terms to see everyday analogies and exact MCP figures.
+              <p className="text-[10px] text-slate-400 mt-3 leading-relaxed">
+                Terms opened in the glossary during the review.
               </p>
             </div>
 
@@ -334,15 +301,9 @@ export default function AdvisorDashboardPage() {
                     {telemetrySummary.hesitationPauses} detected
                   </span>
                 </div>
-                <div className="mt-2.5 space-y-1.5">
-                  <div className="p-2 rounded-xl bg-rose-950/30 border border-rose-500/30 text-xs text-rose-200 flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                    <span>Paused on Story 2 (Superpower vs 18% Card)</span>
-                  </div>
-                </div>
               </div>
-              <p className="text-[10px] text-slate-500 mt-3 leading-relaxed">
-                4-second inactivity sensor automatically triggered the Zero-Prompt calibration card.
+              <p className="text-[10px] text-slate-400 mt-3 leading-relaxed">
+                A pause can indicate time spent reading or thinking.
               </p>
             </div>
           </div>
@@ -351,15 +312,15 @@ export default function AdvisorDashboardPage() {
           <div className="p-3 rounded-2xl bg-slate-950/40 border border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300">
             <span className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-indigo-400" />
-              <span>Voice questions asked: <strong className="text-white">{telemetrySummary.interactions.voiceAsks || 1}</strong></span>
+              <span>Voice questions asked: <strong className="text-white">{telemetrySummary.interactions.voiceAsks}</strong></span>
             </span>
             <span className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-sky-400" />
-              <span>Tactile allocation changes: <strong className="text-white">{telemetrySummary.interactions.allocationChanges || 2}</strong></span>
+              <span>Tactile allocation changes: <strong className="text-white">{telemetrySummary.interactions.allocationChanges}</strong></span>
             </span>
             <span className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span>Calibration status: <strong className="text-emerald-400 font-semibold">{telemetrySummary.shouldSuggestCalibration ? 'Recommended & Triggered' : 'Normal'}</strong></span>
+              <span>Calibration status: <strong className="text-emerald-400 font-semibold">{telemetrySummary.shouldSuggestCalibration ? 'Suggested' : 'No suggestion'}</strong></span>
             </span>
           </div>
         </section>
@@ -372,73 +333,21 @@ export default function AdvisorDashboardPage() {
             </span>
             <div>
               <h2 className="text-base font-bold text-white">
-                {isCouple ? 'Family Consensus ("Two Paces, One Plan")' : 'Trade-off Leaning & What-If Simulation'}
+                Saved priorities
               </h2>
               <p className="text-xs text-slate-400">
                 {isCouple
-                  ? 'Cross-referenced choices from both partners showing ready agreements and queued advisor tie-breakers.'
-                  : 'Client simulation stance balancing immediate goals against long-term independence.'}
+                  ? 'Compare the order saved by each partner.'
+                  : 'See how the household ranked the options before continuing.'}
               </p>
             </div>
           </div>
 
-          {isCouple ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {/* Green Zone: Agreements */}
-              <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>Green Zone: Ready-to-Act Agreement</span>
-                </div>
-                <div className="text-sm font-bold text-white">
-                  Liquidate $18,000 Chase Credit Card Debt
-                </div>
-                <p className="text-xs text-emerald-200/90 leading-relaxed">
-                  Both partners agree 100% on paying off the 18% credit card debt from cash surplus. Immediate saving of <strong>$3,240/yr</strong> in interest, unlocking the health score gate to 62.
-                </p>
-                <div className="pt-1">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300">
-                    Ready to execute today
-                  </span>
-                </div>
-              </div>
-
-              {/* Amber Zone: Advisor Tie-Breaker */}
-              <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  <span>Amber Zone: Advisor Tie-Breaker</span>
-                </div>
-                <div className="text-sm font-bold text-white">
-                  College Fund (529) vs. Family Protection (Umbrella)
-                </div>
-                <p className="text-xs text-amber-200/90 leading-relaxed">
-                  Timothy prioritized funding Liam & Josh's 529 college gap ($4,609/yr), while Melanie prioritized $1M umbrella liability protection and term life coverage.
-                </p>
-                <div className="pt-1">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300">
-                    Topic #1 for your meeting
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 space-y-2">
-              <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
-                Simulated What-If Decision
-              </div>
-              <div className="text-sm font-bold text-white">
-                {activeCase.id === 'michael-carter'
-                  ? 'Home Purchase in 2027 ($550,000) vs Retirement at Age 58'
-                  : 'College Tuition Now ($18,400/yr) vs Second Home in 2030 ($620,000)'}
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                {activeCase.id === 'michael-carter'
-                  ? 'Michael leaned 70% toward buying the Austin home in 2027 ($110k down payment), accepting retirement at age 60 instead of age 58 with a 3.6% safe withdrawal rate.'
-                  : 'Samantha prioritized funding college tuition starting now ($18,400/yr), scheduling her second home purchase for 2030 after college contributions normalize.'}
-              </p>
-            </div>
-          )}
+          <div className="rounded-xl border border-slate-700 bg-slate-900 p-4" aria-label="Saved priority order">
+            <p className="whitespace-pre-line text-sm leading-relaxed text-slate-200">
+              <FinancialText text={handoff || 'No priorities have been saved for this household in this session.'} />
+            </p>
+          </div>
         </section>
 
         {/* ── Pillar C: Advisor Zoom Pre-Meeting Cheat-Sheet ────────────────── */}
@@ -449,10 +358,10 @@ export default function AdvisorDashboardPage() {
             </span>
             <div>
               <h2 className="text-base font-bold text-white">
-                Meeting Cheat-Sheet: 3 Human Questions for the Zoom Call
+                Questions for the meeting
               </h2>
               <p className="text-xs text-slate-400">
-                Skip screen sharing and slide decks. Open the meeting directly addressing their exact calibrated doubts.
+                Use these prompts to open the conversation.
               </p>
             </div>
           </div>
@@ -480,14 +389,12 @@ export default function AdvisorDashboardPage() {
           clientNames={householdNames}
           primaryHesitationTerm={primaryHesitationTerm}
           firstWinTitle={fh.score.top_moves[0]?.title ?? 'Pay off high-interest debt'}
-          firstWinDollars={fh.score.top_moves[0] ? `$${fh.score.top_moves[0].target_amount.toLocaleString()}/yr` : '$3,240/yr'}
-          agreedTopic={isCouple ? 'Liquidating $18k high-interest credit card debt' : 'Retirement savings allocation'}
-          divergedTopic={isCouple ? 'College Savings (529) vs. Umbrella Protection' : 'Home purchase timing'}
+          firstWinDollars={fh.score.top_moves[0]?.target_amount != null ? `$${fh.score.top_moves[0].target_amount.toLocaleString()}` : undefined}
           isAdvisorView={true}
         />
 
         {/* ── Pillar E: Raw Telemetry Stream & JSON Exporter ────────────────── */}
-        <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 sm:p-6 space-y-4">
+        <section className="no-print rounded-3xl border border-slate-800 bg-slate-900/90 p-5 sm:p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">
@@ -518,7 +425,7 @@ export default function AdvisorDashboardPage() {
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-indigo-400 font-bold">{e.type}</span>
-                    {e.storyId && <span className="text-slate-500">[{e.storyId}]</span>}
+                    {e.storyId && <span className="text-slate-400">[{e.storyId}]</span>}
                     {typeof e.payload?.term === 'string' && (
                       <span className="text-amber-300">"{e.payload.term}"</span>
                     )}
@@ -526,7 +433,7 @@ export default function AdvisorDashboardPage() {
                       <span className="text-rose-300">{e.payload.inactiveMs}ms pause</span>
                     )}
                   </div>
-                  <span className="text-slate-500 text-[10px]">
+                  <span className="text-slate-400 text-[10px]">
                     {new Date(e.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </span>
                 </div>
@@ -546,15 +453,16 @@ export default function AdvisorDashboardPage() {
             ) : (
               <>
                 <Copy className="w-4 h-4 text-slate-400" />
-                <span>Copy Full Telemetry JSON for Sherpas Platform</span>
+                <span>Copy activity JSON</span>
               </>
             )}
           </button>
+          {copyError && <p role="alert" className="mt-2 text-sm text-rose-300">Couldn’t copy the activity. Check clipboard permissions and try again.</p>}
         </section>
       </div>
 
       {/* ── Fixed Bottom Switcher: Mode Bar ───────────────────────────────── */}
-      <div className="fixed bottom-0 inset-x-0 z-40 bg-slate-950/95 border-t border-slate-800 backdrop-blur-md py-3 px-4 shadow-2xl">
+      <div className="advisor-mode-switcher fixed bottom-0 inset-x-0 z-40 bg-slate-950/95 border-t border-slate-800 backdrop-blur-md py-3 px-4 shadow-2xl">
         <div className="max-w-md mx-auto grid grid-cols-2 gap-2">
           <button
             onClick={() => navigate(`/case/${activeCase.id}/action`)}

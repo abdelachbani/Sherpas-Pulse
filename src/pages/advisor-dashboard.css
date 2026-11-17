@@ -1,0 +1,47 @@
+/* Advisor and follow-up surfaces share the dark Sherpas session palette. */
+.advisor-dashboard { background: #171827; padding-bottom: 112px; }
+.advisor-dashboard > header { background: #1e2235; border-color: #424960; }
+.advisor-header-inner { max-width: 1040px; align-items: flex-start; }
+.advisor-header-inner h1 { font-weight: 600; line-height: 1.2; }
+.advisor-header-actions { flex-wrap: wrap; }
+.advisor-header-actions button, .advisor-header-actions a { min-height: 44px; display: inline-flex; align-items: center; }
+.advisor-dashboard > div:not(.advisor-mode-switcher) { max-width: 1040px; }
+.advisor-dashboard > div > section:not(:first-child), .cadence-section {
+  border-radius: 0;
+  border: 0;
+  border-top: 1px solid #424960;
+  background: transparent;
+  padding: 24px 0;
+  box-shadow: none;
+}
+.advisor-dashboard > div > section:first-child > div { border-radius: 12px; background: #1e2235; border-color: #424960; }
+.advisor-dashboard h2, .cadence-section h2 { font-size: 18px; font-weight: 600; }
+.advisor-dashboard [class*="text-[10px]"], .cadence-section [class*="text-[10px]"] { font-size: 12px; line-height: 1.5; }
+.advisor-dashboard [class*="text-[11px]"], .cadence-section [class*="text-[11px]"] { font-size: 12px; line-height: 1.5; }
+.advisor-dashboard section button, .cadence-section button { min-height: 44px; }
+.advisor-dashboard section [class*="rounded-2xl"], .cadence-section [class*="rounded-2xl"] { border-radius: 12px; }
+.advisor-dashboard section [class*="bg-slate-950"], .cadence-section [class*="bg-slate-950"] { background-color: #1e2235; border-color: #424960; }
+.advisor-dashboard section [class*="bg-indigo-950"], .cadence-section [class*="bg-indigo-950"] { background-color: #233064; border-color: #6380ff; }
+.advisor-mode-switcher { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.advisor-mode-switcher button { min-height: 44px; }
+.calibration-banner { flex-wrap: wrap; background: #1e2235; border-color: #6380ff; box-shadow: 0 12px 30px #0004; }
+.calibration-banner button { min-height: 44px; }
+@media (max-width: 639px) {
+  .advisor-dashboard > header { padding-inline: 20px; }
+  .advisor-dashboard > div:not(.advisor-mode-switcher) { padding-inline: 20px; }
+  .advisor-header-inner > div:first-child > div { flex-wrap: wrap; }
+  .advisor-header-actions { width: 100%; }
+  .advisor-dashboard section > div.flex.items-center.justify-between { flex-wrap: wrap; gap: 12px; }
+  .advisor-dashboard section .font-mono { overflow-wrap: anywhere; }
+  .cadence-section [role="tab"] { min-width: 0; }
+  .calibration-banner > div { flex-basis: calc(100% - 32px); }
+}
+
+@media print {
+  .advisor-dashboard { min-height: auto; padding-bottom: 0; }
+  .advisor-dashboard > header, .advisor-dashboard > div { background: white; }
+  .advisor-dashboard .advisor-header-actions, .advisor-dashboard .cadence-section { display: none; }
+  .advisor-dashboard > div > section { break-inside: avoid; }
+  .advisor-dashboard [class*="bg-slate-9"] { background: white; }
+  .advisor-dashboard [class*="text-slate-"], .advisor-dashboard [class*="text-indigo-"], .advisor-dashboard [class*="text-amber-"] { color: #172033; }
+}

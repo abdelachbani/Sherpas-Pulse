@@ -72,9 +72,7 @@ function ActionContent() {
       clientNames={names}
       primaryHesitationTerm={telemetrySummary.termConsultations.uniqueTerms[0] ?? 'Umbrella Liability'}
       firstWinTitle={moves[0]?.title ?? 'Pay off high-interest debt'}
-      firstWinDollars={moves[0] ? `$${moves[0].target_amount.toLocaleString()}/yr` : '$3,240/yr'}
-      agreedTopic={activeCase.financialHealth.case.household.length > 1 ? 'liquidating high-interest card debt' : 'retirement savings roadmap'}
-      divergedTopic={activeCase.financialHealth.case.household.length > 1 ? 'College 529 vs. Umbrella Liability' : 'home purchase timing'}
+      firstWinDollars={moves[0]?.target_amount != null ? `$${moves[0].target_amount.toLocaleString()}` : undefined}
       isAdvisorView={false}
     />
     <button type="button" onClick={() => { resetStore(); navigate('/'); }} className="min-h-11 w-full rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-200">Start a new household session</button>
@@ -150,7 +148,11 @@ function ActionContent() {
               key={item}
               type="button"
               aria-pressed={tab === item}
-              onClick={() => setTab(item)}
+                onClick={() => {
+                  if (tab === item) return;
+                  setTab(item);
+                  document.getElementById('app-content')?.scrollTo({ top: 0, behavior: 'instant' });
+                }}
               className={`min-h-11 rounded-lg text-sm font-semibold transition-all ${tab === item ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:text-white'}`}
             >
               {item === 'plan' ? 'Client Action Plan' : 'Advisor Telemetry & Pre-Meeting'}
@@ -166,7 +168,11 @@ function ActionContent() {
       <div className="fixed bottom-0 inset-x-0 z-40 bg-slate-950/95 border-t border-slate-800 backdrop-blur-md py-3 px-4 shadow-2xl">
         <div className="max-w-md mx-auto grid grid-cols-2 gap-2">
           <button
-            onClick={() => setTab('plan')}
+            onClick={() => {
+              if (tab === 'plan') return;
+              setTab('plan');
+              document.getElementById('app-content')?.scrollTo({ top: 0, behavior: 'instant' });
+            }}
             className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               tab === 'plan'
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'

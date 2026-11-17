@@ -25,6 +25,10 @@ function splitPoint(point: DataPoint): DataPoint[] {
   return chunks.map(value => ({ ...point, value }));
 }
 
+function isDatedPoint(point: DataPoint) {
+  return typeof point.value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(point.value);
+}
+
 export function buildStoryFrames(stories: StoryCard[], style: ViewingStyle): StoryFrame[] {
   return stories.flatMap((story, chapterIndex) => {
     if (style === 'express') {
@@ -44,15 +48,22 @@ export function buildStoryFrames(stories: StoryCard[], style: ViewingStyle): Sto
     const groups: DataPoint[][] = [];
     for (const point of points) {
       const last = groups[groups.length - 1];
-      const canPair = style === 'visual' && last?.length === 1 && String(last[0].value).length <= 45 && String(point.value).length <= 45;
-      if (canPair) last.push(point); else groups.push([point]);
+      const size = (item: DataPoint) => item.label.length + String(item.value).length;
+      const sameScale = typeof point.value === 'number' && last?.every(item => typeof item.value === 'number' && item.unit === point.unit);
+      const sameTimeline = isDatedPoint(point) && last?.every(isDatedPoint);
+      const shortTextPair = last?.length === 1 && size(last[0]) + size(point) <= 110;
+      if (last && ((last.length < 4 && (sameScale || sameTimeline)) || shortTextPair)) {
+        last.push(point);
+      } else {
+        groups.push([point]);
+      }
     }
-    // The headline gets its own frame, leaving room for the sourced details.
-    const hasHighlight = story.highlightNumber != null;
     const pages: Array<{ points: DataPoint[]; highlight: boolean }> = groups.map(group => ({ points: group, highlight: false }));
-    if (hasHighlight) {
-      const highlightPage = { points: [], highlight: true };
-      if (style === 'analytical') pages.push(highlightPage); else pages.unshift(highlightPage);
+    if (story.highlightNumber != null) {
+      // A short first detail can share the headline; longer details get their own space.
+      const first = pages[0];
+      if (first && ((first.points.length === 1 && String(first.points[0].value).length <= 45) || (first.points[0].label === 'Health score' && first.points[0].value === story.highlightNumber)) && String(story.highlightNumber).length <= 35) first.highlight = true;
+      else pages.unshift({ points: [], highlight: true });
     }
     if (!pages.length) pages.push({ points: [], highlight: false });
     return pages.map((page, partIndex) => {

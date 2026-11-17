@@ -28,7 +28,7 @@ export function generateMultiTouchCadence(params: {
   clientNames: string;
   primaryHesitationTerm: string;
   firstWinTitle: string;
-  firstWinDollars: string;
+  firstWinDollars?: string;
   agreedTopic?: string;
   divergedTopic?: string;
 }): Touchpoint[] {
@@ -37,8 +37,8 @@ export function generateMultiTouchCadence(params: {
     primaryHesitationTerm,
     firstWinTitle,
     firstWinDollars,
-    agreedTopic = 'liquidating high-interest card balance',
-    divergedTopic = 'College Savings (529) vs. Umbrella Liability Shield',
+    agreedTopic = 'the priorities in your plan',
+    divergedTopic = 'the decisions you would like help with',
   } = params;
 
   return [
@@ -49,9 +49,9 @@ export function generateMultiTouchCadence(params: {
       badge: 'Immediate Action',
       purpose: 'Lock in the single highest-ROI action while motivation is at its peak.',
       hasCalendarInvite: true,
-      whatsappText: `Hi ${clientNames}! 👋 Great job reviewing your Sherpas financial plan today. Your easiest first victory is ready: ${firstWinTitle}. Taking 5 minutes today locks in ${firstWinDollars} in immediate annual benefit! Let us know if you need any help taking this first step.`,
+      whatsappText: `Hi ${clientNames}, here’s one step to review from your Sherpas plan: ${firstWinTitle}.${firstWinDollars ? ` The plan lists ${firstWinDollars} for this step.` : ''} Let us know if you have questions about getting started.`,
       emailSubject: `Your 5-Minute Financial Win (${clientNames})`,
-      emailBody: `Hi ${clientNames},\n\nThank you for exploring your Sherpas Financial Wrapped today!\n\nTo avoid getting overwhelmed by multiple recommendations, your advisor recommends focusing on ONE single first domino:\n\n👉 ${firstWinTitle}\n💰 Impact: ${firstWinDollars} back in your pocket each year.\n\nTake 5 minutes to complete this step today. We've attached a quick calendar reminder so you don't lose momentum.\n\nBest,\nYour Sherpas Advisory Team`,
+      emailBody: `Hi ${clientNames},\n\nHere’s one step from your Sherpas plan to review before we meet:\n\n${firstWinTitle}${firstWinDollars ? `\nAmount listed: ${firstWinDollars}.` : ''}\n\nSet aside five minutes to read through it and note anything you’d like to ask us.\n\nBest,\nYour Sherpas Advisory Team`,
     },
     {
       id: 'day-3',
@@ -59,9 +59,9 @@ export function generateMultiTouchCadence(params: {
       label: 'Day 3: Doubt Calibrator',
       badge: 'Calibrate Hesitation',
       purpose: 'Proactively calibrate technical friction before doubts turn into inaction.',
-      whatsappText: `Hi ${clientNames}, we noticed you were carefully reviewing ${primaryHesitationTerm} in your plan. It is completely normal to have questions about how that applies to your family! Here is the 20-second takeaway: it is designed specifically to protect your surplus cash without tying up your liquidity. Would you like us to explain this in 2 minutes on a quick call?`,
+      whatsappText: `Hi ${clientNames}, would you like to talk through ${primaryHesitationTerm} before we meet? Let us know what you’d like us to explain.`,
       emailSubject: `Quick clarification on ${primaryHesitationTerm} for your plan`,
-      emailBody: `Hi ${clientNames},\n\nWhen families review their Sherpas plan, terms like "${primaryHesitationTerm}" frequently raise natural questions.\n\nWe saw you paused on this section during your review. In simple terms: for your specific household, this recommendation acts as a guardrail so unexpected life events don't derail your retirement horizon.\n\nNo need to stress about the technicalities—we've noted this as a priority point to walk through together when we meet.\n\nWarmly,\nYour Sherpas Advisory Team`,
+      emailBody: `Hi ${clientNames},\n\nWe can spend a few minutes walking through ${primaryHesitationTerm} before we meet. If you have questions about how this fits into your plan, reply here and we’ll review them together.\n\nWarmly,\nYour Sherpas Advisory Team`,
     },
     {
       id: 'day-14',
@@ -69,9 +69,9 @@ export function generateMultiTouchCadence(params: {
       label: 'Day 14: Alignment Check',
       badge: 'Couple Execution',
       purpose: 'Follow up on joint consensus tasks and celebrate mutual progress.',
-      whatsappText: `Hi ${clientNames}! Quick 2-week check-in from Sherpas. Both of you were 100% aligned on ${agreedTopic}. Did you get a chance to execute that step? Knocking that off your plate protects your family's cash flow this month! 🙌`,
-      emailSubject: `2-Week Progress Check-in: Your agreed priority`,
-      emailBody: `Hi ${clientNames},\n\nIt's been two weeks since your plan sync. One of the highlights of your session was that you both agreed 100% on:\n\n✅ ${agreedTopic}\n\nHave you had a chance to submit this transfer or adjust your allocations? Getting this done before our upcoming strategy meeting will give us maximum momentum.\n\nFeel free to reply directly here with any updates!\n\nBest regards,\nYour Sherpas Advisory Team`,
+      whatsappText: `Hi ${clientNames}, how is it going with ${agreedTopic}? Let us know what you’ve tried so far and what you’d like help with.`,
+      emailSubject: 'Your two-week plan check-in',
+      emailBody: `Hi ${clientNames},\n\nWe’d like to check in on ${agreedTopic}. Which next step feels manageable, and is there anything you’d like to talk through?\n\nBest,\nYour Sherpas Advisory Team`,
     },
     {
       id: 'day-30',
@@ -79,9 +79,9 @@ export function generateMultiTouchCadence(params: {
       label: 'Day 30: Meeting Blueprint',
       badge: 'Human Meeting Prep',
       purpose: 'Frame the Zoom conversation around human trade-offs, skipping slides entirely.',
-      whatsappText: `Hi ${clientNames}! 📅 Our strategic Zoom review is around the corner. Because you already reviewed the numbers and completed your 5-minute win, we are SKIPPING the 40-minute slide deck recap! We will spend 100% of our time discussing your primary tie-breaker: ${divergedTopic}. See you soon!`,
-      emailSubject: `Your Pre-Meeting Blueprint: Skipping the slides for what matters`,
-      emailBody: `Hi ${clientNames},\n\nLooking forward to our upcoming strategy conversation!\n\nHere is how we do things differently at Sherpas:\nBecause you've already walked through your mobile Financial Wrapped and aligned on key priorities, we will NOT spend 40 minutes sharing our screen and reading static slides.\n\nInstead, our entire conversation will focus on the human side:\n1. Celebrating your completed action steps (${agreedTopic})\n2. Deep-diving into your primary trade-off: ${divergedTopic}\n3. Setting your 3-year living map roadmap in motion.\n\nSee you on Zoom!\n\nBest regards,\nYour Sherpas Advisory Team`,
+      whatsappText: `Hi ${clientNames}, before our next meeting, let us know if there’s anything you’d like to add to the agenda. We can start with ${divergedTopic}.`,
+      emailSubject: 'Preparing for your Sherpas meeting',
+      emailBody: `Hi ${clientNames},\n\nFor our next meeting, we can review ${agreedTopic} and talk through ${divergedTopic}. If any questions or changes have come up, send them over so we can prepare.\n\nSee you soon,\nYour Sherpas Advisory Team`,
     },
   ];
 }

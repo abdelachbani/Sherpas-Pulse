@@ -18,7 +18,8 @@ for (const item of CASES) {
         assert(fragments.every(part => part.grounding === point.grounding));
       }
     }
-    assert(frames.every(frame => frame.card.dataPoints.length <= (style === 'visual' ? 2 : 1)));
+    assert(frames.every(frame => frame.card.dataPoints.length <= 4));
+    assert(frames.some(frame => frame.card.pillar === 'overview' && frame.card.dataPoints.length >= 3));
   }
   const express = buildStoryFrames(stories, 'express');
   assert.equal(express.length, stories.length);

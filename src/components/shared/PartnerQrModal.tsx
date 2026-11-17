@@ -7,7 +7,8 @@
  */
 
 import { useState } from 'react';
-import { X, Copy, Check, Smartphone, Users, Sparkles, ExternalLink } from 'lucide-react';
+import { X, Copy, Check, Smartphone } from 'lucide-react';
+import { useDialogFocus } from './useDialogFocus';
 import { generateQRMatrix } from '../../lib/qrEncoder';
 
 interface Props {
@@ -20,6 +21,8 @@ interface Props {
 
 export function PartnerQrModal({ isOpen, onClose, partnerName, partnerRole, url }: Props) {
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState('');
+  const dialogRef = useDialogFocus(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -30,10 +33,14 @@ export function PartnerQrModal({ isOpen, onClose, partnerName, partnerRole, url 
   const totalWidth = size * cellSize + padding * 2;
 
   const handleCopy = async () => {
-    if (navigator.clipboard?.writeText) {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
       await navigator.clipboard.writeText(url);
+      setCopyError('');
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setCopyError('Copy is unavailable. You can select the link below.');
     }
   };
 
@@ -46,7 +53,9 @@ export function PartnerQrModal({ isOpen, onClose, partnerName, partnerRole, url 
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-3xl bg-slate-900 border border-slate-700/80 p-5 text-white shadow-2xl shadow-black/80 space-y-4"
+        ref={dialogRef}
+        tabIndex={-1}
+        className="w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl bg-slate-900 border border-slate-700/80 p-5 text-white shadow-2xl shadow-black/80 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -63,7 +72,7 @@ export function PartnerQrModal({ isOpen, onClose, partnerName, partnerRole, url 
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="min-w-11 min-h-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -133,12 +142,15 @@ export function PartnerQrModal({ isOpen, onClose, partnerName, partnerRole, url 
           </button>
         </div>
 
+        {copyError && <p role="alert" className="text-sm text-amber-300">{copyError}</p>}
+        <p className="break-all text-xs text-slate-300 select-text">{url}</p>
+
         {/* Instructions */}
         <div className="text-[10px] text-slate-400 leading-relaxed space-y-1 pt-1">
           <p className="font-semibold text-slate-300">How Asynchronous Alignment works:</p>
           <p>1. Each partner reviews on their own mobile device at their own pace.</p>
           <p>2. Both prioritize strategies in the tactile Cash Allocator.</p>
-          <p>3. At the end, Family Sync highlights your shared agreements & advisor questions.</p>
+          <p>3. Reviews are stored in each browser session; the link does not transfer saved choices between devices.</p>
         </div>
       </div>
     </div>

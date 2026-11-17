@@ -5,7 +5,8 @@
  * Clear architectural rationale for what was built vs what was ruled out.
  */
 
-import { X, CheckCircle2, XCircle, Sparkles, Scale, ShieldCheck } from 'lucide-react';
+import { X, CheckCircle2, XCircle, Scale } from 'lucide-react';
+import { useDialogFocus } from './useDialogFocus';
 
 interface Props {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function FridayDecisionMatrixModal({ isOpen, onClose }: Props) {
+  const dialogRef = useDialogFocus(isOpen, onClose);
   if (!isOpen) return null;
 
   return (
@@ -24,6 +26,8 @@ export function FridayDecisionMatrixModal({ isOpen, onClose }: Props) {
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-3xl bg-slate-900 border border-slate-700 p-5 sm:p-6 text-white shadow-2xl shadow-black/80 space-y-4 no-scrollbar"
         onClick={(e) => e.stopPropagation()}
       >
@@ -41,7 +45,7 @@ export function FridayDecisionMatrixModal({ isOpen, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="min-w-11 min-h-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -71,14 +75,14 @@ export function FridayDecisionMatrixModal({ isOpen, onClose }: Props) {
             <div className="p-3 rounded-2xl bg-rose-950/20 border border-rose-500/30 space-y-1">
               <div className="font-bold text-rose-200">2. 40-Minute Desktop Slide Deck Recaps</div>
               <p className="text-slate-300 text-[11px] leading-relaxed">
-                <strong>Why ruled out:</strong> Advisors want meetings for human connection, not screen-sharing spreadsheets. Furthermore, Sherpas has zero mobile experience today. Mobile is where families actually open links on the couch.
+                <strong>Why ruled out:</strong> Advisors want meetings for human connection, not screen-sharing spreadsheets. The flow is designed for a mobile review at home.
               </p>
             </div>
 
             <div className="p-3 rounded-2xl bg-rose-950/20 border border-rose-500/30 space-y-1">
               <div className="font-bold text-rose-200">3. Generative LLM Math & Calculations</div>
               <p className="text-slate-300 text-[11px] leading-relaxed">
-                <strong>Why ruled out:</strong> In wealth management, an AI hallucinating an 8% compounding return or incorrect tax bracket destroys fiduciary trust. We chose 100% deterministic TypeScript extraction from MCP data with Grounding Badges.
+                <strong>Why ruled out:</strong> In wealth management, an AI hallucinating an 8% compounding return or incorrect tax bracket destroys fiduciary trust. The application derives displayed plan values from its case data and provides source details where available.
               </p>
             </div>
           </div>
@@ -95,28 +99,28 @@ export function FridayDecisionMatrixModal({ isOpen, onClose }: Props) {
             <div className="p-3 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-1">
               <div className="font-bold text-emerald-200">📱 Mobile Wrapped Stories</div>
               <p className="text-slate-300 text-[11px] leading-relaxed">
-                25-second vertical cards (Overview, Advice, Living Map) clients actually finish.
+                A short sequence of plan stories for a mobile review.
               </p>
             </div>
 
             <div className="p-3 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-1">
               <div className="font-bold text-emerald-200">⚡ Zero-Prompt Calibration</div>
               <p className="text-slate-300 text-[11px] leading-relaxed">
-                Detects hesitation pauses and opens everyday analogies + expert financial mechanics.
+                Offers explanations and captures hesitation signals during the review.
               </p>
             </div>
 
             <div className="p-3 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-1">
               <div className="font-bold text-emerald-200">👫 Two Paces, One Plan</div>
               <p className="text-slate-300 text-[11px] leading-relaxed">
-                Analytical rhythm for Timothy; Peace of mind for Melanie; QR pairing across devices.
+                Each partner can open a review link and consider priorities at their own pace.
               </p>
             </div>
 
             <div className="p-3 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-1">
               <div className="font-bold text-emerald-200">📊 Advisor Pre-Meeting Telemetry</div>
               <p className="text-slate-300 text-[11px] leading-relaxed">
-                Comprehension index (92%) and 3 human questions so advisors skip the slides.
+                Session signals and suggested questions help prepare an advisor conversation.
               </p>
             </div>
           </div>
@@ -127,7 +131,7 @@ export function FridayDecisionMatrixModal({ isOpen, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors cursor-pointer"
+            className="min-h-11 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors cursor-pointer"
           >
             Close Rationale
           </button>
