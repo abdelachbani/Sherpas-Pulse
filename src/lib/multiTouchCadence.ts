@@ -2,8 +2,7 @@
  * src/lib/multiTouchCadence.ts
  *
  * Multi-Touch Re-engagement Engine:
- * Answers Borja's exact hackathon rubric challenge:
- * "What happens on day 3, when the doubts come? And on day 30?"
+ * Manages the multi-touch client journey across Days 1, 3, 14, and 30.
  *
  * Delivers a 4-phase cadence:
  * - Day 1:  The 5-Minute Win Action & Calendar reminder (.ics)

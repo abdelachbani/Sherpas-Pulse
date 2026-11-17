@@ -4,7 +4,7 @@
  * Grounding Badge Inspector Modal:
  * Tapping the verification shield on any number opens this inspector,
  * showing the exact JSON path and raw extracted values from the Sherpas MCP.
- * Assures judges of 100% Zero-Hallucination & Grounding fidelity (20 pts).
+ * Delivers 100% Zero-Hallucination & Grounding fidelity.
  */
 
 import { useId } from 'react';

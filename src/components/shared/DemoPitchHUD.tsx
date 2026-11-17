@@ -2,9 +2,8 @@
  * src/components/shared/DemoPitchHUD.tsx
  *
  * Demo Day "Pitch Mode" Floating HUD:
- * Empowers the presenter (or jury member) to effortlessly navigate across
- * the 6 key pillars of Sherpas Pulse during the 2-minute pitch,
- * highlighting exactly how the solution satisfies Borja's rubric.
+ * Empowers the presenter (or user) to effortlessly navigate across
+ * the 6 key pillars of Sherpas Pulse during live demonstrations.
  */
 
 import { useState } from 'react';
@@ -27,7 +26,7 @@ import { CASES } from '../../lib/mcp/cases';
 interface Milestone {
   id: string;
   name: string;
-  rubricPillar: string;
+  featureTag: string;
   path: (caseId: string) => string;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
@@ -37,7 +36,7 @@ const MILESTONES: Milestone[] = [
   {
     id: 'stories',
     name: '1. Financial Wrapped Stories',
-    rubricPillar: 'Pillar 1 · 20 pts Captivating',
+    featureTag: 'Pillar 1 · Interactive Vertical Stories',
     path: (caseId) => `/case/${caseId}/stories`,
     icon: Compass,
     description: '25s vertical stories with Spotify Wrapped feel and voice narration.',
@@ -45,7 +44,7 @@ const MILESTONES: Milestone[] = [
   {
     id: 'calibration',
     name: '2. Zero-Prompt Calibration',
-    rubricPillar: 'Pillar 1 · 20 pts Understanding',
+    featureTag: 'Pillar 1 · Dual Persona Calibration',
     path: (caseId) => `/case/${caseId}/stories`,
     icon: ShieldCheck,
     description: 'Implicit pause detection with Beginner Analogy vs. Expert Mechanics.',
@@ -53,7 +52,7 @@ const MILESTONES: Milestone[] = [
   {
     id: 'allocator',
     name: '3. Tactile Cash Tank Allocator',
-    rubricPillar: 'Pillar 2 · 20 pts Action / 15 pts Personal',
+    featureTag: 'Pillar 2 · Tactile Liquidity Tank',
     path: (caseId) => `/case/${caseId}/allocate`,
     icon: Sliders,
     description: 'Interactive liquidity reservoir drainage for competing strategies.',
@@ -61,7 +60,7 @@ const MILESTONES: Milestone[] = [
   {
     id: 'sync',
     name: '4. Family Sync Consensus',
-    rubricPillar: 'Pillar 2 · 15 pts Personal & Creativity',
+    featureTag: 'Pillar 2 · Asynchronous Couple Sync',
     path: (caseId) => `/case/${caseId}/sync`,
     icon: Users,
     description: 'Green Zone agreements (pay $18k card) + Amber Zone tie-breakers.',
@@ -69,7 +68,7 @@ const MILESTONES: Milestone[] = [
   {
     id: 'action',
     name: '5. 5-Min Win & Multi-Touch (1-30d)',
-    rubricPillar: 'Pillar 4 · 20 pts Motivation to Act',
+    featureTag: 'Pillar 4 · 5-Minute Win & Follow-up',
     path: (caseId) => `/case/${caseId}/action`,
     icon: Calendar,
     description: 'The first domino with .ics calendar reminder and 4-phase touchpoints.',
@@ -77,7 +76,7 @@ const MILESTONES: Milestone[] = [
   {
     id: 'advisor',
     name: '6. Advisor Telemetry & Cheat-Sheet',
-    rubricPillar: 'Pillar 4 · 15 pts Ready to Use & Business',
+    featureTag: 'Pillar 4 · Advisor Telemetry Dashboard',
     path: (caseId) => `/case/${caseId}/advisor`,
     icon: Activity,
     description: 'Comprehension Index (92%) and 3 Human Questions for the Zoom call.',
@@ -126,8 +125,8 @@ export function DemoPitchHUD() {
                 <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
               </span>
               <div>
-                <h3 className="text-sm font-bold text-white">2-Minute Pitch Navigator</h3>
-                <p className="text-[10px] text-indigo-300 font-mono">100/100 Rubric Checklist</p>
+                <h3 className="text-sm font-bold text-white">Interactive Flow Navigator</h3>
+                <p className="text-[10px] text-indigo-300 font-mono">End-to-End Product Tour</p>
               </div>
             </div>
             <button
@@ -195,7 +194,7 @@ export function DemoPitchHUD() {
                       <div className="text-xs font-bold text-white truncate">{m.name}</div>
                       <ChevronRight className="w-3 h-3 text-slate-500 shrink-0" />
                     </div>
-                    <div className="text-[10px] text-indigo-300/90 font-medium mt-0.5">{m.rubricPillar}</div>
+                    <div className="text-[10px] text-indigo-300/90 font-medium mt-0.5">{m.featureTag}</div>
                     <p className="text-[10px] text-slate-400 mt-0.5 leading-snug line-clamp-1">{m.description}</p>
                   </div>
                 </button>

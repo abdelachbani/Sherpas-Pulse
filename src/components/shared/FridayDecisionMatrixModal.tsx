@@ -1,9 +1,8 @@
 /**
  * src/components/shared/FridayDecisionMatrixModal.tsx
  *
- * The Friday Decision Matrix Modal:
- * Directly addresses Rubric Criterion 6 (10 pts):
- * "Your Friday plan: A clear choice, and honest about what you ruled out and why?"
+ * Product Architectural Choices & Trade-offs:
+ * Clear architectural rationale for what was built vs what was ruled out.
  */
 
 import { X, CheckCircle2, XCircle, Sparkles, Scale, ShieldCheck } from 'lucide-react';
@@ -35,8 +34,8 @@ export function FridayDecisionMatrixModal({ isOpen, onClose }: Props) {
               <Scale className="w-4 h-4" />
             </span>
             <div>
-              <h3 className="text-base font-bold text-white">The Friday Decision Matrix</h3>
-              <p className="text-xs text-amber-300/90 font-mono">Criterion 6: Honest Choices & Trade-offs</p>
+              <h3 className="text-base font-bold text-white">Why Sherpas Pulse?</h3>
+              <p className="text-xs text-amber-300/90 font-mono">Architectural Choices & Trade-offs</p>
             </div>
           </div>
           <button
@@ -51,7 +50,7 @@ export function FridayDecisionMatrixModal({ isOpen, onClose }: Props) {
 
         {/* Intro */}
         <p className="text-xs text-slate-300 leading-relaxed">
-          From Day 1, our vision was guided by Sherpas' internal notes: <em>"Say it, don't show it: Sherpas already has guided tours and a chat on the plan. If that is all you build, it will not score on creativity."</em>
+          Sherpas Pulse was designed to solve the real friction between advisor and client when reviewing financial plans at home without an advisor present.
         </p>
 
         {/* What We Deliberately Ruled Out */}
