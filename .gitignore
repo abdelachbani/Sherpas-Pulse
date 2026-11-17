@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+01-sherpas-hackathon-upv-es.html
 
 # Dependencies and builds
 node_modules/
