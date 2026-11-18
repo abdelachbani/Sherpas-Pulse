@@ -11,8 +11,8 @@
  */
 
 import { createServer } from "node:http";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync, createReadStream, statSync } from "node:fs";
+import { dirname, join, resolve, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { WebSocket, WebSocketServer } from "ws";
 import { formatCaseBrief } from "./voiceCaseBrief.mjs";
@@ -196,8 +196,42 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  // ── Proxy to Vite dev server ────────────────────────────────────────────────
-  // Everything else is proxied to the Vite dev server.
+  // ── Serve static production build or proxy to Vite dev server ───────────────
+  const distDir = resolve(root, "dist");
+  if (existsSync(distDir)) {
+    const MIME = {
+      ".html": "text/html; charset=utf-8",
+      ".js": "application/javascript; charset=utf-8",
+      ".css": "text/css; charset=utf-8",
+      ".json": "application/json; charset=utf-8",
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".svg": "image/svg+xml",
+      ".ico": "image/x-icon",
+      ".woff": "font/woff",
+      ".woff2": "font/woff2",
+      ".webm": "audio/webm",
+      ".mp3": "audio/mpeg",
+      ".wav": "audio/wav",
+    };
+    const cleanPath = pathname === "/" ? "/index.html" : pathname;
+    const filePath = join(distDir, cleanPath);
+    if (existsSync(filePath) && !statSync(filePath).isDirectory()) {
+      const ext = extname(filePath).toLowerCase();
+      res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream" });
+      createReadStream(filePath).pipe(res);
+      return;
+    }
+    // Fallback to index.html for SPA client-side routes (/case/:caseId/...)
+    const indexHtml = join(distDir, "index.html");
+    if (existsSync(indexHtml)) {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      createReadStream(indexHtml).pipe(res);
+      return;
+    }
+  }
+
+  // Fallback to Vite dev server proxy
   try {
     const viteUrl = `http://localhost:${VITE_PORT}${req.url}`;
     const { default: http } = await import("node:http");
@@ -315,11 +349,12 @@ wss.on("connection", (browser, req) => {
 
 // ── Start ──────────────────────────────────────────────────────────────────────
 
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
+  const hasDist = existsSync(resolve(root, "dist"));
   console.log(
-    `[server] Sherpas Pulse backend on http://localhost:${PORT}\n` +
+    `[server] Sherpas Pulse backend on http://0.0.0.0:${PORT}\n` +
       `         Proxy  → ${PROXY_URL}\n` +
       `         Cases  → ${CASES_DIR} (${caseIds.length} cases: ${caseIds.join(", ")})\n` +
-      `         Vite   → http://localhost:${VITE_PORT} (proxied)`
+      `         Mode   → ${hasDist ? "Serving static dist/ (production)" : `Proxying to Vite http://localhost:${VITE_PORT} (dev)`}`
   );
 });
