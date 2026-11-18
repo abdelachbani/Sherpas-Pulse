@@ -8,6 +8,7 @@ import { buildAdvisorQuestions, formatSessionHandoff } from '../lib/sessionHando
 import { getTelemetrySummary as summarizeTelemetry, serialiseTelemetry } from '../lib/telemetry';
 import { FinancialText } from '../components/shared/FinancialText';
 import { MultiTouchCadenceSection } from '../components/shared/MultiTouchCadenceSection';
+import { loadChecklist, saveChecklist } from '../lib/sessionChecklist';
 
 export default function ActionPage() {
   const { caseId } = useParams<{ caseId: string }>();
@@ -30,7 +31,17 @@ function ActionContent() {
   const telemetrySummary = summarizeTelemetry(sessionEvents);
   const checkboxPrefix = useId();
   const activeCase = (currentCase?.id === caseId ? currentCase : CASES.find((c) => c.id === caseId))!;
-  const [done, setDone] = useState<number[]>([]);
+  const [done, setDone] = useState<number[]>(() => {
+    try { return loadChecklist(sessionStorage, activeCase.id, activeCase.financialHealth.score.top_moves.length); }
+    catch { return []; }
+  });
+  const [checklistError, setChecklistError] = useState(false);
+  const toggleDone = (index: number) => {
+    const next = done.includes(index) ? done.filter((item) => item !== index) : [...done, index];
+    setDone(next);
+    try { setChecklistError(!saveChecklist(sessionStorage, activeCase.id, next)); }
+    catch { setChecklistError(true); }
+  };
   const [tab, setTab] = useState<'plan' | 'advisor'>('plan');
   const [telemetryCopied, setTelemetryCopied] = useState(false);
   const [telemetryCopyError, setTelemetryCopyError] = useState<string | null>(null);
@@ -60,14 +71,14 @@ function ActionContent() {
     <header><p className="text-xs font-bold uppercase tracking-wider text-indigo-300">Your next steps</p><h1 className="mt-2 text-3xl font-semibold">{names}’s action plan</h1><p className="mt-3 text-sm leading-relaxed text-slate-300">Review the recommendations from your plan and mark the steps you have completed.</p></header>
     <section className="space-y-3"><div className="flex justify-between gap-3"><h2 className="text-lg font-semibold">Plan recommendations</h2><span className="text-sm text-slate-400">{done.length} / {moves.length} complete</span></div>
       {moves.length === 0 && <p className="text-sm text-slate-300">No recommendations are available for this plan.</p>}
-      {moves.map((move, index) => <article key={`${move.title}-${index}`} className="rounded-2xl border border-slate-700 bg-slate-900 p-4 sm:p-5"><div className="flex items-start gap-3"><input id={`${checkboxPrefix}-move-${index}`} type="checkbox" aria-label={`Mark recommendation ${index + 1} complete`} checked={done.includes(index)} onChange={() => setDone((previous) => previous.includes(index) ? previous.filter((i) => i !== index) : [...previous, index])} className="mt-1 h-5 w-5 accent-indigo-500" /><div><h3 className="font-semibold text-white"><FinancialText text={move.title} /></h3><p className="mt-2 text-sm leading-relaxed text-slate-300"><FinancialText text={move.action} /></p></div></div></article>)}
+      {moves.map((move, index) => <article key={`${move.title}-${index}`} className="rounded-2xl border border-slate-700 bg-slate-900 p-4 sm:p-5"><div className="flex items-start gap-3"><input id={`${checkboxPrefix}-move-${index}`} type="checkbox" aria-label={`Mark recommendation ${index + 1} complete`} checked={done.includes(index)} onChange={() => toggleDone(index)} className="mt-1 h-5 w-5 accent-indigo-500" /><div><h3 className="font-semibold text-white"><FinancialText text={move.title} /></h3><p className="mt-2 text-sm leading-relaxed text-slate-300"><FinancialText text={move.action} /></p></div></div></article>)}
     </section>
+    {checklistError && <p role="alert" className="text-sm text-rose-300">Checklist changes could not be saved for this browser session.</p>}
     <MultiTouchCadenceSection
       caseId={activeCase.id}
       clientNames={names}
       primaryHesitationTerm={telemetrySummary.termConsultations.uniqueTerms[0] ?? 'Umbrella Liability'}
       firstWinTitle={moves[0]?.title ?? 'Pay off high-interest debt'}
-      firstWinDollars={moves[0]?.target_amount != null ? `$${moves[0].target_amount.toLocaleString()}` : undefined}
       isAdvisorView={false}
     />
     <button type="button" onClick={() => { resetStore(); navigate('/'); }} className="min-h-11 w-full rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-200">Start a new household session</button>

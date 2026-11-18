@@ -46,6 +46,17 @@ timeout.markSent(pending);
 timeout.cancel();
 const waiting = timeout.start();
 assert.equal(timeout.isBlocked(), true);
+
+const duplicateFinal = createResponseGate();
+assert.equal(duplicateFinal.markSent(duplicateFinal.start()), true);
+assert.equal(duplicateFinal.created('first'), true);
+assert.equal(duplicateFinal.finish(), true); // The assistant item can finish without a response ID.
+const followUp = duplicateFinal.start();
+assert.equal(duplicateFinal.markSent(followUp), true);
+assert.equal(duplicateFinal.finish('first'), false);
+assert.equal(duplicateFinal.isCurrent(followUp), true);
+assert.equal(duplicateFinal.created('follow-up'), true);
+assert.equal(duplicateFinal.finish('follow-up'), true);
 timeout.failWaiting();
 assert.equal(timeout.isCurrent(waiting), false);
 assert.equal(timeout.isBlocked(), true);

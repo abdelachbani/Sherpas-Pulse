@@ -12,6 +12,8 @@ interface Props {
   guardRedirect: string | null;
   errorNotice: string | null;
   audioLevel: number;
+  termToExplain?: string;
+  onExplainTerm: () => void;
   suggestedQuestion: string;
   onPressStart: () => void;
   onPressEnd: () => void;
@@ -25,7 +27,7 @@ const HOLD_MS = 250;
 
 export function VoicePushButton({
   voiceState, transcript, responseMessage, guardRedirect, errorNotice,
-  audioLevel, suggestedQuestion, onPressStart, onPressEnd,
+  audioLevel, suggestedQuestion, termToExplain, onExplainTerm, onPressStart, onPressEnd,
   onStopSpeaking, onSelectSuggestion, onClosePopup, onOverlayChange,
 }: Props) {
   const panelId = useId();
@@ -117,6 +119,7 @@ export function VoicePushButton({
           ) : (
             <>
               {(responseMessage || guardRedirect) && <p className="rounded-lg bg-slate-950 p-3 text-sm text-slate-200" aria-live="polite"><FinancialText text={guardRedirect ?? responseMessage ?? ''} /></p>}
+              {responseMessage && !isSpeaking && termToExplain && <button type="button" onClick={onExplainTerm} className="min-h-11 text-left text-sm font-semibold text-indigo-200 underline">Explain {termToExplain}</button>}
               {isSpeaking && !responseMessage && !guardRedirect && <p role="status" className="text-sm text-slate-300">Sherpi is preparing an answer…</p>}
               {errorNotice && <p role="status" className="text-sm text-slate-200">{errorNotice}</p>}
               {!responseMessage && !guardRedirect && !isSpeaking && (

@@ -17,7 +17,8 @@ test('shows ranked saved choices and their differences without inventing a revie
   const primary = { partner: 'Alex', allocations: [{ strategyId: 'x', label: 'Protect', amount: 100, priority: 1 }] };
   const secondary = { partner: 'Sam', allocations: [{ strategyId: 'x', label: 'Protect', amount: 200, priority: 2 }] };
   const text = formatSessionHandoff('case', [], { primary, secondary }, []);
-  assert.match(text, /may include demo partner/); assert.match(text, /Alex: #1 Protect — \$100/); assert.match(text, /Sam: #2 Protect — \$200/); assert.match(text, /Different choices: Protect/);
+  assert.match(text, /may include demo partner/); assert.match(text, /Alex: #1 Protect/); assert.match(text, /Sam: #2 Protect/); assert.match(text, /Different choices: Protect/);
+  assert.doesNotMatch(text, /\$100|\$200/);
   assert.doesNotMatch(formatSessionHandoff('case', [], { primary, secondary: null }, []), /Different choices/);
 });
 
@@ -46,4 +47,12 @@ test('suggests three advisor questions from the most repeated hesitation steps a
 
 test('returns three usable advisor questions when the session has no doubt signals', () => {
   assert.equal(buildAdvisorQuestions([], []).length, 3);
+});
+
+test('handoff uses documented goal labels from the saved choice', () => {
+  const events: any[] = [{ type: 'allocation_set', timestamp: 1, payload: { caseId: 'case', scenarioId: 'documented-goals', labelA: 'Vacation', labelB: 'Home', choice: 'B', starsA: 2, starsB: 5, weightA: 29, weightB: 71 } }];
+  const text = formatSessionHandoff('case', events, { primary: null, secondary: null }, []);
+  assert.match(text, /Documented goals/);
+  assert.match(text, /Choice: Home/);
+  assert(text.indexOf('Home: 5/5') < text.indexOf('Vacation: 2/5'));
 });

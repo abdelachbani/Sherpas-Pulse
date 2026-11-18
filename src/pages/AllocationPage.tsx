@@ -27,10 +27,15 @@ import type { CashStrategyOption, GroundingRef, CoupleAllocation } from '../type
 
 export default function AllocationPage() {
   const { caseId } = useParams<{ caseId: string }>();
+  const currentCaseId = useAppStore((s) => s.currentCase?.id);
+  const setCase = useAppStore((s) => s.setCase);
   const partner = useAppStore((s) => s.partner) || 'primary';
-  if (!CASES.some((item) => item.id === caseId)) {
+  const couple = CASES.some((item) => item.id === caseId && item.householdType === 'couple');
+  useEffect(() => { if (caseId && couple && caseId !== currentCaseId) setCase(caseId); }, [caseId, couple, currentCaseId, setCase]);
+  if (!couple) {
     return <main className="session-page min-h-dvh bg-[#171827] text-white p-8"><div className="max-w-3xl mx-auto"><h1 className="text-2xl font-semibold">Household not found</h1><p className="mt-3 text-sm text-slate-300">This household link is unavailable. Choose a household to continue.</p><a className="inline-flex min-h-11 items-center mt-6 text-indigo-300 underline" href="/">Choose a household</a></div></main>;
   }
+  if (caseId !== currentCaseId) return null;
   return <AllocationPageContent key={`${caseId}:${partner}`} />;
 }
 
@@ -39,19 +44,12 @@ function AllocationPageContent() {
   const navigate = useNavigate();
 
   const currentCase = useAppStore((s) => s.currentCase);
-  const setCase = useAppStore((s) => s.setCase);
   const partner = useAppStore((s) => s.partner) || 'primary';
   const setAllocation = useAppStore((s) => s.setAllocation);
   const savedAllocation = useAppStore((s) => s.currentCase?.id === caseId ? s.coupleAllocations[partner] : null);
   const trackAllocationChange = useAppStore((s) => s.trackAllocationChange);
 
   const activeCase = (currentCase?.id === caseId ? currentCase : CASES.find((c) => c.id === caseId))!;
-
-  useEffect(() => {
-    if (caseId && (!currentCase || currentCase.id !== caseId)) {
-      setCase(caseId);
-    }
-  }, [caseId, currentCase, setCase]);
 
   const rawOptions = extractCashAllocationOptions(activeCase.financialHealth);
 
@@ -66,14 +64,6 @@ function AllocationPageContent() {
     partner === 'primary' ? client?.first_name || 'Timothy' : coClient?.first_name || 'Melanie';
   const otherPartnerName =
     partner === 'primary' ? coClient?.first_name || 'Melanie' : client?.first_name || 'Timothy';
-
-  // Total cash numbers
-  const surplusCash = 60222;
-
-  // Sum top 2 prioritized strategy amounts
-  const allocatedAmount = strategies
-    .slice(0, 2)
-    .reduce((sum, s) => sum + (s.id === 'umbrella-cover' ? 300 : s.amount), 0);
 
   function moveStrategy(fromIdx: number, toIdx: number) {
     if (toIdx < 0 || toIdx >= strategies.length) return;
@@ -185,8 +175,6 @@ function AllocationPageContent() {
               key={strategy.id}
               strategy={strategy}
               priorityIndex={idx}
-              allocatedAmount={allocatedAmount}
-              totalAvailable={surplusCash}
               onMoveUp={() => moveStrategy(idx, idx - 1)}
               onMoveDown={() => moveStrategy(idx, idx + 1)}
               isFirst={idx === 0}

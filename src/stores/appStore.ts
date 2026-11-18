@@ -14,6 +14,7 @@ import type {
   ViewingStyle,
 } from '../types';
 import { CASES } from '../lib/mcp/cases';
+import { clearChecklist } from '../lib/sessionChecklist';
 import {
   getTelemetrySummary as summarizeTelemetry,
   loadTelemetrySession,
@@ -50,6 +51,40 @@ interface AppStore {
   reset(): void;
 }
 
+type Priorities = Pick<AppStore, 'coupleAllocations' | 'partner'>;
+
+function emptyPriorities(): Priorities {
+  return { partner: null, coupleAllocations: { primary: null, secondary: null } };
+}
+
+function allocationKey(caseId: string) { return `sherpas-priorities:${caseId}`; }
+
+function validAllocation(value: unknown): value is CoupleAllocation {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Partial<CoupleAllocation>;
+  return typeof item.partner === 'string' && Array.isArray(item.allocations) && item.allocations.every(entry =>
+    entry && typeof entry.strategyId === 'string' && typeof entry.label === 'string'
+    && Number.isFinite(entry.amount) && Number.isInteger(entry.priority) && entry.priority >= 0);
+}
+
+function loadPriorities(caseId: string): Priorities {
+  try {
+    const saved: Partial<Priorities> | null = JSON.parse(sessionStorage.getItem(allocationKey(caseId)) ?? 'null');
+    const { primary, secondary } = saved?.coupleAllocations ?? {};
+    return {
+      partner: saved?.partner === 'primary' || saved?.partner === 'secondary' ? saved.partner : null,
+      coupleAllocations: { primary: validAllocation(primary) ? primary : null, secondary: validAllocation(secondary) ? secondary : null },
+    };
+  } catch {
+    return emptyPriorities();
+  }
+}
+
+function persistPriorities({ currentCase, coupleAllocations, partner }: AppStore) {
+  if (currentCase?.householdType !== 'couple') return;
+  try { sessionStorage.setItem(allocationKey(currentCase.id), JSON.stringify({ coupleAllocations, partner })); } catch { /* Keep the in-memory session. */ }
+}
+
 export const useAppStore = create<AppStore>((set, get) => {
   const appendTelemetryEvent = (event: TelemetryEvent, languageMode?: LanguageMode) => {
     const state = get();
@@ -74,8 +109,8 @@ export const useAppStore = create<AppStore>((set, get) => {
     if (get().currentCase?.id === found?.id) return;
     const telemetryEvents = found ? loadTelemetrySession(found.id) : [];
     set({
-      currentCase: found, currentStoryIndex: 0, viewingStyle: null, languageMode: 'standard', partner: null,
-      telemetryEvents, coupleAllocations: { primary: null, secondary: null },
+      currentCase: found, currentStoryIndex: 0, viewingStyle: null, languageMode: 'standard',
+      telemetryEvents, ...(found?.householdType === 'couple' ? loadPriorities(found.id) : emptyPriorities()),
     });
     persistTelemetrySession(found?.id ?? null, telemetryEvents);
   },
@@ -89,7 +124,7 @@ export const useAppStore = create<AppStore>((set, get) => {
     appendTelemetryEvent(mkEvent('language_mode_change', { languageMode: mode }), mode);
   },
 
-  setPartner: (p) => set({ partner: p }),
+  setPartner: (p) => { set({ partner: p }); persistPriorities(get()); },
 
   addTelemetryEvent: (e) => appendTelemetryEvent(e),
 
@@ -112,12 +147,21 @@ export const useAppStore = create<AppStore>((set, get) => {
 
   shouldSuggestCalibration: () => summarizeTelemetry(get().telemetryEvents).shouldSuggestCalibration,
 
-  setAllocation: (partner, alloc) =>
+  setAllocation: (partner, alloc) => {
     set((state) => ({
       coupleAllocations: { ...state.coupleAllocations, [partner]: alloc },
-    })),
+    }));
+    persistPriorities(get());
+  },
 
   reset: () => {
+    const caseId = get().currentCase?.id;
+    if (caseId) {
+      try {
+        sessionStorage.removeItem(allocationKey(caseId));
+        clearChecklist(sessionStorage, caseId);
+      } catch { /* Storage may be unavailable. */ }
+    }
     persistTelemetrySession(null, []);
     set({
       currentCase:       null,

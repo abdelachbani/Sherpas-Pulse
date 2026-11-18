@@ -55,6 +55,7 @@ export interface FinancialHealth {
   schema_version: number;
   part: string;
   case: Case;
+  profile?: { liabilities?: { type?: string; balance?: number }[] };
   score: {
     published_score: number;
     scale?: string;
@@ -221,6 +222,7 @@ export interface CashStrategyOption {
   amount: number;
   urgency: 'critical' | 'moderate' | 'optional';
   benefitSummary: string;
+  quantities?: { label: string; amount: number }[];
   interestRate?: number;
   annualDollarBenefit?: number;
   grounding?: GroundingRef;

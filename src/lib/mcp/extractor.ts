@@ -119,151 +119,38 @@ export function extractStoryData(
 // ─── Cash allocation options for the Tactile Cash Allocator ───────────────────
 
 export function extractCashAllocationOptions(fh: FinancialHealth): CashStrategyOption[] {
-  const slug = fh.case.slug;
-
-  if (slug === 'timothy-melanie-weah') {
-    return [
-      {
-        id: 'card-payoff',
-        label: 'Pay off 18% Chase Card',
-        amount: 18000,
-        urgency: 'critical',
-        benefitSummary: 'Saves $3,240/yr in pure interest & clears score gate from 60 to 62',
-        interestRate: 18,
-        annualDollarBenefit: 3240,
-        grounding: {
-          sourceFile: 'financial-health.json',
-          jsonPath: 'score.top_moves[0]: Pay $6,800 on 18% card from cash',
-          label: '18% Credit Card Payoff',
-          rawValue: 18000,
-          description: 'Carrying $18,000 at 18% APR costs $3,240/year in interest while earning only 0.09% on cash.',
-        },
-      },
-      {
-        id: 'life-insurance',
-        label: 'Add Life Insurance Coverage',
-        amount: 235000,
-        urgency: 'critical',
-        benefitSummary: 'Raises mortality coverage ratio to 100% to protect Liam (6) & Josh (3)',
-        annualDollarBenefit: 0,
-        grounding: {
-          sourceFile: 'financial-health.json',
-          jsonPath: 'score.top_moves[1]: Add $235,000 life cover to raise mortality ratio',
-          label: 'Life Coverage Shortfall',
-          rawValue: 235000,
-          description: 'Timothy is short $610,000 and Melanie $490,000 in term protection with young dependents.',
-        },
-      },
-      {
-        id: 'umbrella-cover',
-        label: 'Add $1M Umbrella Liability Shield',
-        amount: 1000000,
-        urgency: 'moderate',
-        benefitSummary: 'Protects $695,500 net worth against catastrophic liability claims for ~$300/yr',
-        annualDollarBenefit: 0,
-        grounding: {
-          sourceFile: 'financial-health.json',
-          jsonPath: 'score.top_moves[2]: Add $1M umbrella cover',
-          label: 'Umbrella Liability Policy',
-          rawValue: 1000000,
-          description: 'Household has zero excess liability protection despite high net worth.',
-        },
-      },
-      {
-        id: 'college-529',
-        label: 'Fund 529 College for Liam & Josh',
-        amount: 4609,
-        urgency: 'moderate',
-        benefitSummary: 'Year 1 contribution towards $113,508 education gap for Liam (6) and Josh (3)',
-        annualDollarBenefit: 1100,
-        grounding: {
-          sourceFile: 'financial-health.json',
-          jsonPath: 'narrative.summary_main: College shortfall $113,508.60, need $4,609/yr',
-          label: '529 College Savings Gap',
-          rawValue: 4609,
-          description: '$0 currently saved in tax-free 529 education accounts.',
-        },
-      },
-    ];
-  }
-
-  if (slug === 'daniel-emily-johnson') {
-    return [
-      {
-        id: 'life-coverage',
-        label: 'Add $1.16M Life Cover for Kids',
-        amount: 1166000,
-        urgency: 'critical',
-        benefitSummary: 'Raises 0/20 protection score by closing the mortality gap for Oliver (11) & Sophia (8)',
-        annualDollarBenefit: 0,
-        grounding: {
-          sourceFile: 'financial-health.json',
-          jsonPath: 'score.top_moves[0]: Add $1,166,000 of life cover',
-          label: 'Life Coverage Shortfall',
-          rawValue: 1166000,
-          description: 'Daniel and Emily currently have $0 in term life protection with two school-age dependents.',
-        },
-      },
-      {
-        id: 'umbrella-cover',
-        label: 'Add $1M Umbrella Liability Shield',
-        amount: 1000000,
-        urgency: 'critical',
-        benefitSummary: 'Shields Denver home equity ($560k) and assets against tort claims for ~$25/mo',
-        annualDollarBenefit: 0,
-        grounding: {
-          sourceFile: 'financial-health.json',
-          jsonPath: 'score.top_moves[1]: Add $1M umbrella cover',
-          label: 'Umbrella Liability Policy',
-          rawValue: 1000000,
-          description: 'Zero excess liability protection creates catastrophic risk against accumulated equity.',
-        },
-      },
-      {
-        id: 'college-529',
-        label: 'Fund 529 College for Oliver & Sophia',
-        amount: 8400,
-        urgency: 'moderate',
-        benefitSummary: 'Starts tax-free tuition savings towards estimated $68,000 in-state college goals',
-        annualDollarBenefit: 1200,
-        grounding: {
-          sourceFile: 'financial-health.json',
-          jsonPath: 'goals.goalsSummary: College funding for Oliver & Sophia',
-          label: '529 Education Fund',
-          rawValue: 8400,
-          description: 'Tax-free educational compound growth under IRC §529.',
-        },
-      },
-      {
-        id: 'savings-boost',
-        label: 'Raise Annual Savings by $12k',
-        amount: 12000,
-        urgency: 'moderate',
-        benefitSummary: 'Preserves target early retirement at age 62 instead of pushing to age 65',
-        annualDollarBenefit: 0,
-        grounding: {
-          sourceFile: 'financial-health.json',
-          jsonPath: 'score.top_moves[2]: Raise annual savings to preserve retirement at 62',
-          label: 'Annual Retirement Savings',
-          rawValue: 12000,
-          description: 'Increases net wealth accumulation to sustain early retirement.',
-        },
-      },
-    ];
-  }
-
-  // Fallback using top_moves
+  // Preserve the existing IDs for published moves so saved priority order remains usable.
+  const knownIds: Record<string, string[]> = {
+    'timothy-melanie-weah': ['card-payoff', 'life-insurance', 'umbrella-cover'],
+    'daniel-emily-johnson': ['life-coverage', 'umbrella-cover', 'savings-boost'],
+  };
+  const firstMove = fh.score.top_moves[0];
+  const balance = fh.profile?.liabilities?.find(item => item.type === 'PERSONAL_CREDIT_CARD')?.balance;
+  const payment = firstMove?.action.match(/^Pay \$([\d,]+)\b/)?.[1];
+  const extraCover = fh.score.top_moves[1]?.action.match(/^Add \$([\d,]+) of life cover/)?.[1];
+  const quantities = fh.case.slug === 'timothy-melanie-weah' ? [
+    balance != null && payment ? [
+      { label: 'Current card balance', amount: balance },
+      { label: 'Payment in the plan', amount: Number(payment.replace(/,/g, '')) },
+      { label: 'Balance after payment', amount: firstMove.target_amount },
+    ] : undefined,
+    extraCover ? [
+      { label: 'Additional life coverage', amount: Number(extraCover.replace(/,/g, '')) },
+      { label: 'Total coverage after this move', amount: fh.score.top_moves[1].target_amount },
+    ] : undefined,
+  ] : [];
   return (fh.score.top_moves || []).map((move, idx) => ({
-    id: `strategy-${idx}`,
+    id: knownIds[fh.case.slug]?.[idx] ?? `strategy-${idx}`,
     label: move.title,
     amount: move.target_amount,
     urgency: move.lifts_a_cap ? 'critical' : 'moderate',
     benefitSummary: move.action,
+    quantities: quantities[idx],
     grounding: {
       sourceFile: 'financial-health.json',
-      jsonPath: `score.top_moves[${idx}]`,
+      jsonPath: `score.top_moves[${idx}].action`,
       label: move.title,
-      rawValue: move.target_amount,
+      rawValue: move.action,
     },
   }));
 }
@@ -468,11 +355,11 @@ export function extractHouseholdSync(
   for (const primary of primaryAlloc.allocations) {
     const secondary = secondaryAlloc.allocations.find((item) => item.strategyId === primary.strategyId);
     if (!secondary) continue;
-    if (primary.amount === secondary.amount && primary.priority === secondary.priority) {
+    if (primary.priority === secondary.priority) {
       agreements.push({
         strategyId: primary.strategyId, title: primary.label, agreedAmount: primary.amount,
         dollarBenefit: 'No financial impact calculated',
-        explanation: `${primaryAlloc.partner} and ${secondaryAlloc.partner} selected the same amount and priority.`,
+        explanation: `${primaryAlloc.partner} and ${secondaryAlloc.partner} ranked this priority in the same position.`,
         status: 'agreement',
       });
     } else {

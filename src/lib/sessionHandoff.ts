@@ -7,9 +7,9 @@ export function formatSessionHandoff(caseId: string, events: TelemetryEvent[], a
   if (event) {
     const p = event.payload;
     const scenario = scenarios.find((s) => s.id === p.scenarioId);
-    const a = scenario?.optionA.label ?? 'Option A';
-    const b = scenario?.optionB.label ?? 'Option B';
-    lines.push(`Trade-off: ${scenario?.title ?? String(p.scenarioId)}`);
+    const a = typeof p.labelA === 'string' ? p.labelA : scenario?.optionA.label ?? 'Option A';
+    const b = typeof p.labelB === 'string' ? p.labelB : scenario?.optionB.label ?? 'Option B';
+    lines.push(`Trade-off: ${p.scenarioId === 'documented-goals' ? 'Documented goals' : scenario?.title ?? String(p.scenarioId)}`);
     lines.push(`Choice: ${p.choice === 'balanced' ? 'Balanced' : p.choice === 'A' ? a : b}`);
     const ratings = [
       { label: a, stars: p.starsA, weight: p.weightA },
@@ -24,7 +24,7 @@ export function formatSessionHandoff(caseId: string, events: TelemetryEvent[], a
   if (saved.length) {
     if (lines.length) lines.push('');
     lines.push('Saved session choices (may include demo partner):');
-    for (const partner of saved) for (const item of [...partner.allocations].sort((a, b) => a.priority - b.priority)) lines.push(`${partner.partner}: #${item.priority} ${item.label} — $${item.amount.toLocaleString()}`);
+    for (const partner of saved) for (const item of [...partner.allocations].sort((a, b) => a.priority - b.priority)) lines.push(`${partner.partner}: #${item.priority} ${item.label}`);
     if (allocations.primary && allocations.secondary) {
       const { agreements, tieBreakers } = extractHouseholdSync(caseId, allocations.primary, allocations.secondary);
       if (agreements.length) lines.push(`Matching choices: ${agreements.map((a) => a.title).join(', ')}`);

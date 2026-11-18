@@ -138,13 +138,11 @@ export function StoryContainer({ caseId, stories, calibrationCards, viewingStyle
     document.addEventListener('visibilitychange', update);
     return () => document.removeEventListener('visibilitychange', update);
   }, [markStoryActivity]);
-  useEffect(() => {
-    if (voice.detectedTerm) {
-      const card = calibrationCards[voice.detectedTerm];
-      if (card) setActiveCalibration(card);
-      voice.clearDetectedTerm();
-    }
-  }, [voice.detectedTerm, calibrationCards, voice]);
+  const voiceExplanation = voice.detectedTerm ? calibrationCards[voice.detectedTerm] : undefined;
+  function explainAnsweredTerm() {
+    if (voiceExplanation) setActiveCalibration(voiceExplanation);
+    voice.clearDetectedTerm();
+  }
 
   // Attempt once per chapter entry. Closing a dialog, stopping voice or returning
   // to a visible tab can cancel speech but must never trigger a replay.
@@ -202,6 +200,7 @@ export function StoryContainer({ caseId, stories, calibrationCards, viewingStyle
     voice.stopSpeaking();
     voice.clearResponseMessage();
     voice.clearGuardRedirect();
+    voice.clearDetectedTerm();
     voice.clearErrorNotice();
     voice.setShowSuggestions(false);
     const next = nextChapterFrame(frameIndex, frames);
@@ -287,12 +286,14 @@ export function StoryContainer({ caseId, stories, calibrationCards, viewingStyle
                 guardRedirect={voice.guardRedirect}
                 errorNotice={voice.errorNotice}
                 audioLevel={voice.audioLevel}
+                termToExplain={voiceExplanation?.term}
+                onExplainTerm={explainAnsweredTerm}
                 suggestedQuestion={terms[0] ? `What does “${terms[0]}” mean for my plan?` : 'What should I take away from this chapter?'}
                 onPressStart={() => { stopNarration(); voice.startListening(); }}
                 onPressEnd={voice.stopListening}
                 onStopSpeaking={voice.stopSpeaking}
                 onSelectSuggestion={askSherpi}
-                onClosePopup={() => { voice.setShowSuggestions(false); voice.clearGuardRedirect(); voice.clearResponseMessage(); voice.clearErrorNotice(); voice.stopSpeaking(); }}
+                onClosePopup={() => { voice.setShowSuggestions(false); voice.clearGuardRedirect(); voice.clearResponseMessage(); voice.clearDetectedTerm(); voice.clearErrorNotice(); voice.stopSpeaking(); }}
               />
             </div>
           </div>
@@ -337,6 +338,7 @@ export function StoryContainer({ caseId, stories, calibrationCards, viewingStyle
               <div aria-live="polite">
                 {voice.isSpeaking && !voice.responseMessage && !voice.guardRedirect && <p className="mt-1 text-xs text-slate-300">Sherpi is preparing an answer…</p>}
                 {(voice.responseMessage || voice.guardRedirect) && <p className="mt-1 max-h-16 overflow-y-auto text-sm text-slate-200"><FinancialText text={voice.guardRedirect ?? voice.responseMessage ?? ''} /></p>}
+                {voice.responseMessage && !voice.isSpeaking && voiceExplanation && <button type="button" onClick={explainAnsweredTerm} className="min-h-11 text-left text-sm font-semibold text-indigo-200 underline">Explain {voiceExplanation.term}</button>}
                 {voice.errorNotice && <p className="mt-1 text-xs text-slate-300">{voice.errorNotice}</p>}
               </div>
             </form>}

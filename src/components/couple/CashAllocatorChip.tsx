@@ -76,17 +76,14 @@ export function CashAllocatorChip({
         </div>
       </div>
 
-      {/* Target Amount & Benefit */}
-      <div className="mt-3 flex items-baseline justify-between pt-2 border-t border-white/10 text-xs">
-        <span className="text-slate-300 text-xs font-semibold">Allocated Target:</span>
-        <span className="text-base font-black text-white">
-          ${strategy.amount.toLocaleString()}
-        </span>
-      </div>
-
       <p className="text-sm text-slate-300 mt-1 leading-relaxed bg-black/20 p-2 rounded-xl">
         <FinancialText text={strategy.benefitSummary} />
       </p>
+      {strategy.quantities && <dl className="mt-2 divide-y divide-slate-700 text-sm">
+        {strategy.quantities.map(({ label, amount }) => <div key={label} className="flex justify-between gap-2 py-1.5 text-slate-200">
+          <dt>{label}</dt><dd className="shrink-0 font-semibold tabular-nums text-white">${amount.toLocaleString('en-US')}</dd>
+        </div>)}
+      </dl>}
     </div>
   );
 }

@@ -213,11 +213,29 @@ try {
   await clickAria('Rate option B 5 out of 5');await pause(150);
   results.push({ label:'tradeoff-rating-reorders-priorities', pass:await evaluate(`document.querySelector('[data-priority-order] > li')?.dataset.option==='B'`) });
   const beforeRouteChange=await evaluate(`(() => { const root=document.querySelector('#app-content'); root.scrollTop=root.scrollHeight; return root.scrollTop })()`);
-  await click('Continue to Your Action Plan');await pause(250);
-  results.push({ label:'route-transition-starts-at-top', pass:beforeRouteChange>100 && await evaluate(`location.pathname.endsWith('/action') && document.querySelector('#app-content').scrollTop===0`) });
+  await click('Save and continue to action plan');await pause(250);
+  results.push({ label:'route-transition-starts-at-top', pass:beforeRouteChange>0 && await evaluate(`location.pathname.endsWith('/action') && document.querySelector('#app-content').scrollTop===0`) });
   results.push({label:'action-controls-use-the-pointer-cursor',pass:await evaluate(`getComputedStyle(document.querySelector('main button[aria-pressed]')).cursor==='pointer' && getComputedStyle(document.querySelector('main input[type="checkbox"]')).cursor==='pointer'`)});
   await evaluate(`document.querySelector('main a[href$="/advisor"]')?.click()`);await pause(380);
-  results.push({label:'advisor-receives-the-priority-order',pass:await evaluate(`(() => { const text=document.querySelector('[aria-label="Saved priority order"]')?.textContent ?? ''; return text.includes('5/5 (56%)') && text.indexOf('5/5 (56%)') < text.indexOf('4/5 (44%)') })()`)});
+  results.push({label:'advisor-receives-the-priority-order',pass:await evaluate(`(() => { const text=document.querySelector('[aria-label="Saved priority order"]')?.textContent ?? ''; return text.includes('5/5 (62%)') && text.indexOf('5/5 (62%)') < text.indexOf('3/5 (38%)') })()`)});
+  await navigate('/case/timothy-melanie-weah/allocate');
+  results.push({label:'allocation-distinguishes-source-amounts',pass:await evaluate(`(() => { const lines=[...document.querySelectorAll('dl div')].map(e=>e.textContent); return lines.some(l=>l.includes('Current card balance')&&l.includes('$18,000')) && lines.some(l=>l.includes('Payment in the plan')&&l.includes('$6,800')) && lines.some(l=>l.includes('Total coverage after this move')&&l.includes('$485,000')) })()`)});
+  const topPriority=()=>evaluate(`document.querySelector('main h3, .session-page h3')?.textContent`);
+  const originalPriority=await topPriority();
+  await clickAria('Move priority down');await pause(150);const savedPriority=await topPriority();
+  await click('Lock In Timothy’s Priorities');await navigate('/case/timothy-melanie-weah/allocate');
+  results.push({label:'allocation-priorities-survive-reload',pass:originalPriority!==savedPriority && savedPriority===await topPriority() && await evaluate(`document.body.innerText.includes('priorities are locked')`)});
+  await navigate('/case/timothy-melanie-weah/action');
+  await evaluate(`document.querySelector('input[type="checkbox"]').click()`);await pause(100);
+  await navigate('/case/timothy-melanie-weah/action');
+  results.push({label:'checklist-survives-reload',pass:await evaluate(`document.querySelector('input[type="checkbox"]').checked`)});
+  await click('Start a new household session');
+  await navigate('/case/timothy-melanie-weah/action');
+  results.push({label:'new-session-clears-the-checklist',pass:await evaluate(`!document.querySelector('input[type="checkbox"]').checked`)});
+  await navigate('/case/timothy-melanie-weah');
+  await evaluate(`Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText(){return Promise.reject(new Error('Denied for test'))}}})`);
+  await click('Copy partner link');await pause(150);
+  results.push({label:'copy-partner-link-reports-clipboard-failure',pass:await evaluate(`Boolean(document.querySelector('[role="alert"]')) && !document.body.innerText.includes('Link copied!')`)});
   if(!process.env.UI_CHECK_NAVIGATION_ONLY){
   const widths=process.env.UI_CHECK_INTERACTIONS_ONLY?[]:(process.env.UI_CHECK_WIDTHS?process.env.UI_CHECK_WIDTHS.split(',').map(Number):[320,390,430,768,844,1440]);
   for(const width of widths){

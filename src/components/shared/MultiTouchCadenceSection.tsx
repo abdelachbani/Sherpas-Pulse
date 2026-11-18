@@ -49,6 +49,7 @@ export function MultiTouchCadenceSection({
   const [activeTouchId, setActiveTouchId] = useState<Touchpoint['id']>('day-3');
   const [channel, setChannel] = useState<'whatsapp' | 'email'>('whatsapp');
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
   const [calendarDownloaded, setCalendarDownloaded] = useState(false);
 
   const activeTouch = touchpoints.find((t) => t.id === activeTouchId) ?? touchpoints[1];
@@ -59,10 +60,15 @@ export function MultiTouchCadenceSection({
         ? activeTouch.whatsappText
         : `Subject: ${activeTouch.emailSubject}\n\n${activeTouch.emailBody}`;
 
-    if (navigator.clipboard?.writeText) {
+    setCopied(false);
+    setCopyError(false);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setCopyError(true);
     }
   };
 
@@ -108,6 +114,7 @@ export function MultiTouchCadenceSection({
             onClick={() => {
               setChannel('whatsapp');
               setCopied(false);
+              setCopyError(false);
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               channel === 'whatsapp'
@@ -123,6 +130,7 @@ export function MultiTouchCadenceSection({
             onClick={() => {
               setChannel('email');
               setCopied(false);
+              setCopyError(false);
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               channel === 'email'
@@ -149,6 +157,7 @@ export function MultiTouchCadenceSection({
               onClick={() => {
                 setActiveTouchId(t.id);
                 setCopied(false);
+              setCopyError(false);
               }}
               className={`p-3 rounded-2xl border text-left transition-all ${
                 isSelected
@@ -239,6 +248,7 @@ export function MultiTouchCadenceSection({
           </button>
         )}
       </div>
+      {copyError && <p role="alert" className="text-sm text-rose-300">Could not copy the draft. Check clipboard permissions and try again.</p>}
     </section>
   );
 }

@@ -51,6 +51,7 @@ function HouseholdEntryPageContent() {
   const [selectedPartner, setSelectedPartner] = useState<'primary' | 'secondary'>('primary');
   const [selectedStyle, setSelectedStyle] = useState<ViewingStyle>('visual');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copyError, setCopyError] = useState('');
   const [showQrModal, setShowQrModal] = useState(false);
 
   const activeCase = (currentCase?.id === caseId ? currentCase : CASES.find((c) => c.id === caseId))!;
@@ -102,11 +103,18 @@ function HouseholdEntryPageContent() {
     navigate(`/case/${activeCase.id}/stories?style=${selectedStyle}`);
   }
 
-  function handleCopyShareLink(partnerName: string) {
-    const url = `${window.location.origin}/case/${activeCase.id}?user=${partnerName.toLowerCase()}`;
-    navigator.clipboard.writeText(url);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+  async function handleCopyShareLink(partnerName: string) {
+    const url = `${window.location.origin}/case/${activeCase.id}?user=${encodeURIComponent(partnerName.toLowerCase())}`;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(url);
+      setCopyError('');
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      setCopiedLink(false);
+      setCopyError('Copy unavailable. Open the QR dialog to select the link.');
+    }
   }
 
   return (
@@ -224,6 +232,7 @@ function HouseholdEntryPageContent() {
                 <span>Scan QR</span>
               </button>
             </div>
+            {copyError && <p role="alert" className="text-xs text-amber-700">{copyError}</p>}
           </div>
         )}
 

@@ -15,6 +15,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { createResponseGate } from './responseGate';
+import { createInputQueue } from './inputQueue';
+import { typedQuestionMessages } from './typedQuestion';
 import {
   getOfflineAnswer,
   GUARDRAIL_REDIRECT_MESSAGE,
@@ -71,6 +73,8 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [transcript, setTranscript] = useState('');
+  const transcriptRef = useRef('');
+  transcriptRef.current = transcript;
   const [responseMessage, setResponseMessage] = useState<string | null>(null);
   const [guardRedirect, setGuardRedirect] = useState<string | null>(null);
   const [detectedTerm, setDetectedTerm] = useState<string | null>(null);
@@ -91,11 +95,13 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const currentReplyTextRef = useRef<string>('');
   const voiceAskRecordedRef = useRef(false);
   const responseGateRef = useRef(createResponseGate());
+  const reopenAfterItemRef = useRef(false);
   const waitingSendRef = useRef<(() => void) | null>(null);
   const waitingTimerRef = useRef<number | null>(null);
 
   // Audio capture & pending commit tracking
   const audioFramesCountRef = useRef<number>(0);
+  const pendingAudioRef = useRef(createInputQueue());
   const pendingCommitRef = useRef<{ token: number; hasAudio: boolean } | null>(null);
   const lastLevelUpdateRef = useRef<number>(0);
 
@@ -117,8 +123,13 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     waitingTimerRef.current = window.setTimeout(() => {
       clearWaitingSend();
       responseGateRef.current.failWaiting();
+      const socket = wsRef.current;
+      wsRef.current = null;
+      responseGateRef.current = createResponseGate();
+      socket?.close();
+      setIsConnected(false);
       setVoiceState('idle');
-      setErrorNotice('The previous response did not finish cancelling. Please reconnect before asking again.');
+      setErrorNotice('The previous response was interrupted. Please ask again.');
     }, 5000);
   }, [clearWaitingSend]);
 
@@ -131,7 +142,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       }
       const token = activeRequestTokenRef.current;
       if (token !== null && !responseGateRef.current.isCurrent(token)) return;
-
+      pendingCommitRef.current = null;
+      pendingAudioRef.current.clear();
+      if (responseGateRef.current.cancel() && wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'response.cancel' }));
+      }
       inFlightQuestionRef.current = null;
       const fallback = getOfflineAnswer(caseId, question);
 
@@ -184,11 +199,22 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       responseTimeoutTimerRef.current = window.setTimeout(() => {
         responseTimeoutTimerRef.current = null;
         if (responseGateRef.current.isCurrent(token) && !currentReplyTextRef.current) {
-          executeFallback(inFlightQuestionRef.current || transcript || 'Can you explain this part of our plan?', reason);
+          if (inFlightQuestionRef.current || transcriptRef.current) {
+            executeFallback(inFlightQuestionRef.current || transcriptRef.current, reason);
+          } else {
+            setVoiceState('idle');
+            setErrorNotice('Voice transcription unavailable. Please type your question.');
+            setShowSuggestions(true);
+          }
+          pendingCommitRef.current = null;
+          pendingAudioRef.current.clear();
+          if (responseGateRef.current.cancel() && wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: 'response.cancel' }));
+          }
         }
       }, 8000);
     },
-    [executeFallback, transcript]
+    [executeFallback]
   );
 
   // ── Stop playback helper ────────────────────────────────────────────────────
@@ -208,9 +234,19 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
   const stopPlayback = useCallback(() => {
     clearWaitingSend();
+    if (reopenAfterItemRef.current) {
+      // If the proxy never closed the response, a new turn can stall on that connection.
+      reopenAfterItemRef.current = false;
+      const finishedSocket = wsRef.current;
+      wsRef.current = null;
+      responseGateRef.current = createResponseGate();
+      finishedSocket?.close();
+      setIsConnected(false);
+    }
     const discardInput = isPressingRef.current || pendingCommitRef.current?.hasAudio;
     isPressingRef.current = false;
     audioFramesCountRef.current = 0;
+    pendingAudioRef.current.clear();
     if (responseTimeoutTimerRef.current !== null) {
       window.clearTimeout(responseTimeoutTimerRef.current);
       responseTimeoutTimerRef.current = null;
@@ -293,6 +329,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      if (wsRef.current !== ws) return;
       console.log('[AI Voice] Connected successfully to', model, 'for case', caseId);
       setIsConnected(true);
       setErrorNotice(null);
@@ -300,7 +337,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         type: 'session.update',
         session: {
           type: 'realtime',
-          instructions: 'You are Sherpi, the Sherpas guide helping this household understand its financial plan. Use short, natural sentences and explain the figures from the plan. Help the household prepare questions for their advisor. Answer in the same language the client speaks (Spanish or English).',
+          instructions: 'You are Sherpi, the Sherpas guide. Answer in one or two short sentences in the same language as the question (English or Spanish). Use only facts explicitly recorded in the household plan. Distinguish current amounts, recommended changes and targets. If the plan lacks an answer, say so. Do not infer emotions, affordability, or future outcomes.',
           audio: {
             input: {
               format: { type: 'audio/pcm', rate: 24000 },
@@ -314,6 +351,8 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
           },
         },
       }));
+
+      pendingAudioRef.current.flush((message) => ws.send(JSON.stringify(message)));
 
       // Flush pending commit if stopListening was called while connecting
       if (pendingCommitRef.current) {
@@ -334,7 +373,24 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       }
     };
 
+    function finishResponse(responseId?: string) {
+      const gate = responseGateRef.current;
+      const wasBlocked = gate.isBlocked();
+      if (gate.finish(responseId)) {
+        if (responseTimeoutTimerRef.current !== null) window.clearTimeout(responseTimeoutTimerRef.current);
+        responseTimeoutTimerRef.current = null;
+        inFlightQuestionRef.current = null;
+        if (playSourcesRef.current.length === 0 && !isPressingRef.current) setVoiceState('idle');
+      }
+      if (wasBlocked && !gate.isBlocked()) {
+        const queued = waitingSendRef.current;
+        clearWaitingSend();
+        queued?.();
+      }
+    }
+
     ws.onmessage = (event) => {
+      if (wsRef.current !== ws) return;
       try {
         const ev = JSON.parse(event.data);
         const t = ev.type || '';
@@ -353,20 +409,15 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         if (t.startsWith('response.') && t !== 'response.done' && !responseGateRef.current.accepts(responseId)) return;
 
         if (t === 'response.done') {
-          if (responseTimeoutTimerRef.current !== null) {
-            window.clearTimeout(responseTimeoutTimerRef.current);
-            responseTimeoutTimerRef.current = null;
-          }
-          inFlightQuestionRef.current = null;
-          const wasBlocked = responseGateRef.current.isBlocked();
-          if (responseGateRef.current.finish(responseId) && playSourcesRef.current.length === 0 && !isPressingRef.current) {
-            setVoiceState('idle');
-          }
-          if (wasBlocked && !responseGateRef.current.isBlocked()) {
-            const queued = waitingSendRef.current;
-            clearWaitingSend();
-            queued?.();
-          }
+          reopenAfterItemRef.current = false;
+          finishResponse(responseId);
+          return;
+        }
+
+        // Some upstream sessions close the assistant message before sending the final response event.
+        if (t === 'response.output_item.done' && currentReplyTextRef.current) {
+          reopenAfterItemRef.current = true;
+          finishResponse(responseId);
           return;
         }
 
@@ -434,11 +485,14 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     };
 
     ws.onerror = (e) => {
+      if (wsRef.current !== ws) return;
       console.warn('[AI Voice WS error]', e);
       setIsConnected(false);
       if (pendingCommitRef.current) {
         pendingCommitRef.current = null;
-        executeFallback(transcript || 'Can you explain this part of our plan?', 'Voice relay unavailable · Answered from verified plan figures');
+        setVoiceState('idle');
+        setErrorNotice('Voice relay unavailable. Please type your question.');
+        setShowSuggestions(true);
       } else if (inFlightQuestionRef.current && !currentReplyTextRef.current) {
         const q = inFlightQuestionRef.current;
         executeFallback(q, 'Voice relay unavailable · Answered from verified plan figures');
@@ -446,12 +500,17 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     };
 
     ws.onclose = (ev) => {
+      if (wsRef.current !== ws) return;
       console.log('[AI Voice WS closed]', ev.code, ev.reason);
       setIsConnected(false);
       wsRef.current = null;
+      reopenAfterItemRef.current = false;
+      if (responseGateRef.current.isBlocked()) responseGateRef.current = createResponseGate();
       if (pendingCommitRef.current) {
         pendingCommitRef.current = null;
-        executeFallback(transcript || 'Can you explain this part of our plan?', 'Voice relay offline · Answered from verified plan figures');
+        setVoiceState('idle');
+        setErrorNotice('Voice relay offline. Please type your question.');
+        setShowSuggestions(true);
       } else if (inFlightQuestionRef.current && !currentReplyTextRef.current) {
         const q = inFlightQuestionRef.current;
         executeFallback(q, 'Voice relay offline · Answered from verified plan figures');
@@ -459,7 +518,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     };
 
     return ws;
-  }, [caseId, clearWaitingSend, executeFallback, playChunk, startResponseTimeout, trackVoiceAsk, transcript]);
+  }, [caseId, clearWaitingSend, executeFallback, playChunk, startResponseTimeout, trackVoiceAsk]);
 
   // Connect on mount or caseId change
   useEffect(() => {
@@ -506,6 +565,8 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
       const micNode = new AudioWorkletNode(audioCtxRef.current, 'mic-frames');
       srcNode.connect(micNode);
+      // The processor has no audible output; connecting it keeps the graph rendering.
+      micNode.connect(audioCtxRef.current.destination);
 
       micNode.port.onmessage = (e) => {
         // Compute live RMS amplitude for visual level meters & soundwaves
@@ -526,13 +587,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         if (!isPressingRef.current) return;
         audioFramesCountRef.current++;
 
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(
-            JSON.stringify({
-              type: 'input_audio_buffer.append',
-              audio: b64(e.data),
-            })
-          );
+        const audio = b64(e.data);
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: 'input_audio_buffer.append', audio }));
+        } else if (wsRef.current?.readyState === WebSocket.CONNECTING) {
+          pendingAudioRef.current.append(audio);
         }
       };
 
@@ -551,11 +610,14 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     stopPlayback();
     pendingCommitRef.current = null;
     audioFramesCountRef.current = 0;
+    pendingAudioRef.current.clear();
     const token = responseGateRef.current.start();
     activeRequestTokenRef.current = token;
     voiceAskRecordedRef.current = false;
     currentReplyTextRef.current = '';
     setResponseMessage(null);
+    setDetectedTerm(null);
+    transcriptRef.current = '';
     setTranscript('');
     setGuardRedirect(null);
     setErrorNotice(null);
@@ -565,7 +627,10 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     isPressingRef.current = true;
 
     connectWs();
-    await ensureMic();
+    if (!await ensureMic() && responseGateRef.current.isCurrent(token)) {
+      isPressingRef.current = false;
+      setVoiceState('idle');
+    }
   }, [connectWs, ensureMic, stopPlayback]);
 
   // ── Stop Listening (Release to Send) ────────────────────────────────────────
@@ -605,14 +670,16 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       } else {
         // Socket is closed or unavailable — provide immediate graceful fallback if audio was spoken
         if (hasAudio) {
-          executeFallback(transcript || 'Can you explain this part of our plan?', 'Voice relay offline · Answered from verified plan figures');
+          setVoiceState('idle');
+          setErrorNotice('Voice relay offline. Please type your question.');
+          setShowSuggestions(true);
         } else {
           setVoiceState('idle');
           setShowSuggestions(true);
         }
       }
     });
-  }, [executeFallback, sendAfterCancel, startResponseTimeout, transcript]);
+  }, [sendAfterCancel, startResponseTimeout]);
 
   // ── Push to Ask (Direct Question via Text or Suggestion Chip) ───────────────
   const pushToAsk = useCallback(
@@ -628,6 +695,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       currentReplyTextRef.current = '';
       setTranscript(clean);
       setResponseMessage(null);
+      setDetectedTerm(null);
       setGuardRedirect(null);
       setErrorNotice(null);
       setShowSuggestions(false);
@@ -659,26 +727,14 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         // If WebSocket is ready, send the question and request response
         if (activeWs && activeWs.readyState === WebSocket.OPEN) {
           if (pollTimer !== null) window.clearTimeout(pollTimer);
-          activeWs.send(
-            JSON.stringify({
-              type: 'conversation.item.create',
-              item: {
-                type: 'message',
-                role: 'user',
-                content: [{ type: 'input_text', text: clean }],
-              },
-            })
-          );
+          const messages = typedQuestionMessages(clean);
+          activeWs.send(JSON.stringify(messages[0]));
           if (responseGateRef.current.markSent(requestToken)) {
-            activeWs.send(JSON.stringify({ type: 'response.create' }));
+            activeWs.send(JSON.stringify(messages[1]));
           }
 
           // Safety timeout in case server never responds
-          responseTimeoutTimerRef.current = window.setTimeout(() => {
-            if (responseGateRef.current.isCurrent(requestToken) && !currentReplyTextRef.current) {
-              executeFallback(clean, 'Response timed out · Answered from verified plan figures');
-            }
-          }, 8000);
+          startResponseTimeout(requestToken, 'Response timed out · Answered from verified plan figures');
           return;
         }
 
@@ -703,7 +759,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         }
       });
     },
-    [connectWs, executeFallback, sendAfterCancel, stopPlayback, trackVoiceAsk]
+    [connectWs, executeFallback, sendAfterCancel, startResponseTimeout, stopPlayback, trackVoiceAsk]
   );
 
   const disconnect = useCallback(() => {

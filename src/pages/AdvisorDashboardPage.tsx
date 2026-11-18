@@ -125,6 +125,7 @@ export default function AdvisorDashboardPage() {
 
   async function handleCopyJson() {
     setCopyError(false);
+    setCopiedJson(false);
     try {
       await navigator.clipboard.writeText(serialiseTelemetry(sessionEvents));
       setCopiedJson(true);
@@ -388,7 +389,6 @@ export default function AdvisorDashboardPage() {
           clientNames={householdNames}
           primaryHesitationTerm={primaryHesitationTerm}
           firstWinTitle={fh.score.top_moves[0]?.title ?? 'Pay off high-interest debt'}
-          firstWinDollars={fh.score.top_moves[0]?.target_amount != null ? `$${fh.score.top_moves[0].target_amount.toLocaleString()}` : undefined}
           isAdvisorView={true}
         />
 

@@ -34,7 +34,7 @@ test('voice fallback: household-specific answers contain strictly grounded figur
   const weahLife = getOfflineAnswer('timothy-melanie-weah', 'Why add life insurance?');
   assert.equal(weahLife.detectedTerm, 'mortality-ratio');
   assert.match(weahLife.text, /\$235,000/);
-  assert.match(weahLife.text, /\$485,000/);
+  assert.match(weahLife.text, /60 to 60/);
 
   // Daniel & Emily Johnson: Life insurance
   const johnsonLife = getOfflineAnswer('daniel-emily-johnson', 'Why increase our life insurance coverage?');
@@ -45,15 +45,15 @@ test('voice fallback: household-specific answers contain strictly grounded figur
   // Michael Carter: $550k home in Austin
   const carterHome = getOfflineAnswer('michael-carter', 'Can I afford to buy a $550,000 home in 2027?');
   assert.match(carterHome.text, /\$550,000/);
-  assert.match(carterHome.text, /Austin/);
+  assert.match(carterHome.text, /affordability/);
   assert.match(carterHome.text, /2027/);
 
   // Michael Carter: 58 vs 60 retirement
   const carterRetire = getOfflineAnswer('michael-carter', 'What is the impact of retiring at 58 vs 60?');
   assert.equal(carterRetire.detectedTerm, 'withdrawal-rate');
-  assert.match(carterRetire.text, /58 vs 60/);
-  assert.match(carterRetire.text, /\$10,300\/year/);
-  assert.match(carterRetire.text, /26 to 62/);
+  assert.match(carterRetire.text, /age 58/);
+  assert.match(carterRetire.text, /does not provide a comparison/);
+
 
   // Samantha Lewis: Second home 2030
   const samanthaHome = getOfflineAnswer('samantha-lewis', 'Can I buy a second home in 2030?');
@@ -85,4 +85,19 @@ test('vite relay plugin: generates complete case briefs with verified numbers', 
     assert.match(brief, /=== FINANCIAL HEALTH ===/);
     assert.match(brief, /=== TOP MOVES ===/);
   }
+});
+
+test('offline fallback avoids unsupported retirement comparisons and invented case data', () => {
+  const answer = getOfflineAnswer('michael-carter', 'What is the impact of retiring at 58 vs 60?');
+  assert.match(answer.text, /does not provide a comparison/i);
+  assert.doesNotMatch(answer.text, /stabilizes your retirement timeline/i);
+  const unknown = getOfflineAnswer('unknown', 'What is my liquidity score?');
+  assert.match(unknown.text, /not available/i);
+  assert.doesNotMatch(unknown.text, /100\/100/);
+});
+
+test('education fallback reports the documented goal without asserting a 529 account', () => {
+  const answer = getOfflineAnswer('timothy-melanie-weah', 'Tell me about education for the children');
+  assert.match(answer.text, /\$45,000/);
+  assert.doesNotMatch(answer.text, /dedicated 529 education accounts/i);
 });

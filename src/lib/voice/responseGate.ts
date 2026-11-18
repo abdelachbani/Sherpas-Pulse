@@ -7,6 +7,7 @@ export function createResponseGate() {
   let waitingForCancel = false;
   let canceledPendingId: string | undefined;
   const canceledIds = new Set<string>();
+  const completedIds = new Set<string>();
   return {
     start() { generation += 1; accepting = true; sent = false; activeId = undefined; return generation; },
     current() { return generation; },
@@ -16,17 +17,20 @@ export function createResponseGate() {
     markSent(token: number) { if (waitingForCancel || !accepting || token !== generation) return false; sent = true; return true; },
     created(id?: string) {
       if (waitingForCancel) { if (id) { canceledPendingId = id; canceledIds.add(id); } return false; }
-      if (!accepting || (id && canceledIds.has(id))) { if (id) canceledIds.add(id); return false; }
+      if (!accepting || (id && (canceledIds.has(id) || completedIds.has(id)))) { if (id) canceledIds.add(id); return false; }
       activeId = id;
       return true;
     },
-    accepts(id?: string) { return !waitingForCancel && accepting && (!id || (!canceledIds.has(id) && (!activeId || id === activeId))); },
+    accepts(id?: string) { return !waitingForCancel && accepting && (!id || (!canceledIds.has(id) && !completedIds.has(id) && (!activeId || id === activeId))); },
     finish(id?: string) {
+      if (id && completedIds.has(id)) return false;
       if (waitingForCancel) {
         if (!id || !canceledPendingId || id === canceledPendingId) { if (id) canceledIds.add(id); waitingForCancel = false; canceledPendingId = undefined; }
         return false;
       }
       if (!accepting || (id && (canceledIds.has(id) || (activeId && id !== activeId)))) return false;
+      const completed = id ?? activeId;
+      if (completed) completedIds.add(completed);
       accepting = false; sent = false; return true;
     },
     cancel() {

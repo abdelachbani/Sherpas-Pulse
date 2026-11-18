@@ -22,15 +22,15 @@ export function SyncCard({ item, partner1Name, partner2Name, index = 0, priority
           <p className="mt-2 text-sm leading-relaxed text-slate-300"><FinancialText text={item.explanation} /></p>
           <div className="mt-4 rounded-xl bg-slate-800 p-4 text-sm text-slate-200">
             <p>{partner1Name} &amp; {partner2Name}</p>
-            <p className="mt-1 font-semibold text-white">${item.agreedAmount.toLocaleString()}{priority != null ? ` · Priority #${priority}` : ''}</p>
+            <p className="mt-1 font-semibold text-white">{priority != null ? `Priority #${priority}` : ''}</p>
           </div>
         </>
       ) : (
         <>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {[[item.partner1Name, item.partner1Priority, item.partner1Amount], [item.partner2Name, item.partner2Priority, item.partner2Amount]].map(([name, rank, amount]) => (
+            {[[item.partner1Name, item.partner1Priority], [item.partner2Name, item.partner2Priority]].map(([name, rank]) => (
               <div key={String(name)} className="rounded-xl bg-slate-800 p-4 text-sm text-slate-200">
-                <p className="font-semibold text-white">{name}</p><p className="mt-1">Priority #{rank} · ${Number(amount).toLocaleString()}</p>
+                <p className="font-semibold text-white">{name}</p><p className="mt-1">Priority #{rank}</p>
               </div>
             ))}
           </div>
