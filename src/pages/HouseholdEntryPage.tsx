@@ -99,7 +99,7 @@ function HouseholdEntryPageContent() {
       timestamp: Date.now(),
     });
 
-    navigate(`/case/${activeCase.id}/stories`);
+    navigate(`/case/${activeCase.id}/stories?style=${selectedStyle}`);
   }
 
   function handleCopyShareLink(partnerName: string) {
@@ -256,7 +256,7 @@ function HouseholdEntryPageContent() {
                   {selectedStyle === 'visual' && <Check className="w-3.5 h-3.5 text-emerald-700" />}
                 </div>
                 <div className="text-xs text-slate-500 mt-0.5 leading-snug">
-                  See key figures first, with simple score bars and paired short details.
+                  Follow figures as they appear, compare scores in charts, and see milestones on a timeline.
                 </div>
               </div>
             </motion.button>
@@ -282,13 +282,13 @@ function HouseholdEntryPageContent() {
                   {selectedStyle === 'analytical' && <Check className="w-3.5 h-3.5 text-indigo-600" />}
                 </div>
                 <div className="text-xs text-slate-500 mt-0.5 leading-snug">
-                  Review all plan details one at a time, followed by each chapter’s highlight.
+                  Read the figures and dates as recorded in your plan, with more time on each screen.
                 </div>
               </div>
             </motion.button>
             <button type="button" onClick={() => setSelectedStyle('express')} aria-pressed={selectedStyle === 'express'} className={`w-full text-left p-5 rounded-2xl border flex items-start gap-3 cursor-pointer transition-all ${selectedStyle === 'express' ? 'bg-indigo-50 border-indigo-500 text-slate-900' : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300'}`}>
               <span className="p-1.5 rounded-xl bg-indigo-100 text-indigo-600 mt-0.5"><List className="w-3.5 h-3.5" /></span>
-              <span className="flex-1"><span className="text-xs font-bold text-slate-900 block">Express</span><span className="text-xs text-slate-500 mt-0.5 block leading-snug">See one key detail or highlight per chapter in six screens.</span></span>
+              <span className="flex-1"><span className="text-xs font-bold text-slate-900 block">Express</span><span className="text-xs text-slate-500 mt-0.5 block leading-snug">Get one takeaway in each chapter, with shorter narration.</span></span>
               {selectedStyle === 'express' && <Check className="w-3.5 h-3.5 text-indigo-600" />}
             </button>
           </div>

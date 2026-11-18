@@ -124,6 +124,50 @@ try {
   const edge=async right=>{const r=await evaluate(`(()=>{const r=document.querySelector('.story-shell > main').getBoundingClientRect();return {x:${right?'true':'false'}?r.right-4:r.left+4,y:r.top+r.height*.7}})()`);await call('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...r});await call('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...r});await pause(170);};
   const cases=['timothy-melanie-weah','daniel-emily-johnson','michael-carter','samantha-lewis'];
   const skipIntro=async()=>{if(!await click('Skip introduction'))throw new Error('Wrapped needs Skip introduction');await pause(160);};
+  if(process.env.UI_CHECK_MODES_ONLY){
+    const widths=(process.env.UI_CHECK_WIDTHS || '320,390,844,1440').split(',').map(Number);
+    for(const width of widths){
+      await call('Emulation.setDeviceMetricsOverride',{width,height:width===320?568:width===844?390:width>=1024?900:844,deviceScaleFactor:1,mobile:false});
+      for(const id of cases){
+        const frameCounts={};
+        const summaryCounts={};
+        for(const mode of ['visual','analytical','express']){
+          await navigate('/case/'+id);
+          const selected=await evaluate(`(() => { const button=[...document.querySelectorAll('button[aria-pressed]')].find(button=>button.querySelector('span') && button.textContent.trim().toLowerCase().startsWith(${JSON.stringify(mode)})); if(!button)return false; button.click(); return true })()`);
+          if(!selected || !await click('Explore your plan'))throw new Error('Could not enter '+mode);
+          await pause(250);await skipIntro();
+          const started=await state();
+          frameCounts[mode]=started.count;
+          const article=await evaluate(`(() => { const a=document.querySelector('.story-card'); return {mode:a?.dataset.viewingStyle, charts:!!a?.querySelector('.story-score'), rows:!!a?.querySelector('dl'), takeaway:!!a?.querySelector('[aria-label="Chapter takeaway"]')} })()`);
+          results.push({label:id+'-'+mode+'-uses-selected-presentation',width,pass:article.mode===mode && article.charts===(mode==='visual') && article.rows===(mode==='analytical') && article.takeaway===(mode==='express')});
+          if(mode==='express')results.push({label:id+'-express-uses-short-narration',width,pass:await evaluate(`window.__speechCalls.at(-1)?.startsWith('Your financial health score is')`)});
+          if(width===390 && id===cases[0] && mode==='visual')await pause(4200);
+          await inspect(id+'-'+mode+'-first-scene',width,width===390 && id===cases[0]);
+          let sawExactDates=false;
+          for(let steps=0;await state();steps++){
+            if(steps>80)throw new Error('Could not finish '+mode);
+            const step=await state();
+            if(step.phase==='checkpoint'){
+              if(step.chapter===0)summaryCounts[mode]=await evaluate(`document.querySelector('[aria-label="Chapter summary"]').children.length`);
+              if(step.progress!==100)throw new Error('Expected a pause at 100%');
+              await click('Continue');await pause(200);
+              continue;
+            }
+            if(mode==='analytical' && step.chapter===3){
+              sawExactDates ||= await evaluate(String.raw`/\b[A-Za-z]+ \d{1,2}, \d{4}\b/.test(document.querySelector('dl')?.textContent ?? '')`);
+            }
+            if(step.index>0)await inspect(id+'-'+mode+'-scene-'+step.index,width);
+            await key('ArrowRight');
+          }
+          if(mode==='analytical')results.push({label:id+'-analytical-shows-source-dates-to-the-day',width,pass:sawExactDates});
+        }
+        results.push({label:id+'-modes-use-different-scene-counts-and-full-recaps',width,pass:frameCounts.express===5 && frameCounts.analytical!==frameCounts.visual && frameCounts.express<Math.min(frameCounts.analytical,frameCounts.visual) && summaryCounts.visual>3 && new Set(Object.values(summaryCounts)).size===1});
+      }
+    }
+    await navigate('/case/timothy-melanie-weah/stories?style=analytical');
+    await skipIntro();
+    results.push({label:'analytical-selection-survives-direct-load',pass:await evaluate(`document.querySelector('.story-card')?.dataset.viewingStyle==='analytical'`)});
+  } else {
   await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
   await navigate('/case/timothy-melanie-weah/stories');
   const introAtEntry=await evaluate(`document.querySelector('.story-shell')?.dataset.phase==='intro' && document.querySelector('button[aria-label="Turn narration off"]')?.getAttribute('aria-pressed')==='true' && document.body.innerText.includes('I’m Sherpi')`);
@@ -312,6 +356,7 @@ try {
   results.push({label:'sherpi-hold-requests-microphone-and-shows-denial',pass:await evaluate(`window.__micRequests===1 && document.querySelector('section[aria-label="Ask Sherpi"]')?.textContent.includes('Microphone access blocked')`)});
   await navigate('/case/not-a-case/stories');
   results.push({label:'unknown-case',pass:await evaluate(`document.body.innerText.includes('not found')`)});
+  }
   }
   await writeFile(join(out,'report.json'),JSON.stringify(results,null,2));
   const failed=results.filter(r=>!r.pass);console.log(`APPLICATION QUALITY: ${results.length-failed.length}/${results.length} passed`);

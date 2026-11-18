@@ -31,6 +31,8 @@ assert.deepEqual(advanceBeat(1, 2, false), { partIndex: 1, checkpoint: true });
 assert.deepEqual(advanceBeat(1, 2, true), { partIndex: 1, checkpoint: true });
 assert.equal(beatDuration('A short thought'), 3000);
 assert.equal(beatDuration('word '.repeat(200)), 8000);
+assert(beatDuration('A short thought', 'express') < beatDuration('A short thought'));
+assert(beatDuration('A short thought', 'analytical') > beatDuration('A short thought'));
 
 import { nextChapterFrame } from '../src/lib/storyPlayback.ts';
 const chapters = [{ chapterId: 'a' }, { chapterId: 'a' }, { chapterId: 'b' }];

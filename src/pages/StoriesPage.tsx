@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
 import { extractStoryData, extractCalibrationCards } from '../lib/mcp/extractor';
@@ -27,12 +27,18 @@ export default function StoriesPage() {
 function StoriesContent() {
   const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const selectedMode = searchParams.get('style');
 
   const currentCase = useAppStore((s) => s.currentCase);
   const setCase = useAppStore((s) => s.setCase);
   const addTelemetryEvent = useAppStore((s) => s.addTelemetryEvent);
+  const savedMode = useAppStore((s) => s.viewingStyle);
 
   const activeCase = CASES.find((c) => c.id === caseId)!;
+  const viewingStyle = selectedMode === 'visual' || selectedMode === 'analytical' || selectedMode === 'express'
+    ? selectedMode
+    : (currentCase?.id === activeCase.id ? savedMode : null) ?? 'visual';
 
   useEffect(() => {
     if (caseId && (!currentCase || currentCase.id !== caseId)) {
@@ -72,11 +78,11 @@ function StoriesContent() {
   return (
     <div className="relative w-full h-full bg-slate-950 overflow-hidden flex flex-col justify-between">
       <StoryContainer
-        key={activeCase.id}
+        key={`${activeCase.id}:${viewingStyle}`}
         caseId={activeCase.id}
         stories={stories}
         calibrationCards={calibrationCards}
-        pillars={activeCase.financialHealth.score.pillars}
+        viewingStyle={viewingStyle}
         voice={voice}
         onComplete={handleComplete}
         onNavigateBack={() => navigate('/')}

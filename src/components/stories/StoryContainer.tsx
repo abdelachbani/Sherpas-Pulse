@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Volume2, VolumeX, X, Lightbulb, Pause, Play } from 'lucide-react';
-import type { StoryCard as StoryCardType, CalibrationCard, GroundingRef, ViewingStyle, PillarScore } from '../../types';
+import type { StoryCard as StoryCardType, CalibrationCard, GroundingRef, ViewingStyle } from '../../types';
 import type { VoiceSessionResult } from '../../lib/voice/useVoiceSession';
 import { useAppStore } from '../../stores/appStore';
 import { advanceBeat, advanceElapsed, beatDuration, chapterProgress, nextChapterFrame, storyTapDirection, voiceBlocksPlayback } from '../../lib/storyPlayback';
@@ -26,7 +26,7 @@ interface Props {
   caseId: string;
   stories: StoryCardType[];
   calibrationCards: Record<string, CalibrationCard>;
-  pillars?: PillarScore[];
+  viewingStyle: ViewingStyle;
   voice: VoiceSessionResult;
   onComplete: () => void;
   onNavigateBack: () => void;
@@ -41,8 +41,8 @@ function prefersVoice() {
     return saved === null ? voicePreference : saved === 'true';
   } catch { return voicePreference; }
 }
-function frameDuration(card: StoryCardType, introduction: boolean): number {
-  const reading = beatDuration([card.title, card.subtitle, card.tagline ?? '', card.highlightLabel ?? '', ...card.dataPoints.map((point) => `${point.label} ${point.value}`)].join(' '));
+function frameDuration(card: StoryCardType, introduction: boolean, style: ViewingStyle): number {
+  const reading = beatDuration([card.title, card.subtitle, card.tagline ?? '', card.highlightLabel ?? '', card.highlightNumber ?? '', ...card.dataPoints.map((point) => `${point.label} ${point.value}`)].join(' '), style);
   return introduction ? Math.max(reading, beatDuration(card.voiceScript ?? '')) : reading;
 }
 
@@ -61,7 +61,7 @@ function TermsDialog({ terms, onClose, onSelect }: { terms: string[]; onClose: (
   </div>;
 }
 
-export function StoryContainer({ caseId, stories, calibrationCards, pillars = [], voice, onComplete, onNavigateBack }: Props) {
+export function StoryContainer({ caseId, stories, calibrationCards, viewingStyle, voice, onComplete, onNavigateBack }: Props) {
   const questionId = useId();
   const mainRef = useRef<HTMLElement>(null);
   const [introStep, setIntroStep] = useState<number | null>(0);
@@ -74,8 +74,6 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
     setIntroStep(null);
     mainRef.current?.focus({ preventScroll: true });
   }, []);
-  const preferredStyle = useAppStore((state) => state.viewingStyle);
-  const [viewingStyle, setViewingStyle] = useState<ViewingStyle>(preferredStyle ?? 'visual');
   const frames = useMemo(() => buildStoryFrames(stories, viewingStyle), [stories, viewingStyle]);
   const [frameIndex, setFrameIndex] = useState(0);
   const elapsedRef = useRef(0);
@@ -88,6 +86,7 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
   }, []);
   const frame = frames[Math.min(frameIndex, frames.length - 1)];
   const currentStory = frame?.card;
+  const narrationScript = currentStory?.voiceScript;
   const chapter = frame ? stories[frame.chapterIndex] : undefined;
   const [checkpoint, setCheckpoint] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -113,7 +112,6 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
     setAudioMuted(!enabled);
     setIsVoiceNarrating(enabled);
   }
-  const [checklistState, setChecklistState] = useState([false, false, false]);
   const attemptedChapter = useRef<string | null>(null);
   const narrationRef = useRef<StoryNarration | null>(null);
   const stopNarration = useCallback(() => {
@@ -140,7 +138,6 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
     document.addEventListener('visibilitychange', update);
     return () => document.removeEventListener('visibilitychange', update);
   }, [markStoryActivity]);
-  useEffect(() => { if (preferredStyle) setViewingStyle(preferredStyle); }, [preferredStyle]);
   useEffect(() => {
     if (voice.detectedTerm) {
       const card = calibrationCards[voice.detectedTerm];
@@ -156,12 +153,12 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
     const entry = `${caseId}:${chapter.id}`;
     if (attemptedChapter.current === entry) return;
     attemptedChapter.current = entry;
-    if (isAssistantActive || hidden || modalOpen || !chapter.voiceScript) return;
-    narrationRef.current = startStoryNarration(chapter.voiceScript, () => {
+    if (isAssistantActive || hidden || modalOpen || !narrationScript) return;
+    narrationRef.current = startStoryNarration(narrationScript, () => {
       narrationRef.current = null;
       markStoryActivity();
     });
-  }, [caseId, chapter, checkpoint, introActive, isVoiceNarrating, isAssistantActive, hidden, modalOpen, paused, markStoryActivity]);
+  }, [caseId, chapter, checkpoint, introActive, isVoiceNarrating, isAssistantActive, hidden, modalOpen, paused, markStoryActivity, narrationScript]);
   useEffect(() => {
     if (!isVoiceNarrating || isAssistantActive || hidden || modalOpen) stopNarration();
   }, [isVoiceNarrating, isAssistantActive, hidden, modalOpen, stopNarration]);
@@ -211,8 +208,8 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
     if (next.complete) onComplete();
     else navigate(next.index);
   }, [frameIndex, frames, navigate, onComplete, voice]);
-  const duration = currentStory ? frameDuration(currentStory, frame.partIndex === 0) : 3000;
-  const chapterDurations = frame ? frames.filter((item) => item.chapterId === frame.chapterId).map((item) => frameDuration(item.card, item.partIndex === 0)) : [];
+  const duration = currentStory ? frameDuration(currentStory, frame.partIndex === 0, viewingStyle) : 3000;
+  const chapterDurations = frame ? frames.filter((item) => item.chapterId === frame.chapterId).map((item) => frameDuration(item.card, item.partIndex === 0, viewingStyle)) : [];
   const revealProgress = elapsed.frameId === frame?.id ? Math.min(1, elapsed.value / duration) : 0;
   const chapterFraction = frame ? chapterProgress(chapterDurations, frame.partIndex, elapsed.frameId === frame.id ? elapsed.value : 0, checkpoint) : 0;
   useEffect(() => {
@@ -264,10 +261,6 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [goToNext, goToPrev, introActive, modalOpen, isAssistantActive]);
 
-  function handleCalibrationOpen(termKey: string) {
-    const card = calibrationCards[termKey];
-    if (card) setActiveCalibration(card);
-  }
   function selectTerm(term: string) {
     useAppStore.getState().trackTermConsulted(term, chapter?.id);
     setTermsOpen(false);
@@ -276,7 +269,7 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
   if (!currentStory || !frame) return null;
 
   return (
-    <StoryHelpContext.Provider value={helpContext}><div onPointerDownCapture={markStoryActivity} onPointerUpCapture={markStoryActivity} onPointerCancelCapture={markStoryActivity} onKeyDownCapture={markStoryActivity} onClickCapture={markStoryActivity} onWheelCapture={markStoryActivity} data-phase={introActive ? "intro" : checkpoint ? "checkpoint" : "playing"} data-chapter-index={frame.chapterIndex} data-beat-progress={revealProgress} data-frame-id={frame.id} data-frame-index={frameIndex} data-frame-count={frames.length} className="story-shell relative mx-auto flex h-full w-full flex-col overflow-hidden bg-[#171827] shadow-2xl">
+    <StoryHelpContext.Provider value={helpContext}><div onPointerDownCapture={markStoryActivity} onPointerUpCapture={markStoryActivity} onPointerCancelCapture={markStoryActivity} onKeyDownCapture={markStoryActivity} onClickCapture={markStoryActivity} onWheelCapture={markStoryActivity} data-phase={introActive ? "intro" : checkpoint ? "checkpoint" : "playing"} data-chapter-index={frame.chapterIndex} data-viewing-style={viewingStyle} data-beat-progress={revealProgress} data-frame-id={frame.id} data-frame-index={frameIndex} data-frame-count={frames.length} className="story-shell relative mx-auto flex h-full w-full flex-col overflow-hidden bg-[#171827] shadow-2xl">
       <header className="shrink-0 px-4 pt-3 sm:px-6">
         <div className="flex items-center justify-between gap-2">
           <button onClick={onNavigateBack} className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/80" aria-label="Back to case selection"><X className="h-4 w-4" /></button>
@@ -315,7 +308,7 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
       </header>
       <main ref={mainRef} tabIndex={-1} className="relative min-h-0 flex-1 overflow-hidden" onPointerDown={(event) => { if (!introActive && !modalOpen && !isAssistantActive && !(event.target as HTMLElement).closest('button, a, input, select, textarea, summary, [role="button"], [role="dialog"]')) { pointerStart.current = { x: event.clientX, y: event.clientY, at: Date.now() }; event.currentTarget.setPointerCapture(event.pointerId); setHolding(true); } else pointerStart.current = null; }} onPointerUp={(event) => { const start = pointerStart.current; pointerStart.current = null; setHolding(false); if (!start || Date.now() - start.at > 350 || modalOpen || isAssistantActive || (event.target as HTMLElement).closest('button, a, input, select, textarea, summary, [role="button"], [role="dialog"]')) return; const rect = event.currentTarget.getBoundingClientRect(); const direction = storyTapDirection(start.x - rect.left, start.y, event.clientX - rect.left, event.clientY, rect.width); if (direction === 'previous') goToPrev(); if (direction === 'next') goToNext(); }} onPointerCancel={() => { pointerStart.current = null; setHolding(false); }} onLostPointerCapture={() => { pointerStart.current = null; setHolding(false); }}>
         {introStep !== null && <SherpiIntro stepIndex={introStep} voiceEnabled={isVoiceNarrating} hidden={hidden} onNext={advanceIntro} onFinish={finishIntro} />}
-        <AnimatePresence mode="wait">{!introActive && !checkpoint && <motion.div key={frame.chapterId} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="h-full w-full"><StoryCard card={currentStory} revealProgress={revealProgress} partIndex={frame.partIndex} partCount={frame.partCount} isActive={!modalOpen && !isAssistantActive && !hidden} pillars={pillars} viewingStyle={viewingStyle} onCalibrationOpen={handleCalibrationOpen} onInspectGrounding={setActiveGrounding} onSelectStyle={(style) => { const updated = buildStoryFrames(stories, style); const chapterFrames = updated.filter((item) => item.chapterId === frame.chapterId); const target = chapterFrames[Math.min(frame.partIndex, chapterFrames.length - 1)]; if (target) setFrameIndex(updated.indexOf(target)); setViewingStyle(style); useAppStore.getState().setViewingStyle(style); }} onActionComplete={goToNext} stepChecklist={checklistState} onToggleStep={(i) => setChecklistState((prev) => prev.map((value, index) => index === i ? !value : value))} /></motion.div>}</AnimatePresence>
+        <AnimatePresence mode="wait">{!introActive && !checkpoint && <motion.div key={frame.chapterId} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="h-full w-full"><StoryCard card={currentStory} revealProgress={revealProgress} viewingStyle={viewingStyle} /></motion.div>}</AnimatePresence>
         {checkpoint && chapter && <section className="mx-auto flex h-full max-w-xl flex-col px-5 pb-2 text-white" aria-label="Chapter checkpoint">
           <div className="flex shrink-0 items-start gap-3">
             <SherpiAvatar large />
@@ -327,7 +320,7 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
           </div>
           <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-xl border border-white/10 bg-white/5 px-4" aria-label="Chapter summary">
             {chapter.highlightNumber != null && <div className="border-b border-white/10 py-2"><p className="text-xs text-slate-400"><FinancialText text={chapter.highlightLabel || 'Highlight'} /></p><p className="wrap-break-word text-sm text-white"><FinancialText text={`${formatStoryValue(chapter.highlightNumber)}${chapter.highlightUnit ? ` ${chapter.highlightUnit}` : ''}`} /></p>{chapter.tagline && <p className="text-xs text-slate-300"><FinancialText text={chapter.tagline} /></p>}</div>}
-            {chapter.dataPoints.map((point, index) => <div key={`${point.label}-${index}`} className="border-b border-white/10 py-2 last:border-0"><p className="text-xs text-slate-400"><FinancialText text={point.label.replace(/_/g, ' ')} /></p><p className="wrap-break-word text-sm text-white"><FinancialText text={`${formatStoryValue(point.value)}${point.unit ? ` ${point.unit}` : ''}`} /></p></div>)}
+            {chapter.dataPoints.map((point, index) => <div key={`${point.label}-${index}`} className="border-b border-white/10 py-2 last:border-0"><p className="text-xs text-slate-400"><FinancialText text={point.label.replace(/_/g, ' ')} /></p><p className="wrap-break-word text-sm text-white"><FinancialText text={`${formatStoryValue(point.value, viewingStyle === "analytical" ? "day" : "month")}${point.unit ? ` ${point.unit}` : ''}`} /></p></div>)}
           </div>
           <div className="shrink-0 pt-2">
             {questionOpen && <form onSubmit={(event) => {

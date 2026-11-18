@@ -1,3 +1,5 @@
+import type { ViewingStyle } from '../types';
+
 export function previousStory(index: number) {
   return { index: Math.max(0, index - 1), complete: false };
 }
@@ -34,9 +36,16 @@ export function advanceBeat(partIndex: number, partCount: number, checkpoint: bo
   return { partIndex: partIndex + 1, checkpoint: false };
 }
 
-export function beatDuration(text: string): number {
+const beatTiming = {
+  visual: { minimum: 3000, maximum: 8000, perWord: 300 },
+  analytical: { minimum: 5500, maximum: 12000, perWord: 420 },
+  express: { minimum: 2700, maximum: 6500, perWord: 250 },
+} satisfies Record<ViewingStyle, { minimum: number; maximum: number; perWord: number }>;
+
+export function beatDuration(text: string, style: ViewingStyle = 'visual'): number {
   const words = text.trim().split(/\s+/).filter(Boolean).length;
-  return Math.min(8000, Math.max(3000, words * 300));
+  const { minimum, maximum, perWord } = beatTiming[style];
+  return Math.min(maximum, Math.max(minimum, words * perWord));
 }
 
 export function nextChapterFrame(index: number, frames: { chapterId: string }[]) {

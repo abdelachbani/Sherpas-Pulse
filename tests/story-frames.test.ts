@@ -18,7 +18,11 @@ for (const item of CASES) {
         assert(fragments.every(part => part.grounding === point.grounding));
       }
     }
-    assert(frames.every(frame => frame.card.dataPoints.length <= 4));
+    assert(frames.every(frame => frame.card.dataPoints.length <= (style === 'analytical' ? 3 : 4)));
+    if (style === 'analytical') {
+      const visual = buildStoryFrames(stories, 'visual');
+      assert.notDeepEqual(frames.map(frame => frame.card.dataPoints.length), visual.map(frame => frame.card.dataPoints.length));
+    }
     assert(frames.some(frame => frame.card.pillar === 'overview' && frame.card.dataPoints.length >= 3));
   }
   const express = buildStoryFrames(stories, 'express');
@@ -27,10 +31,22 @@ for (const item of CASES) {
   express.forEach((frame, index) => {
     const source = stories[index];
     assert.equal(frame.chapterId, source.id);
-    if (frame.card.highlightNumber != null) {
-      assert([source.highlightNumber, ...source.dataPoints.map(point => point.label)].includes(frame.card.highlightNumber));
+    assert.notEqual(frame.card.voiceScript, source.voiceScript);
+    if (source.pillar === 'overview') assert.match(frame.card.voiceScript, new RegExp(`\\b${source.highlightNumber} out of 100\\b`));
+    if (source.highlightNumber != null) {
+      assert.equal(frame.card.highlightNumber, source.highlightNumber);
+      assert.equal(frame.card.dataPoints.length, 0);
+    } else if (source.dataPoints.length) {
+      assert.equal(frame.card.dataPoints.length, 1);
+      const point = frame.card.dataPoints[0];
+      const original = source.dataPoints[0];
+      assert.equal(point.label, original.label);
+      assert.equal(point.grounding, original.grounding);
+      assert(String(original.value).startsWith(String(point.value)));
+      assert(String(point.value).length <= 120);
+      assert.equal(frame.card.highlightNumber, undefined);
     }
-    for (const point of frame.card.dataPoints) assert(source.dataPoints.includes(point));
+
   });
 }
 console.log('Story frames preserve case details in full modes and summarize in express');

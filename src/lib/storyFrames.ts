@@ -33,17 +33,22 @@ export function buildStoryFrames(stories: StoryCard[], style: ViewingStyle): Sto
   return stories.flatMap((story, chapterIndex) => {
     if (style === 'express') {
       const first = story.dataPoints[0];
-      const usePoint = story.highlightNumber == null && first && String(first.value).length <= 120;
-      const useLabel = story.highlightNumber == null && first && !usePoint;
+      const point = story.highlightNumber == null && first ? splitPoint(first)[0] : undefined;
+      const scripts: Record<StoryCard['pillar'], string> = {
+        vibe: 'Welcome to your financial plan. We will pause after each chapter for your questions.',
+        overview: `Your financial health score is ${story.highlightNumber} out of 100.`,
+        translator: 'Here is one goal recorded in your plan.',
+        advice: 'Here is one move to discuss with your advisor.',
+        'living-map': 'Here is one milestone recorded in your plan.',
+        action: 'Start your next conversation with your advisor here.',
+      };
       const id = `${story.id}-frame-1`;
       return [{
         id, chapterId: story.id, chapterIndex, partIndex: 0, partCount: 1,
-        card: { ...story, id, dataPoints: usePoint ? [first] : [],
-          highlightNumber: useLabel ? first.label : story.highlightNumber,
-          highlightLabel: useLabel ? 'First listed detail' : story.highlightLabel,
-          highlightUnit: useLabel ? undefined : story.highlightUnit },
+        card: { ...story, id, dataPoints: point ? [point] : [], voiceScript: scripts[story.pillar] },
       }];
     }
+
     const points = story.dataPoints.flatMap(splitPoint);
     const groups: DataPoint[][] = [];
     for (const point of points) {
@@ -52,7 +57,7 @@ export function buildStoryFrames(stories: StoryCard[], style: ViewingStyle): Sto
       const sameScale = typeof point.value === 'number' && last?.every(item => typeof item.value === 'number' && item.unit === point.unit);
       const sameTimeline = isDatedPoint(point) && last?.every(isDatedPoint);
       const shortTextPair = last?.length === 1 && size(last[0]) + size(point) <= 110;
-      if (last && ((last.length < 4 && (sameScale || sameTimeline)) || shortTextPair)) {
+      if (last && (style === 'analytical' ? last.length < 3 : ((last.length < 4 && (sameScale || sameTimeline)) || shortTextPair))) {
         last.push(point);
       } else {
         groups.push([point]);
