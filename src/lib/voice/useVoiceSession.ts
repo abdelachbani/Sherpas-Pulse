@@ -13,13 +13,14 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { preferNaturalVoice } from '../storyNarration';
 import { useAppStore } from '../../stores/appStore';
 import { createResponseGate } from './responseGate';
 import { createInputQueue } from './inputQueue';
 import { typedQuestionMessages } from './typedQuestion';
 import {
   getOfflineAnswer,
-  GUARDRAIL_REDIRECT_MESSAGE,
+  asksAboutAnotherHousehold,
   OFF_PLAN_TERMS,
 } from './offlineAnswer';
 
@@ -169,6 +170,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         try {
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(fallback.text);
+          preferNaturalVoice(utterance);
           fallbackSpeechRef.current = utterance;
           const finish = () => {
             if (fallbackSpeechRef.current !== utterance) return;
@@ -337,7 +339,6 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         type: 'session.update',
         session: {
           type: 'realtime',
-          instructions: 'You are Sherpi, the Sherpas guide. Answer in one or two short sentences in the same language as the question (English or Spanish). Use only facts explicitly recorded in the household plan. Distinguish current amounts, recommended changes and targets. If the plan lacks an answer, say so. Do not infer emotions, affordability, or future outcomes.',
           audio: {
             input: {
               format: { type: 'audio/pcm', rate: 24000 },
@@ -702,9 +703,10 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       setVoiceState('speaking');
 
       // Check guardrails immediately for user feedback
-      if (OFF_PLAN_TERMS.some((re) => re.test(clean))) {
-        setGuardRedirect(GUARDRAIL_REDIRECT_MESSAGE);
-        setResponseMessage(GUARDRAIL_REDIRECT_MESSAGE);
+      if (asksAboutAnotherHousehold(caseId, clean) || OFF_PLAN_TERMS.some((re) => re.test(clean))) {
+        const redirect = getOfflineAnswer(caseId, clean).text;
+        setGuardRedirect(redirect);
+        setResponseMessage(redirect);
         setVoiceState('idle');
         return;
       }
@@ -759,7 +761,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         }
       });
     },
-    [connectWs, executeFallback, sendAfterCancel, startResponseTimeout, stopPlayback, trackVoiceAsk]
+    [caseId, connectWs, executeFallback, sendAfterCancel, startResponseTimeout, stopPlayback, trackVoiceAsk]
   );
 
   const disconnect = useCallback(() => {

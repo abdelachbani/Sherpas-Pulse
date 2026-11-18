@@ -15,7 +15,7 @@ const defaultChrome = process.env.CHROME_PATH || (process.platform === 'win32'
   : (process.platform === 'darwin'
     ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
     : 'google-chrome'));
-const chrome = spawn(defaultChrome, ['--headless=new', '--no-sandbox', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore' });
+const chrome = spawn(defaultChrome, ['--headless=new', '--no-sandbox', '--disable-gpu', '--autoplay-policy=no-user-gesture-required', '--no-first-run', '--no-default-browser-check', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore' });
 process.on('SIGINT', async () => { chrome.kill('SIGTERM'); await rm(profile,{recursive:true,force:true}); process.exit(130); });
 process.once('SIGINT', () => { chrome.kill('SIGTERM'); ws?.close(); process.exitCode=130; });
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -110,6 +110,15 @@ try {
       pause(){this.paused=true}, resume(){this.paused=false}, get speaking(){return Boolean(this.current)},
     };
     Object.defineProperty(window,'speechSynthesis',{configurable:true,value:speech});
+    if (location.search.includes('ui-recorded=1')) {
+      window.__recordings=[];
+      const OriginalAudio=window.Audio;
+      window.Audio=function(src){const audio=new OriginalAudio(src);window.__recordings.push(audio);return audio;};
+    } else {
+      // The existing timing regressions exercise the native fallback.
+      Object.defineProperty(window,'Audio',{configurable:true,value:undefined});
+    }
+
     class TestSocket extends EventTarget {
       static CONNECTING=0;static OPEN=1;static CLOSING=2;static CLOSED=3;
       constructor(){super();this.readyState=0;this.serial=0;this.reply=null;setTimeout(()=>{if(this.readyState===3)return;this.readyState=1;this.onopen?.({});if(location.search.includes('ui-relay=offline'))this.onmessage?.({data:JSON.stringify({type:'error',error:{message:'Simulated relay unavailable'}})});},10)}
@@ -169,6 +178,11 @@ try {
     results.push({label:'analytical-selection-survives-direct-load',pass:await evaluate(`document.querySelector('.story-card')?.dataset.viewingStyle==='analytical'`)});
   } else {
   await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
+  await navigate('/case/timothy-melanie-weah/stories?ui-recorded=1');
+  await pause(900);
+  results.push({label:'recorded-intro-loads-and-plays',pass:await evaluate(`window.__recordings[0]?.currentTime > 0 && window.__recordings[0]?.duration > 0 && window.__speechCalls.length === 0`)});
+  await click('Next');await pause(450);
+  results.push({label:'recorded-intro-stops-on-step-change',pass:await evaluate(`window.__recordings[0]?.paused && !window.__recordings[0]?.getAttribute('src') && window.__recordings.length === 2`)});
   await navigate('/case/timothy-melanie-weah/stories');
   const introAtEntry=await evaluate(`document.querySelector('.story-shell')?.dataset.phase==='intro' && document.querySelector('button[aria-label="Turn narration off"]')?.getAttribute('aria-pressed')==='true' && document.body.innerText.includes('I’m Sherpi')`);
   results.push({label:'sherpi-intro-opens-with-voice-on',pass:introAtEntry});

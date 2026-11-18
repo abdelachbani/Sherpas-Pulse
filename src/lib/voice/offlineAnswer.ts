@@ -6,7 +6,7 @@
  * from the CASES registry when WebSocket relay is offline, unconfigured, or unreachable.
  */
 
-import { findCase } from '../mcp/cases';
+import { CASES, findCase } from '../mcp/cases';
 
 export interface OfflineAnswerResult {
   text: string;
@@ -31,10 +31,27 @@ export const OFF_PLAN_TERMS: RegExp[] = [
 ];
 
 export const GUARDRAIL_REDIRECT_MESSAGE =
-  'I can only advise on recommendations within your validated Sherpas plan. Speculative assets like crypto or single stocks carry unmodeled volatility that would derail your Living Map milestones.';
+  'I can explain the investments recorded in your plan. Would you like to review those?';
+
+const OTHER_HOUSEHOLD_ANSWER = 'I can only discuss the open plan. Is there something you’d like to review in yours?';
+
+export function asksAboutAnotherHousehold(caseId: string, question: string): boolean {
+  const words = ` ${question.toLowerCase().replace(/[^a-z0-9]+/g, ' ')} `;
+  return CASES.some(({ id }) => {
+    if (id === caseId) return false;
+    const parts = id.split('-');
+    const surname = parts.pop();
+    return words.includes(` ${id.replace(/-/g, ' ')} `) ||
+      parts.some(firstName => words.includes(` ${firstName} ${surname} `));
+  });
+}
 
 export function getOfflineAnswer(caseId: string, question: string): OfflineAnswerResult {
   const clean = question.trim();
+
+  if (asksAboutAnotherHousehold(caseId, clean)) {
+    return { text: OTHER_HOUSEHOLD_ANSWER, detectedTerm: null, isGuardrail: true };
+  }
 
   // 1. Guardrail check
   if (OFF_PLAN_TERMS.some((re) => re.test(clean))) {
@@ -50,12 +67,15 @@ export function getOfflineAnswer(caseId: string, question: string): OfflineAnswe
   const fh = caseData.financialHealth;
   const moves = fh.score?.top_moves ?? [];
   const goals = fh.goals?.goalsSummary ?? [];
-  const result = (text: string, detectedTerm: string | null = null): OfflineAnswerResult => ({ text, detectedTerm, isGuardrail: false });
+  const result = (text: string, detectedTerm: string | null = null, followUp = 'Is there anything else you’d like me to explain?'): OfflineAnswerResult => ({ text: `${text} ${followUp}`, detectedTerm, isGuardrail: false });
   const unavailable = (term: string | null = null) => result('The available plan does not provide enough information to answer that question. Please ask your advisor.', term);
   const moveAnswer = (pattern: RegExp, term: string): OfflineAnswerResult | null => {
     const move = moves.find((item) => pattern.test(`${item.title} ${item.action}`));
     return move ? result(`Your plan lists "${move.title}": ${move.action}. The model shows a score change from ${move.score_before} to ${move.score_after}.`, term) : null;
   };
+  if (/\b(?:score|puntuaci[oó]n)\b/i.test(clean) && !/change|improv|impact|why|if |cambi|mejor/i.test(clean)) {
+    return result(`Your Financial Health score is ${fh.score.published_score}/100.`, null, 'Would you like me to explain what the score measures?');
+  }
   if (/(?:retir|jubilac|retiro)/i.test(clean)) {
     const goal = goals.find((g) => g.goalType === 'RETIREMENT');
     const target = fh.case.household.find((p) => p.retirement_age)?.retirement_age;
@@ -68,13 +88,16 @@ export function getOfflineAnswer(caseId: string, question: string): OfflineAnswe
   if (/(?:umbrella|liability|shield|lawsuit|responsabilidad|demanda)/i.test(clean)) return moveAnswer(/umbrella/i, 'umbrella-liability') ?? unavailable('umbrella-liability');
   if (/(?:mortality|life.?cover|life.?insurance|insurance|parachute|seguro.?de.?vida|fallecimiento|protection)/i.test(clean)) return moveAnswer(/life cover|mortality/i, 'mortality-ratio') ?? unavailable('mortality-ratio');
   if (/(?:credit.?card|card|chase|revolving|interest|tarjeta|deuda|interes|interés|apr)/i.test(clean)) {
-    const answer = moveAnswer(/card|debt|revolving|apr/i, 'revolving-apr');
     const cards = fh.profile?.liabilities?.filter(item => item.type === 'PERSONAL_CREDIT_CARD');
     const singleBalance = cards?.length === 1 ? cards[0].balance : undefined;
-    if (answer && /balance|saldo/i.test(clean) && singleBalance != null) {
-      return { ...answer, text: `${answer.text} The current card balance recorded in the plan is $${singleBalance.toLocaleString('en-US')}.` };
+    if (/balance|saldo/i.test(clean) && !/recommend|propos|recomend|after|después/i.test(clean)) {
+      return singleBalance == null ? unavailable('revolving-apr') : result(
+        `The plan records a current card balance of $${singleBalance.toLocaleString('en-US')}.`,
+        'revolving-apr',
+        'Would you like to review what the plan proposes for the card?',
+      );
     }
-    return answer ?? unavailable('revolving-apr');
+    return moveAnswer(/card|debt|revolving|apr/i, 'revolving-apr') ?? unavailable('revolving-apr');
   }
   if (/(?:home|house|property|mortgage|purchase|casa|vivienda)/i.test(clean)) {
     const goal = goals.find((g) => g.subType === 'REAL_ESTATE_PURCHASE');
@@ -89,5 +112,5 @@ export function getOfflineAnswer(caseId: string, question: string): OfflineAnswe
   }
   const topMove = moves[0];
   const names = fh.case.household.filter((p) => p.role !== 'child').map((p) => p.first_name).join(' & ');
-  return topMove ? result(`For ${names}, your Financial Health score is ${fh.score.published_score}/100 (${fh.score.band}). Your first listed move is "${topMove.title}": ${topMove.action}.`) : unavailable();
+  return topMove && /summari[sz]e|summary|top (?:move|recommendation)|first (?:move|recommendation)|priorit/i.test(clean) ? result(`For ${names}, your Financial Health score is ${fh.score.published_score}/100 (${fh.score.band}). Your first listed move is "${topMove.title}": ${topMove.action}.`) : unavailable();
 }

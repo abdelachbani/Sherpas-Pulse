@@ -171,12 +171,16 @@ export function viteRelayPlugin(): Plugin {
             browser.close(1008, 'unknown model');
             return;
           }
-          if (caseId && !caseIds.includes(caseId)) {
+          if (!caseId || !caseIds.includes(caseId)) {
             browser.close(1008, 'unknown case');
             return;
           }
 
-          const brief = caseId ? caseBrief(caseId) : '';
+          const brief = caseBrief(caseId);
+          if (!brief) {
+            browser.close(1008, 'case not available');
+            return;
+          }
 
           if (!teamKey || teamKey.includes('...')) {
             console.warn('[vite-relay] No valid TEAM_KEY found in .env');
@@ -242,11 +246,11 @@ export function viteRelayPlugin(): Plugin {
             let m = data.toString();
 
             // Inject case brief into session.update instructions
-            if (brief && m.includes('"session.update"')) {
+            if (m.includes('"session.update"')) {
               try {
                 const ev = JSON.parse(m);
                 if (ev.type === 'session.update' && ev.session) {
-                  ev.session.instructions = `${ev.session.instructions ?? ''}\n\n${brief}`.trim();
+                  ev.session.instructions = brief;
                   m = JSON.stringify(ev);
                 }
               } catch {

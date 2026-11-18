@@ -19,7 +19,8 @@ import { CalibrationMicroCard } from '../calibration/CalibrationMicroCard';
 import { GroundingInspector } from '../calibration/GroundingInspector';
 import { VoicePushButton } from '../shared/VoicePushButton';
 import { SherpiAvatar } from '../shared/SherpiAvatar';
-import { SHERPI_INTRO_STEPS, SherpiIntro } from './SherpiIntro';
+import { SherpiIntro } from './SherpiIntro';
+import { SHERPI_INTRO_STEPS } from '../../lib/sherpiIntro';
 import { useDialogFocus } from '../shared/useDialogFocus';
 
 interface Props {

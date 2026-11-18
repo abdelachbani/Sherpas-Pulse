@@ -11,7 +11,8 @@ Sherpi opens each review with a short, skippable tour, then guides the household
 - Run the interface: `npm ci`, then `npm run dev`.
 - Run checks: `npm test`, `npm run lint`, and `npm run build`.
 - Check browser layouts and interactions: start `npm run preview -- --host 127.0.0.1 --port 4173`, then `node scripts/check-ui.mjs http://127.0.0.1:4173 /tmp/sherpas-ui-check`. This needs Chrome and Node 22+; output goes to the supplied temporary folder. `CHROME_PATH` selects a compatible Chrome/Chromium executable.
-- The tour and chapter narration use browser speech synthesis. Live questions for Sherpi use the existing relay (`npm run server`) and its local configuration. Browser checks simulate voice and do not verify live AI responses or financial projections.
+- The tour and chapters play bundled ElevenLabs recordings for the four demo cases. Browser speech is the fallback for missing clips. If demo scripts change, run `node scripts/generate-sherpi-narration.mjs` with `TEAM_KEY` in the process environment to render new clips through the Sherpas proxy.
+- Live questions use the voice relay and the open household’s plan. With the relay running and configured, run `node scripts/evaluate-sherpi.mjs` to check frequent questions against the live model. The suite sends demo questions to the proxy and incurs model usage.
 
 Application checks are distinct from Taste Skill's marketing-page gate. Reports retain the original gate result separately; an application check passing does not mean that gate passed.
 
