@@ -15,7 +15,6 @@ import TradeoffPage from './pages/TradeoffPage';
 import FamilySyncPage from './pages/FamilySyncPage';
 import ActionPage from './pages/ActionPage';
 import AdvisorDashboardPage from './pages/AdvisorDashboardPage';
-import { CalibrationBanner } from './components/shared/CalibrationBanner';
 import { DemoPitchHUD } from './components/shared/DemoPitchHUD';
 import { FridayDecisionMatrixModal } from './components/shared/FridayDecisionMatrixModal';
 
@@ -67,7 +66,7 @@ function ApplicationShell() {
           {/* Household Entry (Partner selection for couples, intro for singles) */}
           <Route path="/case/:caseId" element={<HouseholdEntryPage />} />
 
-          {/* The 6-Story Financial Wrapped */}
+          {/* The Financial Wrapped */}
           <Route path="/case/:caseId/stories" element={<StoriesPage />} />
 
           {/* Tactile Cash Allocator (Couples) & Tradeoff Simulator (Singles) */}
@@ -82,7 +81,6 @@ function ApplicationShell() {
           <Route path="/case/:caseId/advisor" element={<AdvisorDashboardPage />} />
         </Routes>
       </div>
-      {!isWrapped && <CalibrationBanner />}
     </div>
   );
 }

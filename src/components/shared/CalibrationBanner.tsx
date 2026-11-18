@@ -1,78 +1,37 @@
-import '../../pages/advisor-dashboard.css';
-import { useEffect, useState } from 'react';
-import { CheckCircle2, Sparkles } from 'lucide-react';
+import { useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
 
-interface Props {
-  placement?: 'fixed' | 'inline';
-}
-
-export function CalibrationBanner({ placement = 'fixed' }: Props) {
+export function CalibrationBanner() {
   const calibrationReason = useAppStore((state) => state.getTelemetrySummary().calibrationReason);
-  const shouldSuggestCalibration = calibrationReason !== null;
   const languageMode = useAppStore((state) => state.languageMode);
   const setLanguageMode = useAppStore((state) => state.setLanguageMode);
+  const hasDisabledSimple = useAppStore((state) => state.telemetryEvents.some(
+    (event) => event.type === 'language_mode_change' && event.payload.languageMode === 'standard',
+  ));
   const [dismissed, setDismissed] = useState(false);
-  const placementClass = placement === 'inline'
-    ? 'my-2 w-full'
-    : 'fixed inset-x-4 bottom-4 z-[70] mx-auto max-w-[420px]';
+  const simple = languageMode === 'simple';
 
-  useEffect(() => {
-    if (!shouldSuggestCalibration || languageMode === 'simple') setDismissed(false);
-  }, [languageMode, shouldSuggestCalibration]);
-
-  if (languageMode === 'simple') {
-    return (
-      <aside
-        role="status"
-        aria-live="polite"
-        className={`${placementClass} calibration-banner flex items-center gap-3 rounded-2xl border border-emerald-400/30 bg-slate-950/95 p-3 text-white shadow-xl backdrop-blur-xl`}
-      >
-        <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />
-        <div>
-          <p className="text-sm font-semibold">Simplified language is on</p>
-          <p className="mt-1 text-xs leading-relaxed text-slate-300">
-            Financial terms are now shown in everyday words.
-          </p>
-        </div>
-      </aside>
-    );
-  }
-
-  if (!shouldSuggestCalibration || dismissed) return null;
+  if (!simple && (!calibrationReason || dismissed || hasDisabledSimple)) return null;
 
   return (
-    <aside
-      role="status"
-      aria-live="polite"
-      className={`${placementClass} calibration-banner flex items-center gap-3 rounded-2xl border border-blue-400/30 bg-slate-950/95 p-4 text-white shadow-2xl backdrop-blur-xl`}
-    >
-      <Sparkles className="h-5 w-5 shrink-0 text-blue-300" aria-hidden="true" />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold">Want simpler language?</p>
-        <p className="mt-1 text-xs leading-relaxed text-slate-300">
-          {calibrationReason === 'term_consultations'
-            ? 'You have looked up three or more financial terms. Switch to everyday wording.'
-            : 'Taking a moment on this card? Switch to everyday wording.'}
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={() => setLanguageMode('simple')}
-        className="min-h-11 shrink-0 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-blue-500"
-      >
-        Simplify
-      </button>
-      {placement === 'fixed' && (
+    <aside className="calibration-banner mt-1 flex flex-wrap items-center justify-between gap-x-2 rounded-lg border border-indigo-400/40 bg-slate-900 px-2.5 text-white">
+      <p role="status" className="py-1.5 text-sm font-semibold">
+        {simple ? 'Simplified language is on' : 'Want simpler language?'}
+      </p>
+      <div className="ml-auto flex shrink-0 items-center gap-1">
         <button
           type="button"
-          onClick={() => setDismissed(true)}
-          aria-label="Dismiss language suggestion"
-          className="min-h-11 min-w-11 rounded-xl text-sm text-slate-400 hover:bg-white/10 hover:text-white"
+          onClick={() => setLanguageMode(simple ? 'standard' : 'simple')}
+          className="min-h-11 shrink-0 rounded-lg px-2 text-sm font-semibold text-indigo-200 hover:bg-white/10"
         >
-          Not now
+          {simple ? 'Use standard language' : 'Simplify'}
         </button>
-      )}
+        {!simple && (
+          <button type="button" onClick={() => setDismissed(true)} aria-label="Dismiss language suggestion" className="min-h-11 rounded-lg px-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white">
+            Not now
+          </button>
+        )}
+      </div>
     </aside>
   );
 }

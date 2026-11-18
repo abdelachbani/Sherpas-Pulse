@@ -24,8 +24,6 @@
 .advisor-dashboard section [class*="bg-indigo-950"], .cadence-section [class*="bg-indigo-950"] { background-color: #233064; border-color: #6380ff; }
 .advisor-mode-switcher { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 .advisor-mode-switcher button { min-height: 44px; }
-.calibration-banner { flex-wrap: wrap; background: #1e2235; border-color: #6380ff; box-shadow: 0 12px 30px #0004; }
-.calibration-banner button { min-height: 44px; }
 @media (max-width: 639px) {
   .advisor-dashboard > header { padding-inline: 20px; }
   .advisor-dashboard > div:not(.advisor-mode-switcher) { padding-inline: 20px; }
@@ -34,7 +32,6 @@
   .advisor-dashboard section > div.flex.items-center.justify-between { flex-wrap: wrap; gap: 12px; }
   .advisor-dashboard section .font-mono { overflow-wrap: anywhere; }
   .cadence-section [role="tab"] { min-width: 0; }
-  .calibration-banner > div { flex-basis: calc(100% - 32px); }
 }
 
 @media print {

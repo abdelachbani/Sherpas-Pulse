@@ -49,6 +49,9 @@ body { margin: 0; min-width: 320px; }
 h1, h2, h3 { font-family: Poppins, Inter, sans-serif; letter-spacing: -0.035em; text-wrap: balance; }
 button, input, select, textarea { font-family: inherit; }
 button { touch-action: manipulation; }
+/* Signal actions without changing the cursor for text-entry controls. */
+button:enabled, a[href], summary, select:enabled, input:is([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"], [type="range"], [type="file"]):enabled, [role="button"]:not([aria-disabled="true"]) { cursor: pointer; }
+button:disabled, select:disabled, input:disabled, [role="button"][aria-disabled="true"] { cursor: default; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button:enabled, a { transition: background-color 160ms, border-color 160ms, color 160ms, box-shadow 160ms, transform 160ms; }
 button:enabled:active { transform: translateY(1px); }

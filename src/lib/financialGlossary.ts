@@ -73,6 +73,43 @@ const SIMPLE_TERMS: Record<string, string> = {
   'high-yield savings account': 'savings account with a higher interest rate',
 };
 
+const MECHANICS: Record<string, string> = {
+  'health score': 'The published score combines several parts of the financial assessment. Use the individual scores to see which areas pull the overall result up or down.',
+  'cash flow': 'Cash flow compares income received with expenses paid over the same period. The surplus or shortfall can change with timing, irregular costs and changes in income.',
+  liquidity: 'Liquidity depends on how quickly an asset can be converted to cash, its likely sale price and any withdrawal restrictions or penalties.',
+  debt: 'Interest accrues on a debt under its agreement. The rate, balance, payment schedule and fees determine its cost and how quickly the principal falls.',
+  investments: 'Investment results combine changes in market value and any income, less costs and taxes. Diversification can reduce some risks but cannot prevent losses.',
+  'retirement age': 'The target age marks the point where the plan shifts from building savings to drawing income. Moving the target changes both the time available to save and the time savings may need to last.',
+  retirement: 'A retirement projection compares expected spending with pensions, benefits and portfolio withdrawals over time. The result depends on assumptions about longevity, inflation and investment returns.',
+  'life insurance': 'The policy contract sets the death benefit, premiums, coverage period and exclusions. The insurer pays eligible claims to the beneficiaries named in the policy.',
+  contribution: 'A contribution adds new money to the account balance, separate from gains or losses. Account type determines which limits, eligibility rules and tax treatment apply.',
+  '401(k)': 'Contributions are invested within an employer-sponsored retirement plan. Tax treatment depends on whether contributions are traditional or Roth; withdrawals, employer matching and vesting follow plan and tax rules.',
+  'roth ira': 'Contributions are generally made after tax. Earnings can grow tax-free and qualified withdrawals are tax-free; eligibility, contribution limits and withdrawal rules apply.',
+  '529': 'Contributions are invested in an education savings plan. Earnings can grow tax-free and qualified withdrawals are generally federally tax-free; eligible expenses and state treatment vary.',
+  umbrella: 'Umbrella coverage typically starts after a covered claim reaches the limit of the underlying policy. It has its own limits, exclusions and minimum underlying coverage requirements.',
+  'credit card': 'When a balance is carried beyond any applicable grace period, interest is generally calculated using the account’s APR and balance. Paying only the minimum extends repayment and increases interest costs.',
+  apr: 'APR expresses borrowing cost as an annual rate, including interest and applicable fees. The amount paid also depends on the balance, repayment timing and how interest is calculated.',
+  'revolving apr': 'Revolving credit allows the outstanding balance to change as you borrow and repay. Interest for a billing period depends on the APR, how the lender measures the balance and any applicable grace period.',
+  'emergency fund': 'The target buffer is often considered in months of essential expenses. Its usefulness depends on access, stability of value and the household’s income and obligations.',
+  'expense ratio': 'A fund’s annual operating expenses are expressed as a percentage of its assets and reflected in fund performance. Other transaction or account costs may also apply.',
+  'sharpe ratio': 'The calculation subtracts a risk-free benchmark from a portfolio’s average return and divides by the variability of its returns over the same period.',
+  'debt avalanche': 'After making minimum payments on all balances, direct extra money to the highest-rate debt. Once it is paid off, move the extra payment to the next highest rate.',
+  'debt snowball': 'After making minimum payments on all balances, direct extra money to the smallest balance. Once it is paid off, roll the payment into the next smallest balance.',
+  'mortality ratio': 'Compare existing coverage with the estimated amount the household needs to replace income and meet obligations. Changes to the coverage or the estimated need change the ratio.',
+  'leveraged etf': 'Many leveraged ETFs reset their exposure daily. Returns then compound along the path of daily moves, so returns over several days can diverge from the stated daily multiple.',
+  'withdrawal rate': 'A withdrawal rate divides the amount withdrawn over a year by the portfolio value used as its starting point. Sustainability depends on returns, inflation, spending changes and the length of retirement.',
+  'index fund': 'An index fund holds investments intended to track a specified benchmark. Tracking differences, expenses and the benchmark’s composition affect its results.',
+  'brokerage account': 'Cash and securities are held through a broker. Selling a position can realize a gain or loss, and dividends or interest can create taxable income depending on the account and jurisdiction.',
+  'high-yield savings account': 'The bank credits interest under the account’s terms. The quoted annual percentage yield reflects compounding, and a variable rate can change after a deposit.',
+};
+
+const MECHANICS_ALIASES: Record<string, string> = {
+  'financial health score': 'health score',
+  '529 plan': '529', '529 education plan': '529',
+  'umbrella liability': 'umbrella', 'umbrella policy': 'umbrella',
+  'emergency funds': 'emergency fund', 'index funds': 'index fund',
+};
+
 const FINANCIAL_TERMS = Object.keys(DEFINITIONS)
   .sort((left, right) => right.length - left.length)
   .map((term) => ({
@@ -91,6 +128,11 @@ export function getFinancialTermDefinition(term: string): string {
 
   return DEFINITIONS[key]
     ?? `“${cleanTerm}” is a financial term whose exact meaning depends on how it is used in your plan. Your advisor can explain how it applies to your situation.`;
+}
+
+export function getFinancialTermMechanics(term: string): string {
+  const key = normalizeTerm(term);
+  return MECHANICS[MECHANICS_ALIASES[key] ?? key] ?? getFinancialTermDefinition(term);
 }
 
 export function getSimpleFinancialTerm(term: string): string {

@@ -13,6 +13,7 @@ import { Lightbulb, Check, ShieldCheck, Sparkles, GraduationCap, Scale } from 'l
 import type { CalibrationCard, GroundingRef } from '../../types';
 import { useDialogFocus } from '../shared/useDialogFocus';
 import { FinancialText } from '../shared/FinancialText';
+import { getFinancialTermMechanics } from '../../lib/financialGlossary';
 
 interface Props {
   card: CalibrationCard;
@@ -116,7 +117,7 @@ export function CalibrationMicroCard({ card, onDismiss, onInspectGrounding }: Pr
             <Scale className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold text-purple-300 block mb-1">Institutional Mechanics:</span>
-              <FinancialText text={card.expertMechanics || card.sherpasTake} />
+              <FinancialText text={card.expertMechanics?.trim() || card.sherpasTake?.trim() || getFinancialTermMechanics(card.term)} />
             </div>
           </div>
 

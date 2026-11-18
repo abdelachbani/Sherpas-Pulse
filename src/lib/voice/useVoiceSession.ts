@@ -35,6 +35,7 @@ export interface VoiceSessionResult {
   errorNotice: string | null;
   showSuggestions: boolean;
   audioLevel: number;
+  setAudioMuted: (muted: boolean) => void;
   startListening: () => void;
   stopListening: () => void;
   stopSpeaking: () => void;
@@ -83,6 +84,8 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const micNodeRef = useRef<AudioWorkletNode | null>(null);
   const playSourcesRef = useRef<AudioBufferSourceNode[]>([]);
+  const audioMutedRef = useRef(false);
+  const fallbackSpeechRef = useRef<SpeechSynthesisUtterance | null>(null);
   const playHeadRef = useRef<number>(0);
   const isPressingRef = useRef<boolean>(false);
   const currentReplyTextRef = useRef<string>('');
@@ -147,19 +150,22 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       setShowSuggestions(true);
 
       // Attempt speech synthesis for spoken voice feedback
-      if ('speechSynthesis' in window && typeof window.SpeechSynthesisUtterance !== 'undefined') {
+      if (!audioMutedRef.current && 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance !== 'undefined') {
         try {
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(fallback.text);
-          utterance.onend = () => {
+          fallbackSpeechRef.current = utterance;
+          const finish = () => {
+            if (fallbackSpeechRef.current !== utterance) return;
+            fallbackSpeechRef.current = null;
             setVoiceState('idle');
           };
-          utterance.onerror = () => {
-            setVoiceState('idle');
-          };
+          utterance.onend = finish;
+          utterance.onerror = finish;
           setVoiceState('speaking');
           window.speechSynthesis.speak(utterance);
         } catch {
+          fallbackSpeechRef.current = null;
           setVoiceState('idle');
         }
       } else {
@@ -186,6 +192,20 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   );
 
   // ── Stop playback helper ────────────────────────────────────────────────────
+  const setAudioMuted = useCallback((muted: boolean) => {
+    audioMutedRef.current = muted;
+    if (!muted) return;
+    for (const source of playSourcesRef.current) {
+      try { source.stop(); } catch { /* The source may have already stopped. */ }
+    }
+    if (audioCtxRef.current) playHeadRef.current = audioCtxRef.current.currentTime;
+    if (fallbackSpeechRef.current) {
+      fallbackSpeechRef.current = null;
+      window.speechSynthesis.cancel();
+      setVoiceState('idle');
+    }
+  }, []);
+
   const stopPlayback = useCallback(() => {
     clearWaitingSend();
     const discardInput = isPressingRef.current || pendingCommitRef.current?.hasAudio;
@@ -215,6 +235,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       playHeadRef.current = audioCtxRef.current.currentTime;
     }
     if ('speechSynthesis' in window) {
+      fallbackSpeechRef.current = null;
       try { window.speechSynthesis.cancel(); } catch { /* Speech synthesis cleanup */ }
     }
     setVoiceState('idle');
@@ -366,7 +387,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         }
 
         // Voice output chunks
-        if ((t === 'response.output_audio.delta' || t === 'response.audio.delta') && ev.delta) {
+        if ((t === 'response.output_audio.delta' || t === 'response.audio.delta') && ev.delta && !audioMutedRef.current) {
           if (!audioCtxRef.current) {
             try {
               audioCtxRef.current = new AudioContext({ sampleRate: 24000 });
@@ -706,6 +727,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     errorNotice,
     showSuggestions,
     audioLevel,
+    setAudioMuted,
     startListening,
     stopListening,
     stopSpeaking: stopPlayback,

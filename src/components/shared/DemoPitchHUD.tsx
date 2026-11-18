@@ -6,7 +6,7 @@
  * the 6 key pillars of Sherpas Pulse during live demonstrations.
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Zap,
@@ -89,6 +89,16 @@ export function DemoPitchHUD() {
   const navigate = useNavigate();
   const location = useLocation();
   const dialogRef = useDialogFocus(isOpen, () => setIsOpen(false));
+  const hudRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && !hudRef.current?.contains(event.target)) setIsOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutsidePointer, true);
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer, true);
+  }, [isOpen]);
 
   const handleNavigate = (path: string) => {
     navigate(path);
@@ -96,7 +106,7 @@ export function DemoPitchHUD() {
   };
 
   return (
-    <div className="demo-pitch-hud relative z-50 pointer-events-auto font-sans">
+    <div ref={hudRef} className="demo-pitch-hud relative z-50 pointer-events-auto font-sans">
       {/* Floating Pill Trigger */}
         <button
           type="button"

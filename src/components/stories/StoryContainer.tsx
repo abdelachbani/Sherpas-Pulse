@@ -9,7 +9,7 @@ import { hasReachedHesitationThreshold, HESITATION_PAUSE_MS } from '../../lib/te
 import { buildStoryFrames } from '../../lib/storyFrames';
 import { storyTerms } from '../../lib/storyTerms';
 import { formatStoryValue } from '../../lib/storyFormatting';
-import { getFinancialTermDefinition, getSimpleFinancialTerm } from '../../lib/financialGlossary';
+import { getFinancialTermDefinition, getFinancialTermMechanics, getSimpleFinancialTerm } from '../../lib/financialGlossary';
 import { StoryCard } from './StoryCard';
 import { StoryHelpContext } from './StoryHelpContext';
 import { CalibrationBanner } from '../shared/CalibrationBanner';
@@ -18,6 +18,7 @@ import { CalibrationMicroCard } from '../calibration/CalibrationMicroCard';
 import { GroundingInspector } from '../calibration/GroundingInspector';
 import { VoicePushButton } from '../shared/VoicePushButton';
 import { SherpiAvatar } from '../shared/SherpiAvatar';
+import { SHERPI_INTRO_STEPS, SherpiIntro } from './SherpiIntro';
 import { useDialogFocus } from '../shared/useDialogFocus';
 
 interface Props {
@@ -32,6 +33,15 @@ interface Props {
 
 // The in-memory fallback keeps the same behavior when storage is unavailable.
 const narrationVisits = new Map<string, number>();
+const narrationPreferenceKey = 'sherpas:voice-enabled';
+let voicePreference = true;
+
+function prefersVoice() {
+  try {
+    const saved = sessionStorage.getItem(narrationPreferenceKey);
+    return saved === null ? voicePreference : saved === 'true';
+  } catch { return voicePreference; }
+}
 function lastNarrated(key: string): number | undefined {
   try {
     const stored = sessionStorage.getItem(key);
@@ -53,16 +63,30 @@ function TermsDialog({ terms, onClose, onSelect }: { terms: string[]; onClose: (
   const titleId = useId();
   const ref = useDialogFocus(true, onClose);
   const languageMode = useAppStore((state) => state.languageMode);
+  const setLanguageMode = useAppStore((state) => state.setLanguageMode);
+  const languageAction = languageMode === 'simple' ? 'Use standard language' : 'Use simpler language';
   return <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65 p-5">
     <div ref={ref} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 text-white shadow-xl">
       <div className="flex items-center justify-between gap-3"><h2 id={titleId} className="text-lg font-semibold">Terms in this story</h2><button type="button" onClick={onClose} aria-label="Close terms" className="min-h-11 min-w-11"><X className="mx-auto h-5 w-5" /></button></div>
       {terms.length ? <div className="mt-3 flex max-h-[55dvh] flex-col overflow-y-auto">{terms.map((term) => <button key={term.toLowerCase()} type="button" onClick={() => onSelect(term)} className="min-h-11 border-b border-white/10 py-2 text-left text-indigo-200 hover:text-white">{languageMode === 'simple' ? getSimpleFinancialTerm(term) : term}</button>)}</div> : <p className="mt-3 text-sm text-slate-300">No glossary terms appear in this story.</p>}
+      <button type="button" aria-label={languageAction} onClick={() => setLanguageMode(languageMode === 'simple' ? 'standard' : 'simple')} className="mt-2 min-h-11 rounded-lg px-3 text-sm font-semibold text-indigo-200 hover:bg-white/10">{languageAction}</button>
     </div>
   </div>;
 }
 
 export function StoryContainer({ caseId, stories, calibrationCards, pillars = [], voice, onComplete, onNavigateBack }: Props) {
   const questionId = useId();
+  const mainRef = useRef<HTMLElement>(null);
+  const [introStep, setIntroStep] = useState<number | null>(0);
+  const introActive = introStep !== null;
+  const highlightedControl = introActive ? SHERPI_INTRO_STEPS[introStep].control : null;
+  const advanceIntro = useCallback(() => {
+    setIntroStep((step) => step === null ? step : Math.min(step + 1, SHERPI_INTRO_STEPS.length - 1));
+  }, []);
+  const finishIntro = useCallback(() => {
+    setIntroStep(null);
+    mainRef.current?.focus({ preventScroll: true });
+  }, []);
   const preferredStyle = useAppStore((state) => state.viewingStyle);
   const [viewingStyle, setViewingStyle] = useState<ViewingStyle>(preferredStyle ?? 'visual');
   const frames = useMemo(() => buildStoryFrames(stories, viewingStyle), [stories, viewingStyle]);
@@ -92,7 +116,16 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
   const openInlineHelp = useCallback(() => setInlineHelpCount((count) => count + 1), []);
   const closeInlineHelp = useCallback(() => setInlineHelpCount((count) => Math.max(0, count - 1)), []);
   const helpContext = useMemo(() => ({ onOpen: openInlineHelp, onClose: closeInlineHelp }), [openInlineHelp, closeInlineHelp]);
-  const [isVoiceNarrating, setIsVoiceNarrating] = useState(false);
+  const [isVoiceNarrating, setIsVoiceNarrating] = useState(prefersVoice);
+  const { setAudioMuted } = voice;
+  useEffect(() => { setAudioMuted(!isVoiceNarrating); }, [isVoiceNarrating, setAudioMuted]);
+  function toggleVoice() {
+    const enabled = !isVoiceNarrating;
+    voicePreference = enabled;
+    try { sessionStorage.setItem(narrationPreferenceKey, String(enabled)); } catch { /* Memory fallback. */ }
+    setAudioMuted(!enabled);
+    setIsVoiceNarrating(enabled);
+  }
   const [checklistState, setChecklistState] = useState([false, false, false]);
   const attemptedChapter = useRef<string | null>(null);
   const narrationRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -100,7 +133,15 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
     if (!narrationRef.current) return;
     narrationRef.current = null;
     window.speechSynthesis.cancel();
+    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
   }, []);
+  function togglePlayback() {
+    if (narrationRef.current) {
+      if (paused) window.speechSynthesis.resume();
+      else window.speechSynthesis.pause();
+    }
+    setPaused(!paused);
+  }
   const pointerStart = useRef<{ x: number; y: number; at: number } | null>(null);
   const isAssistantActive = voiceBlocksPlayback(voice, voicePanelOpen);
   const modalOpen = Boolean(activeCalibration || activeGrounding || termsOpen || questionOpen || inlineHelpCount > 0);
@@ -128,7 +169,7 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
   // Attempt once per chapter entry. Closing a dialog, stopping voice or returning
   // to a visible tab can cancel speech but must never trigger a replay.
   useEffect(() => {
-    if (!chapter || !isVoiceNarrating || !('speechSynthesis' in window)) return;
+    if (introActive || paused || !chapter || !isVoiceNarrating || !('speechSynthesis' in window)) return;
     const entry = `${caseId}:${chapter.id}`;
     if (attemptedChapter.current === entry) return;
     attemptedChapter.current = entry;
@@ -140,12 +181,16 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
     const utterance = new SpeechSynthesisUtterance(chapter.voiceScript);
     utterance.rate = 1.05;
     utterance.lang = 'en-US';
-    const clearNarration = () => { if (narrationRef.current === utterance) narrationRef.current = null; };
+    const clearNarration = () => {
+      if (narrationRef.current !== utterance) return;
+      narrationRef.current = null;
+      markStoryActivity();
+    };
     utterance.onend = clearNarration;
     utterance.onerror = clearNarration;
     narrationRef.current = utterance;
     window.speechSynthesis.speak(utterance);
-  }, [caseId, chapter, isVoiceNarrating, isAssistantActive, hidden, modalOpen]);
+  }, [caseId, chapter, introActive, isVoiceNarrating, isAssistantActive, hidden, modalOpen, paused, markStoryActivity]);
   useEffect(() => {
     if (!isVoiceNarrating || isAssistantActive || hidden || modalOpen) stopNarration();
   }, [isVoiceNarrating, isAssistantActive, hidden, modalOpen, stopNarration]);
@@ -204,8 +249,9 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
     lastActivityAt.current = Date.now();
   }, [frame?.id]);
   useEffect(() => {
-    if (!frame || !chapter || paused || holding || hidden || modalOpen || isAssistantActive || isVoiceNarrating || checkpoint) return;
+    if (introActive || !frame || !chapter || paused || holding || hidden || modalOpen || isAssistantActive || checkpoint) return;
     const timer = window.setTimeout(() => {
+      if (narrationRef.current) return;
       const inactiveMs = Date.now() - lastActivityAt.current;
       if (!hasReachedHesitationThreshold(inactiveMs)) return;
       useAppStore.getState().trackHesitationPause({
@@ -218,9 +264,9 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
       }, chapter.id);
     }, HESITATION_PAUSE_MS);
     return () => window.clearTimeout(timer);
-  }, [activityRevision, frame, chapter, paused, holding, hidden, modalOpen, isAssistantActive, isVoiceNarrating, checkpoint]);
+  }, [activityRevision, frame, chapter, introActive, paused, holding, hidden, modalOpen, isAssistantActive, checkpoint]);
   useEffect(() => {
-    if (paused || holding || hidden || modalOpen || isAssistantActive || checkpoint || !frame) return;
+    if (introActive || paused || holding || hidden || modalOpen || isAssistantActive || checkpoint || !frame) return;
     let previous = performance.now();
     let request = 0;
     const tick = (now: number) => {
@@ -232,18 +278,18 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
     };
     request = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(request);
-  }, [paused, holding, hidden, modalOpen, isAssistantActive, checkpoint, frame, duration, goToNext]);
+  }, [introActive, paused, holding, hidden, modalOpen, isAssistantActive, checkpoint, frame, duration, goToNext]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || modalOpen || isAssistantActive ||
+      if (introActive || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || modalOpen || isAssistantActive ||
           target?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="dialog"]')) return;
       if (event.key === 'ArrowRight') { event.preventDefault(); goToNext(); }
       if (event.key === 'ArrowLeft') { event.preventDefault(); goToPrev(); }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [goToNext, goToPrev, modalOpen, isAssistantActive]);
+  }, [goToNext, goToPrev, introActive, modalOpen, isAssistantActive]);
 
   function handleCalibrationOpen(termKey: string) {
     const card = calibrationCards[termKey];
@@ -252,48 +298,51 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
   function selectTerm(term: string) {
     useAppStore.getState().trackTermConsulted(term, chapter?.id);
     setTermsOpen(false);
-    setActiveCalibration({ term, termKey: term.toLowerCase(), headline: term, analogy: getFinancialTermDefinition(term), sherpasTake: '', numbers: [], groundingRefs: [] });
+    setActiveCalibration({ term, termKey: term.toLowerCase(), headline: term, analogy: getFinancialTermDefinition(term), expertMechanics: getFinancialTermMechanics(term), sherpasTake: '', numbers: [], groundingRefs: [] });
   }
   if (!currentStory || !frame) return null;
 
   return (
-    <StoryHelpContext.Provider value={helpContext}><div onPointerDownCapture={markStoryActivity} onPointerUpCapture={markStoryActivity} onPointerCancelCapture={markStoryActivity} onKeyDownCapture={markStoryActivity} onClickCapture={markStoryActivity} onWheelCapture={markStoryActivity} data-phase={checkpoint ? "checkpoint" : "playing"} data-chapter-index={frame.chapterIndex} data-beat-progress={revealProgress} data-frame-id={frame.id} data-frame-index={frameIndex} data-frame-count={frames.length} className="story-shell relative mx-auto flex h-full w-full flex-col overflow-hidden bg-[#171827] shadow-2xl">
+    <StoryHelpContext.Provider value={helpContext}><div onPointerDownCapture={markStoryActivity} onPointerUpCapture={markStoryActivity} onPointerCancelCapture={markStoryActivity} onKeyDownCapture={markStoryActivity} onClickCapture={markStoryActivity} onWheelCapture={markStoryActivity} data-phase={introActive ? "intro" : checkpoint ? "checkpoint" : "playing"} data-chapter-index={frame.chapterIndex} data-beat-progress={revealProgress} data-frame-id={frame.id} data-frame-index={frameIndex} data-frame-count={frames.length} className="story-shell relative mx-auto flex h-full w-full flex-col overflow-hidden bg-[#171827] shadow-2xl">
       <header className="shrink-0 px-4 pt-3 sm:px-6">
         <div className="flex items-center justify-between gap-2">
           <button onClick={onNavigateBack} className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/80" aria-label="Back to case selection"><X className="h-4 w-4" /></button>
           <div className="flex items-center gap-2">
-            <button onClick={() => setPaused((value) => !value)} aria-pressed={paused} aria-label={paused ? "Resume story" : "Pause story"} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white">{paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}</button>
-            <button onClick={() => setTermsOpen(true)} className="flex min-h-11 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200"><Lightbulb className="h-4 w-4 text-[#91a5ff]" />Terms</button>
-            <button onClick={() => setIsVoiceNarrating((value) => !value)} aria-label={isVoiceNarrating ? 'Turn narration off' : 'Turn narration on'} aria-pressed={isVoiceNarrating} className="flex min-h-11 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200">{isVoiceNarrating ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}<span className="hidden sm:inline">{isVoiceNarrating ? 'Voice On' : 'Voice Off'}</span></button>
-            <VoicePushButton
-              key={frame.chapterId}
-              onOverlayChange={setVoicePanelOpen}
-              voiceState={voice.voiceState}
-              transcript={voice.transcript}
-              responseMessage={voice.responseMessage}
-              guardRedirect={voice.guardRedirect}
-              errorNotice={voice.errorNotice}
-              audioLevel={voice.audioLevel}
-              suggestedQuestion={terms[0] ? `What does “${terms[0]}” mean for my plan?` : 'What should I take away from this chapter?'}
-              onPressStart={() => { stopNarration(); voice.startListening(); }}
-              onPressEnd={voice.stopListening}
-              onStopSpeaking={voice.stopSpeaking}
-              onSelectSuggestion={askSherpi}
-              onClosePopup={() => { voice.setShowSuggestions(false); voice.clearGuardRedirect(); voice.clearResponseMessage(); voice.clearErrorNotice(); voice.stopSpeaking(); }}
-            />
+            <button disabled={introActive} data-intro-control="playback" data-intro-current={highlightedControl === "playback" || undefined} onClick={togglePlayback} aria-pressed={paused} aria-label={paused ? "Resume story" : "Pause story"} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white">{paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}</button>
+            <button disabled={introActive} data-intro-control="terms" data-intro-current={highlightedControl === "terms" || undefined} onClick={() => setTermsOpen(true)} className="flex min-h-11 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200"><Lightbulb className="h-4 w-4 text-[#91a5ff]" />Terms</button>
+            <button data-intro-control="voice" data-intro-current={highlightedControl === "voice" || undefined} onClick={toggleVoice} aria-label={isVoiceNarrating ? 'Turn narration off' : 'Turn narration on'} aria-pressed={isVoiceNarrating} className="flex min-h-11 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200">{isVoiceNarrating ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}<span className="hidden sm:inline">{isVoiceNarrating ? 'Voice On' : 'Voice Off'}</span></button>
+            <div inert={introActive} data-intro-control="sherpi" data-intro-current={highlightedControl === "sherpi" || undefined}>
+              <VoicePushButton
+                key={frame.chapterId}
+                onOverlayChange={setVoicePanelOpen}
+                voiceState={voice.voiceState}
+                transcript={voice.transcript}
+                responseMessage={voice.responseMessage}
+                guardRedirect={voice.guardRedirect}
+                errorNotice={voice.errorNotice}
+                audioLevel={voice.audioLevel}
+                suggestedQuestion={terms[0] ? `What does “${terms[0]}” mean for my plan?` : 'What should I take away from this chapter?'}
+                onPressStart={() => { stopNarration(); voice.startListening(); }}
+                onPressEnd={voice.stopListening}
+                onStopSpeaking={voice.stopSpeaking}
+                onSelectSuggestion={askSherpi}
+                onClosePopup={() => { voice.setShowSuggestions(false); voice.clearGuardRedirect(); voice.clearResponseMessage(); voice.clearErrorNotice(); voice.stopSpeaking(); }}
+              />
+            </div>
           </div>
         </div>
-        <CalibrationBanner placement="inline" />
-        <nav aria-label="Story steps" className="mt-2 flex gap-1 sm:gap-2">
+        {!introActive && <CalibrationBanner />}
+        {!introActive && <nav aria-label="Story steps" className="mt-2 flex gap-1 sm:gap-2">
           {stories.map((story, index) => {
             const firstFrame = frames.findIndex((item) => item.chapterIndex === index);
             const fill = index < frame.chapterIndex ? 100 : index === frame.chapterIndex ? chapterFraction * 100 : 0;
             return <button key={story.id} disabled={modalOpen || isAssistantActive || checkpoint} onClick={() => navigate(firstFrame)} aria-label={`Step ${index + 1} of ${stories.length}: ${story.title}`} aria-current={index === frame.chapterIndex ? 'step' : undefined} className="min-h-11 min-w-0 flex-1 rounded text-left focus-visible:outline focus-visible:outline-white"><span role="progressbar" aria-label={`${story.title} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(fill)} className="block h-1 overflow-hidden rounded-full bg-white/20"><span className="block h-full bg-white" style={{ width: `${fill}%` }} /></span><span className={`mt-1 hidden truncate text-xs sm:block ${index === frame.chapterIndex ? 'font-semibold text-white' : 'text-slate-400'}`}>{story.title}</span></button>;
           })}
-        </nav>
+        </nav>}
       </header>
-      <main className="relative min-h-0 flex-1 overflow-hidden" onPointerDown={(event) => { if (!modalOpen && !isAssistantActive && !(event.target as HTMLElement).closest('button, a, input, select, textarea, summary, [role="button"], [role="dialog"]')) { pointerStart.current = { x: event.clientX, y: event.clientY, at: Date.now() }; event.currentTarget.setPointerCapture(event.pointerId); setHolding(true); } else pointerStart.current = null; }} onPointerUp={(event) => { const start = pointerStart.current; pointerStart.current = null; setHolding(false); if (!start || Date.now() - start.at > 350 || modalOpen || isAssistantActive || (event.target as HTMLElement).closest('button, a, input, select, textarea, summary, [role="button"], [role="dialog"]')) return; const rect = event.currentTarget.getBoundingClientRect(); const direction = storyTapDirection(start.x - rect.left, start.y, event.clientX - rect.left, event.clientY, rect.width); if (direction === 'previous') goToPrev(); if (direction === 'next') goToNext(); }} onPointerCancel={() => { pointerStart.current = null; setHolding(false); }} onLostPointerCapture={() => { pointerStart.current = null; setHolding(false); }}>
-        <AnimatePresence mode="wait">{!checkpoint && <motion.div key={frame.chapterId} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="h-full w-full"><StoryCard card={currentStory} revealProgress={revealProgress} partIndex={frame.partIndex} partCount={frame.partCount} isActive={!modalOpen && !isAssistantActive && !hidden} pillars={pillars} viewingStyle={viewingStyle} onCalibrationOpen={handleCalibrationOpen} onInspectGrounding={setActiveGrounding} onSelectStyle={(style) => { const updated = buildStoryFrames(stories, style); const chapterFrames = updated.filter((item) => item.chapterId === frame.chapterId); const target = chapterFrames[Math.min(frame.partIndex, chapterFrames.length - 1)]; if (target) setFrameIndex(updated.indexOf(target)); setViewingStyle(style); useAppStore.getState().setViewingStyle(style); }} onActionComplete={goToNext} stepChecklist={checklistState} onToggleStep={(i) => setChecklistState((prev) => prev.map((value, index) => index === i ? !value : value))} /></motion.div>}</AnimatePresence>
+      <main ref={mainRef} tabIndex={-1} className="relative min-h-0 flex-1 overflow-hidden" onPointerDown={(event) => { if (!introActive && !modalOpen && !isAssistantActive && !(event.target as HTMLElement).closest('button, a, input, select, textarea, summary, [role="button"], [role="dialog"]')) { pointerStart.current = { x: event.clientX, y: event.clientY, at: Date.now() }; event.currentTarget.setPointerCapture(event.pointerId); setHolding(true); } else pointerStart.current = null; }} onPointerUp={(event) => { const start = pointerStart.current; pointerStart.current = null; setHolding(false); if (!start || Date.now() - start.at > 350 || modalOpen || isAssistantActive || (event.target as HTMLElement).closest('button, a, input, select, textarea, summary, [role="button"], [role="dialog"]')) return; const rect = event.currentTarget.getBoundingClientRect(); const direction = storyTapDirection(start.x - rect.left, start.y, event.clientX - rect.left, event.clientY, rect.width); if (direction === 'previous') goToPrev(); if (direction === 'next') goToNext(); }} onPointerCancel={() => { pointerStart.current = null; setHolding(false); }} onLostPointerCapture={() => { pointerStart.current = null; setHolding(false); }}>
+        {introStep !== null && <SherpiIntro stepIndex={introStep} voiceEnabled={isVoiceNarrating} hidden={hidden} onNext={advanceIntro} onFinish={finishIntro} />}
+        <AnimatePresence mode="wait">{!introActive && !checkpoint && <motion.div key={frame.chapterId} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="h-full w-full"><StoryCard card={currentStory} revealProgress={revealProgress} partIndex={frame.partIndex} partCount={frame.partCount} isActive={!modalOpen && !isAssistantActive && !hidden} pillars={pillars} viewingStyle={viewingStyle} onCalibrationOpen={handleCalibrationOpen} onInspectGrounding={setActiveGrounding} onSelectStyle={(style) => { const updated = buildStoryFrames(stories, style); const chapterFrames = updated.filter((item) => item.chapterId === frame.chapterId); const target = chapterFrames[Math.min(frame.partIndex, chapterFrames.length - 1)]; if (target) setFrameIndex(updated.indexOf(target)); setViewingStyle(style); useAppStore.getState().setViewingStyle(style); }} onActionComplete={goToNext} stepChecklist={checklistState} onToggleStep={(i) => setChecklistState((prev) => prev.map((value, index) => index === i ? !value : value))} /></motion.div>}</AnimatePresence>
         {checkpoint && chapter && <section className="mx-auto flex h-full max-w-xl flex-col px-5 pb-2 text-white" aria-label="Chapter checkpoint">
           <div className="flex shrink-0 items-start gap-3">
             <SherpiAvatar large />
@@ -332,7 +381,7 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
           </div>
         </section>}
       </main>
-      <button type="button" onClick={goToPrev} disabled={frameIndex === 0 || modalOpen || isAssistantActive} className="sr-only focus:not-sr-only">Previous story page</button><button type="button" onClick={goToNext} disabled={modalOpen || isAssistantActive} className="sr-only focus:not-sr-only">Next story page</button>
+      <button type="button" onClick={goToPrev} disabled={introActive || frameIndex === 0 || modalOpen || isAssistantActive} className="sr-only focus:not-sr-only">Previous story page</button><button type="button" onClick={goToNext} disabled={introActive || modalOpen || isAssistantActive} className="sr-only focus:not-sr-only">Next story page</button>
       {termsOpen && <TermsDialog terms={terms} onClose={() => setTermsOpen(false)} onSelect={selectTerm} />}
       <AnimatePresence>{activeCalibration && <CalibrationMicroCard card={activeCalibration} onDismiss={() => setActiveCalibration(null)} onInspectGrounding={setActiveGrounding} />}</AnimatePresence>
       <GroundingInspector grounding={activeGrounding} onClose={() => setActiveGrounding(null)} />

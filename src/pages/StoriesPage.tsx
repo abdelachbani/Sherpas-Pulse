@@ -8,7 +8,7 @@
  *  - Live voice transcript bubble, sample question pills, and Boomerang Guardrail
  */
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
@@ -43,15 +43,16 @@ function StoriesContent() {
   // Voice session for Push-to-Ask & Zero-Prompt Assistant
   const voice = useVoiceSession(activeCase.id);
 
-  const stories = extractStoryData(
+  // Sherpi introduces the review before the first financial chapter.
+  const stories = useMemo(() => extractStoryData(
     activeCase.financialHealth,
     activeCase.investmentAnalysis,
-  );
+  ).filter((story) => story.interactiveType !== 'vibe_check'), [activeCase]);
 
-  const calibrationCards = extractCalibrationCards(
+  const calibrationCards = useMemo(() => extractCalibrationCards(
     activeCase.financialHealth,
     activeCase.investmentAnalysis,
-  );
+  ), [activeCase]);
 
   function handleComplete() {
     addTelemetryEvent({

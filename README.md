@@ -6,12 +6,12 @@
 
 ## Sherpas Pulse interface
 
-The React application explains each household's plan in six chapters. Scenes play automatically within each chapter. Tap the edges or use the arrow keys to navigate, or pause at any time. At the end of a chapter, the progress bar holds at 100% while you review the figures, ask a question, or choose to continue.
+Sherpi opens each review with a short, skippable tour, then guides the household through five financial chapters. Use the speaker button to mute or restore voice. Scenes play automatically within each chapter. Tap the edges or use the arrow keys to navigate, or pause at any time. At the end of a chapter, the progress bar holds at 100% while you review the figures, ask a question, or choose to continue.
 
 - Run the interface: `npm ci`, then `npm run dev`.
 - Run checks: `npm test`, `npm run lint`, and `npm run build`.
 - Check browser layouts and interactions: start `npm run preview -- --host 127.0.0.1 --port 4173`, then `node scripts/check-ui.mjs http://127.0.0.1:4173 /tmp/sherpas-ui-check`. This needs Chrome and Node 22+; output goes to the supplied temporary folder. `CHROME_PATH` selects a compatible Chrome/Chromium executable.
-- Voice needs the existing relay (`npm run server`) and its locally configured environment. Browser layout tests do not verify live AI responses or financial projections.
+- The tour and chapter narration use browser speech synthesis. Live questions for Sherpi use the existing relay (`npm run server`) and its local configuration. Browser checks simulate voice and do not verify live AI responses or financial projections.
 
 Application checks are distinct from Taste Skill's marketing-page gate. Reports retain the original gate result separately; an application check passing does not mean that gate passed.
 
