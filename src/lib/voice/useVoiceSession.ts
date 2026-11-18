@@ -109,6 +109,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   // Fallback and response tracking refs
   const activeRequestTokenRef = useRef<number | null>(null);
   const inFlightQuestionRef = useRef<string | null>(null);
+  const lastCompletedQuestionRef = useRef<string | null>(null);
   const responseTimeoutTimerRef = useRef<number | null>(null);
 
   const clearWaitingSend = useCallback(() => {
@@ -374,12 +375,15 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       }
     };
 
-    function finishResponse(responseId?: string) {
+    function finishResponse(responseId?: string, completed = true) {
       const gate = responseGateRef.current;
       const wasBlocked = gate.isBlocked();
       if (gate.finish(responseId)) {
         if (responseTimeoutTimerRef.current !== null) window.clearTimeout(responseTimeoutTimerRef.current);
         responseTimeoutTimerRef.current = null;
+        if (completed && currentReplyTextRef.current && inFlightQuestionRef.current) {
+          lastCompletedQuestionRef.current = inFlightQuestionRef.current;
+        }
         inFlightQuestionRef.current = null;
         if (playSourcesRef.current.length === 0 && !isPressingRef.current) setVoiceState('idle');
       }
@@ -411,7 +415,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
         if (t === 'response.done') {
           reopenAfterItemRef.current = false;
-          finishResponse(responseId);
+          finishResponse(responseId, ev.response?.status === 'completed');
           return;
         }
 
@@ -423,13 +427,12 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         }
 
         // Transcriptions
-        if (t.includes('input_audio_transcription') || t.includes('conversation.item')) {
-          const text = ev.delta || ev.transcript || ev.item?.content?.[0]?.text;
+        if (t.includes('input_audio_transcription')) {
+          const text = ev.delta || ev.transcript;
           if (text) {
             setTranscript((prev) => t.endsWith('completed') ? text : (prev + text).trim());
             if (
-              t.includes('input_audio_transcription')
-              && t.endsWith('completed')
+              t.endsWith('completed')
               && !voiceAskRecordedRef.current
             ) {
               trackVoiceAsk({ inputMode: 'voice' });
@@ -525,6 +528,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   useEffect(() => {
     connectWs();
     return () => {
+      lastCompletedQuestionRef.current = null;
       stopPlayback();
       if (wsRef.current) {
         try { wsRef.current.close(); } catch { /* Cleanup */ }
@@ -729,7 +733,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         // If WebSocket is ready, send the question and request response
         if (activeWs && activeWs.readyState === WebSocket.OPEN) {
           if (pollTimer !== null) window.clearTimeout(pollTimer);
-          const messages = typedQuestionMessages(clean);
+          const messages = typedQuestionMessages(clean, lastCompletedQuestionRef.current ?? undefined);
           activeWs.send(JSON.stringify(messages[0]));
           if (responseGateRef.current.markSent(requestToken)) {
             activeWs.send(JSON.stringify(messages[1]));

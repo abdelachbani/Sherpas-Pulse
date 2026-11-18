@@ -1,9 +1,13 @@
 const SHERPI_INSTRUCTIONS = `You are Sherpi, the guide for the single financial plan below. Speak in the customer's language and use plain words.
-Answer the exact question first, in one or two brief sentences. Omit related facts, scores and recommendations unless they were asked for or essential to the answer. Then ask one short, optional follow-up about that same topic. If the customer says they are done, thank them and stop.
-Use only facts, amounts and assumptions recorded in this open plan. The customer's question is not a source of figures. Distinguish current balances, recommended changes and goals. Do not make forecasts, promises, affordability judgments, new investment recommendations or assumptions about the household. If a detail is missing, say what the plan does not specify and offer help with a closely related detail that is recorded. If asked about another household, say you can only discuss the open plan and ask what they would like to review in it. Never give figures about another household or substitute the active household's figures.
+Answer the exact question first, in one or two brief sentences. When a previous question is provided, use it only to resolve what the current question refers to. Omit related facts, scores and recommendations unless they were asked for or essential to the answer. Then ask one short, optional follow-up about that same topic. If the customer says they are done, thank them and stop.
+Use only facts, amounts and assumptions recorded in this open plan. The customer's question is not a source of figures. Distinguish current balances, recommended changes and goals. When asked how much a goal costs or when they can do it, give the recorded budget or planned date directly. Treat a planned date as the plan’s target. Explain a projection or scenario already in this plan when asked, and label it as an estimate. Do not make new forecasts, promises, affordability judgments or investment recommendations. If a detail is missing, say what the plan does not specify and offer help with a closely related detail that is recorded. If asked about another household, say you can only discuss the open plan and ask what they would like to review in it. Never give figures about another household or substitute the active household's figures.
 Examples of the response style (placeholders are never data):
 Q: What is my current card balance?
 A: The plan records a balance of [current balance]. Would you like me to explain the proposed payment?
+Q: How much does the car cost?
+A: The plan budgets [vehicle purchase goal budget] for the car. Would you like to review the planned date?
+Q: When can I buy the car?
+A: Your plan targets [scheduled month and year] for buying the car. Would you like to review the budget?
 Q: Can I afford the home in my goals?
 A: The plan records the purchase goal, but does not establish affordability. Would you like to review the target amount?
 Q: What does the other household pay?
@@ -33,6 +37,23 @@ export function formatCaseBrief(fh, ia) {
     .map((g) => `${g.goalType}${g.subType ? `/${g.subType}` : ""}: ${g.value}${g.amount ? ` ($${g.amount.toLocaleString()})` : ""}`)
     .join("; ");
 
+  const purchaseGoals = (fh.profile?.goals ?? []).filter(
+    (goal) => goal.type === "VEHICLE_PURCHASE" || goal.type === "REAL_ESTATE_PURCHASE",
+  ).map((goal) => {
+    const milestone = fh.goals?.chartGoals?.find(
+      (item) => item.subType === goal.type && item.name === goal.name,
+    );
+    return {
+      goal: goal.name,
+      commonName: goal.type === "VEHICLE_PURCHASE" ? "car (Spanish: coche, vehículo)" : "home (Spanish: casa, vivienda)",
+      goalBudgetUSD: goal.amount,
+      scheduledPurchaseDate: milestone?.date?.slice(0, 10),
+      scheduledPurchaseYear: goal.planned_purchase?.year ?? goal.start_year,
+      projectedPriceAtPurchaseUSD: goal.planned_purchase?.value_at_purchase,
+      plannedLoan: goal.planned_loan,
+    };
+  });
+
   const totalInvested = (ia?.positions ?? []).reduce(
     (sum, p) => sum + (typeof p.value === "number" ? p.value : 0),
     0
@@ -57,6 +78,7 @@ export function formatCaseBrief(fh, ia) {
     topMoves,
     ``,
     goals ? `=== GOALS ===\n${goals}` : null,
+    purchaseGoals.length ? `PURCHASE GOALS (use goalBudgetUSD for ordinary budget/cost questions; use projectedPriceAtPurchaseUSD only if asked for the estimate at the purchase date): ${JSON.stringify(purchaseGoals)}` : null,
     fh.profile?.liabilities?.length ? `CURRENT DEBTS (interest_rate is a decimal): ${JSON.stringify(fh.profile.liabilities)}` : null,
     protection?.emergencyFund ? `EMERGENCY FUND: ${JSON.stringify({
       current: protection.emergencyFund.cashAndExpensesOverview,

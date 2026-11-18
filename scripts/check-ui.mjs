@@ -180,9 +180,10 @@ try {
   await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
   await navigate('/case/timothy-melanie-weah/stories?ui-recorded=1');
   await pause(900);
-  results.push({label:'recorded-intro-loads-and-plays',pass:await evaluate(`window.__recordings[0]?.currentTime > 0 && window.__recordings[0]?.duration > 0 && window.__speechCalls.length === 0`)});
+  const activeRecording = await evaluate(`window.__recordings.findIndex(audio => !audio.paused && audio.currentTime > 0 && audio.duration > 0)`);
+  results.push({label:'recorded-intro-loads-and-plays',pass:activeRecording >= 0 && await evaluate(`window.__speechCalls.length === 0`)});
   await click('Next');await pause(450);
-  results.push({label:'recorded-intro-stops-on-step-change',pass:await evaluate(`window.__recordings[0]?.paused && !window.__recordings[0]?.getAttribute('src') && window.__recordings.length === 2`)});
+  results.push({label:'recorded-intro-stops-on-step-change',pass:activeRecording >= 0 && await evaluate(`window.__recordings[${activeRecording}]?.paused && !window.__recordings[${activeRecording}]?.getAttribute('src') && window.__recordings.some((audio, index) => index > ${activeRecording} && audio.getAttribute('src'))`)});
   await navigate('/case/timothy-melanie-weah/stories');
   const introAtEntry=await evaluate(`document.querySelector('.story-shell')?.dataset.phase==='intro' && document.querySelector('button[aria-label="Turn narration off"]')?.getAttribute('aria-pressed')==='true' && document.body.innerText.includes('I’m Sherpi')`);
   results.push({label:'sherpi-intro-opens-with-voice-on',pass:introAtEntry});

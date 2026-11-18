@@ -99,6 +99,33 @@ export function getOfflineAnswer(caseId: string, question: string): OfflineAnswe
     }
     return moveAnswer(/card|debt|revolving|apr/i, 'revolving-apr') ?? unavailable('revolving-apr');
   }
+  if (/\b(?:cars?|veh[ií]culos?|autom[oó]viles?|coches?)\b/i.test(clean)) {
+    if (/\b(?:repair|fix|maintenance|service|loan|payment|insurance|registration|repar\w*|arregl\w*|mantenimiento|pr[eé]stamo|seguro|matr[ií]cula)\b/i.test(clean)) return unavailable();
+    const spanish = /[¿¡]|\b(?:coche|veh[ií]culo|cu[aá]nto|cu[aá]ndo|comprar|cuesta|precio)\b/i.test(clean);
+    const locale = spanish ? 'es-ES' : 'en-US';
+    const vehicleGoal = goals.find((goal) => goal.subType === 'VEHICLE_PURCHASE');
+    if (!vehicleGoal) return spanish
+      ? result('El plan no recoge una meta de compra de vehículo.', null, '¿Quieres revisar otra meta del plan?')
+      : result('Your plan does not record a vehicle purchase goal.', null, 'Would you like to review another goal?');
+
+    const date = fh.goals?.chartGoals?.find((goal) => goal.subType === 'VEHICLE_PURCHASE')?.date;
+    const month = date && new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(date));
+    const amount = vehicleGoal.amount != null && new Intl.NumberFormat(locale, {
+      style: 'currency', currency: 'USD', maximumFractionDigits: 0,
+    }).format(vehicleGoal.amount);
+    const timingQuestion = /\b(?:when|which year|what year|cu[aá]ndo|qu[eé] a[nñ]o)\b/i.test(clean);
+    const priceQuestion = /\b(?:how much|cost|price|budget|cu[aá]nto|cuesta|precio|presupuesto)\b/i.test(clean);
+    if (spanish) {
+      const timing = month ? `El plan prevé la compra del coche para ${month}.` : 'El plan no indica la fecha de compra.';
+      const price = amount ? `El presupuesto para el coche es de ${amount}.` : 'El plan no indica el presupuesto para el coche.';
+      const answer = timingQuestion && priceQuestion ? `${timing} ${price}` : priceQuestion ? price : timing;
+      return result(answer, null, priceQuestion ? '¿Quieres revisar la fecha de compra?' : '¿Quieres revisar el presupuesto?');
+    }
+    const timing = month ? `Your plan targets ${month} for the car purchase.` : 'Your plan does not specify a purchase date.';
+    const price = amount ? `Your plan budgets ${amount} for the car.` : 'Your plan does not specify a vehicle budget.';
+    const answer = timingQuestion && priceQuestion ? `${timing} ${price}` : priceQuestion ? price : timing;
+    return result(answer, null, priceQuestion ? 'Would you like to review the purchase timing?' : 'Would you like to review the budget?');
+  }
   if (/(?:home|house|property|mortgage|purchase|casa|vivienda)/i.test(clean)) {
     const goal = goals.find((g) => g.subType === 'REAL_ESTATE_PURCHASE');
     return goal ? result(`Your plan goal: ${goal.value} This goal alone does not establish affordability.`) : unavailable();

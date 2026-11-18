@@ -9,3 +9,9 @@ test('typed questions become a user message followed by a response request', () 
   ]);
   assert.deepEqual(typedQuestionMessages('  '), []);
 });
+
+test('keeps the previous question available as context after a relay reconnect', () => {
+  const [message] = typedQuestionMessages('And when can we buy it?', 'How much does the car cost?');
+  assert.match(message?.item?.content?.[0]?.text ?? '', /Previous question.*How much does the car cost/);
+  assert.match(message?.item?.content?.[0]?.text ?? '', /Current question: And when can we buy it\?/);
+});

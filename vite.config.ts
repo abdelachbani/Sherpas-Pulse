@@ -5,6 +5,7 @@ import { viteRelayPlugin } from './server/viteRelayPlugin';
 
 // https://vite.dev/config/
 export default defineConfig({
+  envPrefix: ['VITE_VOICE_', 'VITE_PORT'],
   plugins: [
     react(),
     tailwindcss(),

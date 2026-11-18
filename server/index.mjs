@@ -30,20 +30,20 @@ if (existsSync(envFile)) {
 }
 
 const PROXY_URL = (
-  process.env.VITE_LLM_PROXY_URL ||
   process.env.LLM_PROXY_URL ||
+  process.env.VITE_LLM_PROXY_URL ||
   "https://llm-hackathon.sherpaswealth.com"
 ).replace(/\/$/, "");
 
-const TEAM_KEY = process.env.VITE_TEAM_KEY || process.env.TEAM_KEY;
+const TEAM_KEY = process.env.TEAM_KEY || process.env.VITE_TEAM_KEY;
 const PORT = Number(process.env.PORT || 3001); // 3001 so Vite keeps 5173
 const VITE_PORT = Number(process.env.VITE_PORT || 5173);
 const CASES_DIR = resolve(root, "cases");
 const MODELS = ["gpt-realtime-2.1-mini", "gpt-realtime-2.1", "gemini-3.8-live"];
 
-if (!TEAM_KEY || TEAM_KEY.includes("...")) {
+if (!TEAM_KEY || TEAM_KEY === "your-team-key-here" || TEAM_KEY.includes("...")) {
   console.warn(
-    "[server] Warning: VITE_TEAM_KEY not set in .env — voice sessions will fail.\n" +
+    "[server] Warning: TEAM_KEY not set in .env — voice sessions will fail.\n" +
       "         Copy .env.example to .env and add your team key."
   );
 }
@@ -235,7 +235,7 @@ wss.on("connection", (browser, req) => {
   const brief = caseBrief(caseId);
   if (!brief) return browser.close(1008, "case not available");
 
-  if (!TEAM_KEY || TEAM_KEY.includes("...")) {
+  if (!TEAM_KEY || TEAM_KEY === "your-team-key-here" || TEAM_KEY.includes("...")) {
     browser.send(
       JSON.stringify({
         type: "error",

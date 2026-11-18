@@ -44,3 +44,25 @@ test('does not mistake a different household’s name for part of the open plan'
     assert.match(answer.text, /only.*open plan/i);
   }
 });
+
+test('answers everyday questions about the car goal shown in What matters to you', () => {
+  const id = 'timothy-melanie-weah';
+  const price = getOfflineAnswer(id, 'How much does the car cost?').text;
+  assert.match(price, /\$45,000/);
+  assert.doesNotMatch(price, /600,000|not provide/);
+  const timing = getOfflineAnswer(id, 'When can we buy the car?').text;
+  assert.match(timing, /July 2028/);
+  assert.match(timing, /plan/i);
+  assert.doesNotMatch(timing, /2030|not provide/);
+  assert.match(getOfflineAnswer(id, '¿Cuánto cuesta el coche?').text, /45[.,]000.*(?:coche|vehículo)|(?:coche|vehículo).*45[.,]000/i);
+  assert.match(getOfflineAnswer(id, '¿Cuándo nos podremos comprar el coche?').text, /julio de 2028/i);
+});
+
+test('does not turn the car goal into a repair quote or use it in another household', () => {
+  const repair = getOfflineAnswer('timothy-melanie-weah', 'How much will it cost to fix my car next year?').text;
+  assert.match(repair, /not provide/i);
+  assert.doesNotMatch(repair, /45,000/);
+  const other = getOfflineAnswer('michael-carter', 'When can I buy a car?').text;
+  assert.match(other, /plan does not record.*(?:vehicle|car)/i);
+  assert.doesNotMatch(other, /2028/);
+});

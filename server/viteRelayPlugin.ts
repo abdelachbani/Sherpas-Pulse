@@ -35,12 +35,12 @@ function loadEnv(): { proxyUrl: string; teamKey: string | undefined } {
   }
 
   const proxyUrl = (
-    process.env.VITE_LLM_PROXY_URL ||
     process.env.LLM_PROXY_URL ||
+    process.env.VITE_LLM_PROXY_URL ||
     'https://llm-hackathon.sherpaswealth.com'
   ).replace(/\/$/, '');
 
-  const teamKey = process.env.VITE_TEAM_KEY || process.env.TEAM_KEY;
+  const teamKey = process.env.TEAM_KEY || process.env.VITE_TEAM_KEY;
   return { proxyUrl, teamKey };
 }
 
@@ -182,7 +182,7 @@ export function viteRelayPlugin(): Plugin {
             return;
           }
 
-          if (!teamKey || teamKey.includes('...')) {
+          if (!teamKey || teamKey === 'your-team-key-here' || teamKey.includes('...')) {
             console.warn('[vite-relay] No valid TEAM_KEY found in .env');
             browser.send(
               JSON.stringify({
