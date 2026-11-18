@@ -42,9 +42,13 @@ Every financial advisor faces a critical **"third job"**: once a comprehensive p
   - **Story 3 (Advice):** *The Liquidity Tank* — visual preview of strategies competing for the same cash.
   - **Story 4 (Living Map):** *The Time Machine* — interactive milestone horizon (2026 → 2048+).
   - **Story 5 (Action):** *Your 5-Minute Win* — single first step with dollar benefit and 3-step checklist.
-- **Implicit Calibration ("Zero-Prompt Calibration"):**
+- **Sherpi Mascot & Interactive Chapter Checkpoints:**
+  - **Sherpi the Guide (`SherpiAvatar.tsx`):** An expressive financial companion who introduces the session, highlights critical numbers, and humanizes abstract advice.
+  - **Pause-at-100% Checkpoints:** Critical chapters pause gracefully at the end of their progress bar, giving clients time to absorb the takeaway, tap terms for calibration, ask questions, or tap *Continue* when ready.
+- **Dual Persona Calibration ("Zero-Prompt Calibration"):**
   - Tapping underlined financial terms (*Roth IRA*, *Umbrella Liability*, *Mortality Ratio*, *529 Plan*) pauses the story and opens a slide-up **Calibration Micro-Card** with everyday analogies and the client's exact MCP numbers.
-  - **4-Second Inactivity Sensor:** Pausing for >4 seconds automatically opens calibration for that card's key term to solve the "confused face" problem without forcing the user to ask.
+  - **Dual Persona Switcher:** Clients can toggle between **Everyday Analogy (Beginner)** and **Financial Mechanics (Expert)** to match their comfort level.
+  - **4-Second Inactivity Sensor:** Lingering on a slide for >4 seconds automatically opens calibration for that card's key term to solve the "confused face" problem without forcing the user to know what to ask.
 
 ### Pillar 2: "Two Paces, One Plan" (Asymmetric Couple Mode)
 - **Automatic Household Detection:** Automatically detects whether the household is a couple (Timothy & Melanie, Daniel & Emily) or single (Michael Carter, Samantha Lewis).
@@ -142,3 +146,59 @@ npm run dev
 - **Clean Mobile-First Responsive Design:** Seamlessly adapts across mobile, tablet, and desktop viewports with zero fake frames or clumsy split toggles.
 - **Voice Interruption:** Hold down the floating mic button to trigger Push-to-Ask voice interruption.
 - **Grounding Inspector:** Tap the green shield icon next to any figure to inspect the exact MCP JSON path.
+
+### Automated Test Suite & Build Verification
+```bash
+# Run the 35/35 automated unit test suite
+npm test
+
+# Production type-check & build verification
+npm run build
+```
+
+---
+
+## 6. Official Hackathon Submission Package (For Submission Tonight)
+
+### 6.1 The Official 1-Paragraph Summary
+> **Sherpas Pulse: From Static Financial Plan to Family Alignment & Immediate Action on Mobile.**  
+> Traditional financial plans suffer from a fatal 15–20% client drop-off because 40-page technical PDFs freeze clients, divide couples who think differently about money, and end without an immediate next step. **Sherpas Pulse** transforms any raw MCP financial plan into a 3-minute, 100% mobile-first "Financial Wrapped" experience guided by Sherpi. Pulse passively detects client hesitation (>4s dwell time) to surface instant Dual-Persona Calibrations (*Everyday Analogy* vs. *Financial Mechanics*), empowers couples to explore on their own phones via cross-device QR pairing, and visualizes consensus on a tactile Cash Tank that separates instant agreements (green) from advisor tie-breakers (amber). Armed with "The First Domino" (a concrete 5-minute win with quantified dollar ROI), a 30-day multi-touch follow-up cadence, and an advisor pre-meeting telemetry dashboard that saves 40 minutes of screen sharing, Sherpas Pulse turns passive delivery into confident, aligned family action—with 100% deterministic grounding and zero hallucinations.
+
+---
+
+## 7. Beat-by-Beat 2-Minute Demo Video Recording Script & Storyboard
+
+This 120-second storyboard is structured for a high-impact video submission (and directly mirrored in the in-app **Demo Navigator HUD → 2-Min Pitch Script** tab):
+
+| Timestamp | Screen / Flow | Key Visual Actions | Spoken Script (English) |
+|---|---|---|---|
+| **0:00 - 0:25** | Story Intro & Vibe Check | Launch `/case/timothy-melanie-weah/stories`. Show Sherpi avatar welcome, tap "Calm & Visual" pace, watch Story 1 progress bar fill. | *"Every financial planner knows the third job dilemma: you deliver a 40-page PDF, but the client takes it home, freezes, and never executes. Sherpas Pulse replaces static PDFs with an interactive, 100% mobile Financial Wrapped guided by Sherpi."* |
+| **0:25 - 0:55** | Story 1 & Zero-Prompt Calibration | Story 1 displays "$150k Liquid Cash vs. $3,240/yr Credit Card Interest". User pauses for 4 seconds → Micro-card auto-slides up. Toggle between *Everyday Analogy* and *Financial Mechanics*. Tap green shield to inspect JSON grounding. | *"When a client hesitates, Pulse passively detects dwell time without nagging popups. Our Dual Persona Calibration instantly toggles between simple beginner analogies and rigorous statutory mechanics, backed by zero-hallucination deterministic grounding."* |
+| **0:55 - 1:25** | Cash Allocator & Family Sync | Navigate to `/case/timothy-melanie-weah/allocate`. Drag cash slider. Click "Pair Partner Device" (show SVG QR code). Navigate to `/case/timothy-melanie-weah/sync`. | *"Couples rarely budget in sync. With Two Paces, One Plan, partners scan a QR code to explore independently. Family Sync automatically categorizes instant agreements in green and flags advisor tie-breakers in amber, eliminating at-home friction."* |
+| **1:25 - 1:45** | The First Domino & Multi-Touch Cadence | Navigate to `/case/timothy-melanie-weah/action`. Show 5-minute win checklist (Pay off $18k card → unlock +2 health score). Show 1-tap `.ics` Calendar download and pre-filled WhatsApp nudge. | *"Advice without immediate action is dead advice. We deliver The First Domino: a concrete 5-minute win with quantified dollar ROI, paired with a Days 1 to 30 follow-up timeline, one-tap calendar invites, and advisor WhatsApp drafts."* |
+| **1:45 - 2:00** | Advisor Telemetry & Cheat-Sheet | Navigate to `/case/timothy-melanie-weah/advisor`. Show 92% comprehension rate, client hesitation triggers, 3 prepared advisor questions, and tap "Print Cheat-Sheet". | *"Before the Zoom call even starts, the advisor reviews client dwell telemetry and a 1-page ink-friendly cheat-sheet. We skip 40 minutes of slide presenting and jump straight into high-trust human advice. That is Sherpas Pulse."* |
+
+---
+
+## 8. Demo Day Live Pitch Track (19 Nov, 12:45 · Room 2.3)
+
+### How to Present Sherpas Pulse Live
+1. **Open the App on Mobile / Chrome Responsive Mode (390 x 844 px)**:
+   - Point browser to `http://localhost:5173/`.
+   - The app is 100% responsive with zero viewport letterboxing or desktop crutches.
+2. **Use the Floating Demo Navigator HUD**:
+   - Tap the top-right **Demo Navigator (`⚡`)** button.
+   - Switch to the **2-Min Pitch Script** tab to have your exact cues and 1-tap screen jumps right on screen.
+3. **Key Pitch Emphasis for the Jury**:
+   - **Borja's 6 Rubric Criteria**:
+     - *Captivating (20%)*: Point to the mobile Wrapped stories, Sherpi, and story checkpoints.
+     - *Understanding (20%)*: Toggle Dual Persona Calibration (Analogy vs. Expert statutory rules).
+     - *Motivation (20%)*: Highlight the First Domino ($3,240 saved) + Days 1–30 `.ics` download.
+     - *Personal (15%)*: Show the QR pairing modal and Family Sync Green/Amber zones.
+     - *Creativity (15%)*: Emphasize zero-prompt inactivity sensing + Tactile Cash Tank + Pre-Meeting Telemetry.
+     - *Friday Plan (10%)*: Reference the Friday Decision Matrix (ruling out PDF chatbots and LLM math).
+4. **Q&A Defense**:
+   - *Q: "Does the AI hallucinate financial projections?"*  
+     *A:* **"No. Zero hallucination by architectural constraint. Every single number is deterministically extracted from the MCP JSON layer (`extractor.ts`). Tapping any green shield proves the exact JSON provenance in real time."**
+   - *Q: "Why mobile web instead of a native mobile app?"*  
+     *A:* **"Zero-friction client adoption. Clients won't download an App Store app just to review a financial plan. A responsive mobile web link sent via SMS/WhatsApp opens instantly on any iOS or Android device."**
