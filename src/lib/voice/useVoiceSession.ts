@@ -234,7 +234,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     if (audioCtxRef.current) {
       playHeadRef.current = audioCtxRef.current.currentTime;
     }
-    if ('speechSynthesis' in window) {
+    if (fallbackSpeechRef.current && 'speechSynthesis' in window) {
       fallbackSpeechRef.current = null;
       try { window.speechSynthesis.cancel(); } catch { /* Speech synthesis cleanup */ }
     }

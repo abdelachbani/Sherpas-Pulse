@@ -24,11 +24,6 @@ export function voiceBlocksPlayback(voice: {
   return voice.isListening || voice.isSpeaking || Boolean(voice.responseMessage) || Boolean(voice.guardRedirect) || panelOpen;
 }
 
-/** A chapter can be narrated again after ten minutes away. */
-export function canNarrateStory(lastNarratedAt: number | undefined, now: number): boolean {
-  return lastNarratedAt === undefined || now - lastNarratedAt >= 10 * 60 * 1000;
-}
-
 export function storyTapDirection(startX: number, startY: number, endX: number, endY: number, width: number): 'previous' | 'next' | null {
   if (Math.hypot(endX - startX, endY - startY) > 12 || width <= 0) return null;
   return endX < width / 2 ? 'previous' : 'next';

@@ -90,7 +90,26 @@ try {
   await call('Page.addScriptToEvaluateOnNewDocument', { source: `
     window.__speechCalls=[];window.__questions=[];window.__micRequests=0;
     Object.defineProperty(navigator.mediaDevices,'getUserMedia',{configurable:true,value:async()=>{window.__micRequests++;throw new DOMException('Denied for UI test','NotAllowedError')}});
-    Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{speak(u){window.__speechCalls.push(u.text);window.__lastUtterance=u},cancel(){},paused:false,pause(){this.paused=true},resume(){this.paused=false},get speaking(){return false}}});
+    window.__speechOverlap=0;
+    const speech = {
+      current: null, canceledUtterance: null, timer: 0, paused: false,
+      speak(u) {
+        if(this.current) window.__speechOverlap++;
+        this.current=u; this.canceledUtterance=u.onerror; window.__speechCalls.push(u.text);
+        if(!location.search.includes('ui-speech=long')) {
+          u.onstart?.(new Event('start'));
+          this.timer=setTimeout(()=>{if(!this.paused) this.finish()},2400);
+        }
+      },
+      finish() { const u=this.current; this.current=null; clearTimeout(this.timer); u?.onend?.(new Event('end')); },
+      cancel() {
+        const onerror=this.current && this.canceledUtterance;
+        this.current=null; clearTimeout(this.timer);
+        setTimeout(()=>onerror?.({error:'canceled'}),15);
+      },
+      pause(){this.paused=true}, resume(){this.paused=false}, get speaking(){return Boolean(this.current)},
+    };
+    Object.defineProperty(window,'speechSynthesis',{configurable:true,value:speech});
     class TestSocket extends EventTarget {
       static CONNECTING=0;static OPEN=1;static CLOSING=2;static CLOSED=3;
       constructor(){super();this.readyState=0;this.serial=0;this.reply=null;setTimeout(()=>{if(this.readyState===3)return;this.readyState=1;this.onopen?.({});if(location.search.includes('ui-relay=offline'))this.onmessage?.({data:JSON.stringify({type:'error',error:{message:'Simulated relay unavailable'}})});},10)}
@@ -109,20 +128,39 @@ try {
   await navigate('/case/timothy-melanie-weah/stories');
   const introAtEntry=await evaluate(`document.querySelector('.story-shell')?.dataset.phase==='intro' && document.querySelector('button[aria-label="Turn narration off"]')?.getAttribute('aria-pressed')==='true' && document.body.innerText.includes('I’m Sherpi')`);
   results.push({label:'sherpi-intro-opens-with-voice-on',pass:introAtEntry});
-  await evaluate(`window.__lastUtterance?.onend?.(new Event('end'))`);await pause(1750);
+  await evaluate(`speechSynthesis.finish()`);await pause(1750);
   const automaticStep=await evaluate(`document.querySelector('[data-intro-current="true"]')?.dataset.introControl`);
   results.push({label:'sherpi-moves-to-the-first-control-after-speaking',pass:automaticStep==='playback'});
   const guideOrder=[];
   for(let step=0;step<4;step++){
     if(!await click('Next')) break;
-    await pause(90);
+    await pause(170);
     guideOrder.push(await evaluate(`document.querySelector('[data-intro-current="true"]')?.dataset.introControl ?? (document.body.innerText.includes('Start my plan') ? 'start' : null)`));
   }
   results.push({label:'sherpi-intro-points-to-controls-in-order',pass:guideOrder.join(',')==='terms,voice,sherpi,start'});
-  const narrationStarted=await evaluate(`window.__speechCalls[0]?.includes('I’m Sherpi') && window.__speechCalls.some(line=>line.includes('Use Pause')) && window.__speechCalls.at(-1).includes('We’ll start with your financial health')`);
+  const narrationStarted=await evaluate(`window.__speechCalls[0]?.includes('I’m Sherpi') && window.__speechCalls.some(line=>line.includes('Pause anytime')) && window.__speechCalls.at(-1).includes('We’ll start with your financial health')`);
   results.push({label:'sherpi-reads-the-greeting-and-control-explanation',pass:narrationStarted});
   await click('Start my plan');await pause(150);
   results.push({label:'sherpi-intro-start-opens-financial-health',pass:await evaluate(`document.querySelector('.story-shell')?.dataset.phase==='playing' && document.querySelector('h1')?.textContent.includes('Your financial health')`)});
+  await navigate('/case/timothy-melanie-weah/stories?ui-speech=long');
+  await pause(8000);
+  results.push({label:'guide-waits-for-slow-speech-even-without-start-event',pass:await evaluate(`speechSynthesis.speaking && document.querySelector('.sherpi-intro h1')?.textContent.includes('I’m Sherpi')`)});
+  await evaluate(`speechSynthesis.finish()`);await pause(850);
+  results.push({label:'guide-advances-when-slow-speech-finishes',pass:await evaluate(`document.querySelector('[data-intro-current="true"]')?.dataset.introControl==='playback'`)});
+  await skipIntro();await pause(8300);
+  results.push({label:'first-financial-scene-waits-for-speech',pass:(await state())?.index===0 && await evaluate(`speechSynthesis.speaking`)});
+  await evaluate(`speechSynthesis.finish()`);await pause(900);
+  results.push({label:'financial-scenes-resume-when-speech-finishes',pass:(await state())?.index===1});
+  const selectChapter=async index=>{await evaluate(`document.querySelectorAll('nav[aria-label="Story steps"] button')[${index}]?.click()`);};
+  await selectChapter(1);await pause(180);
+  await selectChapter(2);await pause(30);
+  await selectChapter(3);await pause(30);
+  await selectChapter(0);await pause(230);
+  results.push({label:'rapid-chapter-jumps-cancel-previous-speech-and-replay-on-return',pass:await evaluate(`window.__speechOverlap===0 && window.__speechCalls.filter(line=>line.startsWith('Let’s start with your financial health')).length===2 && speechSynthesis.current?.text.startsWith('Let’s start with your financial health')`)});
+  await edge(true);await edge(false);
+  results.push({label:'moving-between-scenes-stops-speech-without-replaying',pass:(await state())?.index===0 && await evaluate(`!speechSynthesis.speaking && window.__speechCalls.filter(line=>line.startsWith('Let’s start with your financial health')).length===2`)});
+  await selectChapter(1);await pause(180);await edge(false);
+  results.push({label:'left-at-the-start-of-a-chapter-replays-the-previous-chapter',pass:(await state())?.index===0 && await evaluate(`speechSynthesis.current?.text.startsWith('Let’s start with your financial health')`)});
   await navigate('/');await clickAria('Open demo navigator');
   await call('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,x:4,y:110});
   await call('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,x:4,y:110});await pause(150);
@@ -214,7 +252,6 @@ try {
   results.push({label:'voice-mute-persists-upon-return',pass:savedVoiceMute});
   await clickAria('Turn narration on');
   await navigate('/case/timothy-melanie-weah/stories?ui-relay=offline');
-  await evaluate(`sessionStorage.removeItem('sherpas:narration:timothy-melanie-weah:story-overview')`);
   await skipIntro();
   const offlineStart=await state();await pause(450);const offlineNext=await state();
   results.push({label:'unavailable-relay-does-not-open-sherpi-or-stop-playback',pass:offlineNext.progress>offlineStart.progress && await evaluate(`!document.querySelector('section[aria-label="Ask Sherpi"]')`)});

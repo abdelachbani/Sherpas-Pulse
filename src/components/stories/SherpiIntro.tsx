@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { SherpiAvatar } from '../shared/SherpiAvatar';
+import { startStoryNarration, type StoryNarration } from '../../lib/storyNarration';
 import './sherpi-intro.css';
 
 export const SHERPI_INTRO_STEPS = [
@@ -23,54 +24,52 @@ export function SherpiIntro({ stepIndex, voiceEnabled, hidden, onNext, onFinish 
   const ready = stepIndex === SHERPI_INTRO_STEPS.length - 1;
   const [needsAudioGesture, setNeedsAudioGesture] = useState(false);
   const requestSpeech = useRef<(() => void) | null>(null);
+  const stopStep = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (hidden) return;
     let timeout = 0;
-    let utterance: SpeechSynthesisUtterance | null = null;
-    let active = true;
-    let spokenAt = 0;
+    let narration: StoryNarration | null = null;
+    const visibleSince = performance.now();
     const readingTime = Math.min(14_000, Math.max(5_000, step.text.split(' ').length * 380));
     const schedule = (delay: number) => {
       if (ready) return;
       window.clearTimeout(timeout);
       timeout = window.setTimeout(onNext, delay);
     };
-    schedule(readingTime);
-
-    if (voiceEnabled && 'speechSynthesis' in window) {
-      const speak = () => {
-        if (!active || utterance) return;
-        setNeedsAudioGesture(false);
-        spokenAt = performance.now();
-        const speech = new SpeechSynthesisUtterance(`${step.title}. ${step.text}`);
-        utterance = speech;
-        speech.lang = 'en-US';
-        speech.rate = 1.05;
-        speech.onstart = () => { if (active) schedule(25_000); };
-        speech.onend = () => {
-          utterance = null;
-          if (active) schedule(Math.max(650, 2200 - (performance.now() - spokenAt)));
-        };
-        speech.onerror = (event) => {
-          utterance = null;
-          if (!active) return;
-          setNeedsAudioGesture(event.error === 'not-allowed');
-          schedule(readingTime);
-        };
-        window.speechSynthesis.speak(speech);
-      };
-      requestSpeech.current = speak;
-      speak();
+    function speak(immediate = false) {
+      if (narration) return;
+      window.clearTimeout(timeout);
+      setNeedsAudioGesture(false);
+      narration = startStoryNarration(`${step.title}. ${step.text}`, (result) => {
+        narration = null;
+        setNeedsAudioGesture(result === 'blocked');
+        const minimumTime = result === 'finished' ? 2200 : readingTime;
+        schedule(Math.max(650, minimumTime - (performance.now() - visibleSince)));
+      }, immediate);
+      if (!narration) schedule(readingTime);
     }
 
-    return () => {
-      active = false;
-      requestSpeech.current = null;
+    if (voiceEnabled) speak();
+    else schedule(readingTime);
+    requestSpeech.current = voiceEnabled ? () => speak(true) : null;
+    function stop() {
       window.clearTimeout(timeout);
-      if (utterance) window.speechSynthesis.cancel();
+      narration?.cancel();
+      narration = null;
+    }
+    stopStep.current = stop;
+    return () => {
+      stop();
+      requestSpeech.current = null;
+      stopStep.current = null;
     };
   }, [hidden, onNext, ready, step, voiceEnabled]);
+
+  function leaveStep(action: () => void) {
+    stopStep.current?.();
+    action();
+  }
 
   return (
     <section className="sherpi-intro" aria-label="Sherpi’s introduction">
@@ -84,9 +83,9 @@ export function SherpiIntro({ stepIndex, voiceEnabled, hidden, onNext, onFinish 
           </div>
         </div>
         <div className="sherpi-intro-actions">
-          <button type="button" className="sherpi-intro-skip" onClick={onFinish}>Skip introduction</button>
+          <button type="button" className="sherpi-intro-skip" onClick={() => leaveStep(onFinish)}>Skip introduction</button>
           {needsAudioGesture && voiceEnabled && <button type="button" className="sherpi-intro-skip" onClick={() => requestSpeech.current?.()}>Play voice</button>}
-          <button type="button" className="sherpi-intro-next" onClick={ready ? onFinish : onNext}>
+          <button type="button" className="sherpi-intro-next" onClick={() => leaveStep(ready ? onFinish : onNext)}>
             {ready ? 'Start my plan' : 'Next'} <ArrowRight size={16} aria-hidden="true" />
           </button>
         </div>

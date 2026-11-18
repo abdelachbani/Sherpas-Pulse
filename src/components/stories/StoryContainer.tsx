@@ -4,7 +4,8 @@ import { Volume2, VolumeX, X, Lightbulb, Pause, Play } from 'lucide-react';
 import type { StoryCard as StoryCardType, CalibrationCard, GroundingRef, ViewingStyle, PillarScore } from '../../types';
 import type { VoiceSessionResult } from '../../lib/voice/useVoiceSession';
 import { useAppStore } from '../../stores/appStore';
-import { advanceBeat, advanceElapsed, beatDuration, canNarrateStory, chapterProgress, nextChapterFrame, storyTapDirection, voiceBlocksPlayback } from '../../lib/storyPlayback';
+import { advanceBeat, advanceElapsed, beatDuration, chapterProgress, nextChapterFrame, storyTapDirection, voiceBlocksPlayback } from '../../lib/storyPlayback';
+import { startStoryNarration, type StoryNarration } from '../../lib/storyNarration';
 import { hasReachedHesitationThreshold, HESITATION_PAUSE_MS } from '../../lib/telemetry';
 import { buildStoryFrames } from '../../lib/storyFrames';
 import { storyTerms } from '../../lib/storyTerms';
@@ -31,8 +32,6 @@ interface Props {
   onNavigateBack: () => void;
 }
 
-// The in-memory fallback keeps the same behavior when storage is unavailable.
-const narrationVisits = new Map<string, number>();
 const narrationPreferenceKey = 'sherpas:voice-enabled';
 let voicePreference = true;
 
@@ -42,18 +41,6 @@ function prefersVoice() {
     return saved === null ? voicePreference : saved === 'true';
   } catch { return voicePreference; }
 }
-function lastNarrated(key: string): number | undefined {
-  try {
-    const stored = sessionStorage.getItem(key);
-    if (stored !== null && Number.isFinite(Number(stored))) return Number(stored);
-  } catch { /* Private browsing may block storage. */ }
-  return narrationVisits.get(key);
-}
-function markNarrated(key: string, now: number) {
-  narrationVisits.set(key, now);
-  try { sessionStorage.setItem(key, String(now)); } catch { /* Memory fallback. */ }
-}
-
 function frameDuration(card: StoryCardType, introduction: boolean): number {
   const reading = beatDuration([card.title, card.subtitle, card.tagline ?? '', card.highlightLabel ?? '', ...card.dataPoints.map((point) => `${point.label} ${point.value}`)].join(' '));
   return introduction ? Math.max(reading, beatDuration(card.voiceScript ?? '')) : reading;
@@ -128,18 +115,14 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
   }
   const [checklistState, setChecklistState] = useState([false, false, false]);
   const attemptedChapter = useRef<string | null>(null);
-  const narrationRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const narrationRef = useRef<StoryNarration | null>(null);
   const stopNarration = useCallback(() => {
-    if (!narrationRef.current) return;
+    narrationRef.current?.cancel();
     narrationRef.current = null;
-    window.speechSynthesis.cancel();
-    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
   }, []);
   function togglePlayback() {
-    if (narrationRef.current) {
-      if (paused) window.speechSynthesis.resume();
-      else window.speechSynthesis.pause();
-    }
+    if (paused) narrationRef.current?.resume();
+    else narrationRef.current?.pause();
     setPaused(!paused);
   }
   const pointerStart = useRef<{ x: number; y: number; at: number } | null>(null);
@@ -169,48 +152,32 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
   // Attempt once per chapter entry. Closing a dialog, stopping voice or returning
   // to a visible tab can cancel speech but must never trigger a replay.
   useEffect(() => {
-    if (introActive || paused || !chapter || !isVoiceNarrating || !('speechSynthesis' in window)) return;
+    if (introActive || paused || checkpoint || !chapter || !isVoiceNarrating) return;
     const entry = `${caseId}:${chapter.id}`;
     if (attemptedChapter.current === entry) return;
     attemptedChapter.current = entry;
     if (isAssistantActive || hidden || modalOpen || !chapter.voiceScript) return;
-    const key = `sherpas:narration:${entry}`;
-    const now = Date.now();
-    if (!canNarrateStory(lastNarrated(key), now)) return;
-    markNarrated(key, now);
-    const utterance = new SpeechSynthesisUtterance(chapter.voiceScript);
-    utterance.rate = 1.05;
-    utterance.lang = 'en-US';
-    const clearNarration = () => {
-      if (narrationRef.current !== utterance) return;
+    narrationRef.current = startStoryNarration(chapter.voiceScript, () => {
       narrationRef.current = null;
       markStoryActivity();
-    };
-    utterance.onend = clearNarration;
-    utterance.onerror = clearNarration;
-    narrationRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
-  }, [caseId, chapter, introActive, isVoiceNarrating, isAssistantActive, hidden, modalOpen, paused, markStoryActivity]);
+    });
+  }, [caseId, chapter, checkpoint, introActive, isVoiceNarrating, isAssistantActive, hidden, modalOpen, paused, markStoryActivity]);
   useEffect(() => {
     if (!isVoiceNarrating || isAssistantActive || hidden || modalOpen) stopNarration();
   }, [isVoiceNarrating, isAssistantActive, hidden, modalOpen, stopNarration]);
-  useEffect(() => {
-    if (!frame?.chapterId) return;
-    const key = `sherpas:narration:${caseId}:${frame.chapterId}`;
-    return () => { if (lastNarrated(key) !== undefined) markNarrated(key, Date.now()); };
-  }, [caseId, frame?.chapterId]);
   useEffect(() => stopNarration, [stopNarration]);
 
   const navigate = useCallback((index: number) => {
     const next = frames[index];
-    if (!next) return;
+    if (!next || (index === frameIndex && !checkpoint)) return;
+    stopNarration();
     if (next.chapterId !== frame?.chapterId) {
-      stopNarration();
       attemptedChapter.current = null;
+      setPaused(false);
     }
     setCheckpoint(false);
     setFrameIndex(index);
-  }, [frame?.chapterId, frames, stopNarration]);
+  }, [checkpoint, frame?.chapterId, frameIndex, frames, stopNarration]);
 
   function askSherpi(questionText: string) {
     stopNarration();
@@ -219,14 +186,18 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
   const goToNext = useCallback(() => {
     if (!frame || checkpoint) return;
     const next = advanceBeat(frame.partIndex, frame.partCount, false);
-    if (next.checkpoint) setCheckpoint(true);
+    if (next.checkpoint) {
+      stopNarration();
+      setCheckpoint(true);
+    }
     else navigate(frameIndex + 1);
-  }, [checkpoint, frame, frameIndex, navigate]);
+  }, [checkpoint, frame, frameIndex, navigate, stopNarration]);
   const goToPrev = useCallback(() => {
     if (!frame) return;
     if (checkpoint) { elapsedRef.current = 0; setElapsed({ frameId: frame.id, value: 0 }); setCheckpoint(false); return; }
     if (frame.partIndex > 0) navigate(frameIndex - 1);
-  }, [checkpoint, frame, frameIndex, navigate]);
+    else if (frame.chapterIndex > 0) navigate(frames.findIndex((item) => item.chapterIndex === frame.chapterIndex - 1));
+  }, [checkpoint, frame, frameIndex, frames, navigate]);
   const continueChapter = useCallback(() => {
     setPaused(false);
     setQuestionOpen(false);
@@ -270,10 +241,12 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
     let previous = performance.now();
     let request = 0;
     const tick = (now: number) => {
-      elapsedRef.current = advanceElapsed(elapsedRef.current, now - previous, false, duration);
+      // Keep the beat visible, with its details revealed, until Sherpi finishes.
+      const limit = narrationRef.current ? Math.max(elapsedRef.current, duration * 0.96) : duration;
+      elapsedRef.current = advanceElapsed(elapsedRef.current, now - previous, false, limit);
       previous = now;
       setElapsed({ frameId: frame.id, value: elapsedRef.current });
-      if (elapsedRef.current >= duration) goToNext();
+      if (elapsedRef.current >= duration && !narrationRef.current) goToNext();
       else request = window.requestAnimationFrame(tick);
     };
     request = window.requestAnimationFrame(tick);
@@ -336,7 +309,7 @@ export function StoryContainer({ caseId, stories, calibrationCards, pillars = []
           {stories.map((story, index) => {
             const firstFrame = frames.findIndex((item) => item.chapterIndex === index);
             const fill = index < frame.chapterIndex ? 100 : index === frame.chapterIndex ? chapterFraction * 100 : 0;
-            return <button key={story.id} disabled={modalOpen || isAssistantActive || checkpoint} onClick={() => navigate(firstFrame)} aria-label={`Step ${index + 1} of ${stories.length}: ${story.title}`} aria-current={index === frame.chapterIndex ? 'step' : undefined} className="min-h-11 min-w-0 flex-1 rounded text-left focus-visible:outline focus-visible:outline-white"><span role="progressbar" aria-label={`${story.title} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(fill)} className="block h-1 overflow-hidden rounded-full bg-white/20"><span className="block h-full bg-white" style={{ width: `${fill}%` }} /></span><span className={`mt-1 hidden truncate text-xs sm:block ${index === frame.chapterIndex ? 'font-semibold text-white' : 'text-slate-400'}`}>{story.title}</span></button>;
+            return <button key={story.id} disabled={modalOpen || isAssistantActive || (checkpoint && index >= frame.chapterIndex)} onClick={() => navigate(firstFrame)} aria-label={`Step ${index + 1} of ${stories.length}: ${story.title}`} aria-current={index === frame.chapterIndex ? 'step' : undefined} className="min-h-11 min-w-0 flex-1 rounded text-left focus-visible:outline focus-visible:outline-white"><span role="progressbar" aria-label={`${story.title} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(fill)} className="block h-1 overflow-hidden rounded-full bg-white/20"><span className="block h-full bg-white" style={{ width: `${fill}%` }} /></span><span className={`mt-1 hidden truncate text-xs sm:block ${index === frame.chapterIndex ? 'font-semibold text-white' : 'text-slate-400'}`}>{story.title}</span></button>;
           })}
         </nav>}
       </header>

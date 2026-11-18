@@ -59,7 +59,7 @@ const PITCH_BEATS: PitchBeat[] = [
     targetScreen: 'Story Calibration',
     path: (caseId) => `/case/${caseId}/stories`,
     script:
-      '"When a client hesitates on complex terms, Pulse passively detects dwell time without nagging prompts. The micro-card toggles between Everyday Analogy for beginners and Financial Mechanics for experts, backed by zero-hallucination voice answers."',
+      '"When a client hesitates on complex terms, Pulse uses dwell time to suggest simpler wording. The glossary offers Everyday Analogy and Financial Mechanics, and Sherpi can answer questions using the household’s plan."',
     keyVisual: 'Tap Dual Mode toggle (Everyday Analogy vs. Financial Mechanics) + Sherpi checkpoint.',
   },
   {
@@ -68,7 +68,7 @@ const PITCH_BEATS: PitchBeat[] = [
     targetScreen: 'Cash Allocator & Sync',
     path: (caseId) => `/case/${caseId}/sync`,
     script:
-      '"Couples rarely budget together. One partner scans the live QR code on mobile. Our Cash Tank allocator balances surplus dollars, while Family Sync automatically detects instant agreements in green and frames tie-breakers for the advisor in amber."',
+      '"The QR code opens a partner’s review on mobile. Each partner can rank their priorities. Here, Family Sync uses sample reviews to show shared priorities in green and topics to discuss with the advisor in amber."',
     keyVisual: 'Green agreed badges + Amber advisor discussion topics + Partner badges.',
   },
   {

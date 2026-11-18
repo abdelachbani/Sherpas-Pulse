@@ -20,11 +20,7 @@ assert.equal(voiceBlocksPlayback(backgroundVoice, false), false);
 assert.equal(voiceBlocksPlayback(backgroundVoice, true), true);
 assert.equal(voiceBlocksPlayback({ ...backgroundVoice, isListening: true }, false), true);
 
-import { canNarrateStory, storyTapDirection } from '../src/lib/storyPlayback.ts';
-assert.equal(canNarrateStory(undefined, 1000), true);
-assert.equal(canNarrateStory(1000, 1000 + 599_999), false);
-assert.equal(canNarrateStory(1000, 1000 + 600_000), true);
-assert.equal(canNarrateStory(2000, 1000), false);
+import { storyTapDirection } from '../src/lib/storyPlayback.ts';
 assert.equal(storyTapDirection(20, 20, 25, 23, 200), 'previous');
 assert.equal(storyTapDirection(180, 20, 180, 20, 200), 'next');
 assert.equal(storyTapDirection(20, 20, 34, 20, 200), null);
