@@ -25,7 +25,51 @@ import { CASES } from '../lib/mcp/cases';
 import { extractHouseholdSync } from '../lib/mcp/extractor';
 import { SyncCard } from '../components/couple/SyncCard';
 import { GroundingInspector } from '../components/calibration/GroundingInspector';
-import type { GroundingRef } from '../types';
+import type { GroundingRef, CoupleAllocation } from '../types';
+
+// Realistic sample allocations per couple household for stage demo / direct link review
+const DEMO_SYNC_ALLOCATIONS: Record<string, { primary: CoupleAllocation; secondary: CoupleAllocation }> = {
+  'timothy-melanie-weah': {
+    primary: {
+      partner: 'Timothy',
+      allocations: [
+        { strategyId: 'card-payoff', label: 'Pay off 18% Chase Card', amount: 18000, priority: 1 },
+        { strategyId: 'college-529', label: 'Fund 529 College for Liam & Josh', amount: 4609, priority: 2 },
+        { strategyId: 'life-insurance', label: 'Add Life Insurance Coverage', amount: 235000, priority: 3 },
+        { strategyId: 'umbrella-cover', label: 'Add $1M Umbrella Liability Shield', amount: 1000000, priority: 4 },
+      ],
+    },
+    secondary: {
+      partner: 'Melanie',
+      allocations: [
+        { strategyId: 'card-payoff', label: 'Pay off 18% Chase Card', amount: 18000, priority: 1 },
+        { strategyId: 'life-insurance', label: 'Add Life Insurance Coverage', amount: 235000, priority: 2 },
+        { strategyId: 'umbrella-cover', label: 'Add $1M Umbrella Liability Shield', amount: 1000000, priority: 3 },
+        { strategyId: 'college-529', label: 'Fund 529 College for Liam & Josh', amount: 4609, priority: 4 },
+      ],
+    },
+  },
+  'daniel-emily-johnson': {
+    primary: {
+      partner: 'Daniel',
+      allocations: [
+        { strategyId: 'life-coverage', label: 'Add $1.16M Life Cover for Kids', amount: 1166000, priority: 1 },
+        { strategyId: 'savings-boost', label: 'Raise Annual Savings by $12k', amount: 12000, priority: 2 },
+        { strategyId: 'umbrella-cover', label: 'Add $1M Umbrella Liability Shield', amount: 1000000, priority: 3 },
+        { strategyId: 'college-529', label: 'Fund 529 College for Oliver & Sophia', amount: 8400, priority: 4 },
+      ],
+    },
+    secondary: {
+      partner: 'Emily',
+      allocations: [
+        { strategyId: 'life-coverage', label: 'Add $1.16M Life Cover for Kids', amount: 1166000, priority: 1 },
+        { strategyId: 'college-529', label: 'Fund 529 College for Oliver & Sophia', amount: 8400, priority: 2 },
+        { strategyId: 'umbrella-cover', label: 'Add $1M Umbrella Liability Shield', amount: 1000000, priority: 3 },
+        { strategyId: 'savings-boost', label: 'Raise Annual Savings by $12k', amount: 12000, priority: 4 },
+      ],
+    },
+  },
+};
 
 export default function FamilySyncPage() {
   const { caseId } = useParams<{ caseId: string }>();
@@ -68,17 +112,23 @@ function FamilySyncPageContent() {
   const client = activeCase.financialHealth?.case?.household?.find((m) => m.role === 'client');
   const coClient = activeCase.financialHealth?.case?.household?.find((m) => m.role === 'co-client');
 
-  const p1Name = coupleAllocations.primary?.partner || client?.first_name || 'Timothy';
-  const p2Name = coupleAllocations.secondary?.partner || coClient?.first_name || 'Melanie';
+  const liveBothReviewed = Boolean(coupleAllocations.primary && coupleAllocations.secondary);
+  const fallback = DEMO_SYNC_ALLOCATIONS[activeCase.id];
+  const primaryAlloc = coupleAllocations.primary || fallback?.primary || null;
+  const secondaryAlloc = coupleAllocations.secondary || fallback?.secondary || null;
+  const hasConsensusData = Boolean(primaryAlloc && secondaryAlloc);
+  const isSimulated = !liveBothReviewed && hasConsensusData;
+
+  const p1Name = primaryAlloc?.partner || client?.first_name || 'Timothy';
+  const p2Name = secondaryAlloc?.partner || coClient?.first_name || 'Melanie';
 
   // Deterministic sync extraction using MCP layer
   const { agreements, tieBreakers } = extractHouseholdSync(
     activeCase.id,
-    coupleAllocations.primary,
-    coupleAllocations.secondary
+    primaryAlloc,
+    secondaryAlloc
   );
 
-  const bothReviewed = Boolean(coupleAllocations.primary && coupleAllocations.secondary);
   const agreementsCount = agreements.length;
   const tieBreakersCount = tieBreakers.length;
 
@@ -98,8 +148,8 @@ function FamilySyncPageContent() {
           </div>
 
           <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 " />
-            <span>{bothReviewed ? 'Reviews compared' : 'Waiting for both reviews'}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span>{isSimulated ? 'Sample couple consensus' : (liveBothReviewed ? 'Live reviews compared' : 'Waiting for both reviews')}</span>
           </div>
         </div>
 
@@ -136,10 +186,14 @@ function FamilySyncPageContent() {
           </span>
           <div>
             <h2 className="text-sm font-semibold text-white tracking-wide">
-              {bothReviewed ? summaryBannerText : 'Both reviews are needed to compare priorities'}
+              {hasConsensusData ? summaryBannerText : 'Both reviews are needed to compare priorities'}
             </h2>
             <p className="text-xs text-slate-300 mt-0.5 leading-snug">
-              {bothReviewed ? 'These results reflect the priorities saved in this session.' : 'Each partner can save their order in the priorities screen.'}
+              {liveBothReviewed
+                ? 'These results reflect the priorities saved in this session.'
+                : isSimulated
+                ? 'Sample priorities loaded for this household. Both partners can submit their live priorities to update this consensus.'
+                : 'Each partner can save their order in the priorities screen.'}
             </p>
           </div>
         </div>
@@ -164,7 +218,7 @@ function FamilySyncPageContent() {
               <SyncCard
                 key={agreement.strategyId}
                 item={agreement}
-                priority={coupleAllocations.primary?.allocations.find((a) => a.strategyId === agreement.strategyId)?.priority}
+                priority={primaryAlloc?.allocations.find((a) => a.strategyId === agreement.strategyId)?.priority}
                 partner1Name={p1Name}
                 partner2Name={p2Name}
                 index={idx}
@@ -174,7 +228,7 @@ function FamilySyncPageContent() {
           </div>
         </div>
 
-        {bothReviewed && agreements.length === 0 && <p className="text-sm text-slate-300">No matching priorities were found in these reviews.</p>}
+        {hasConsensusData && agreements.length === 0 && <p className="text-sm text-slate-300">No matching priorities were found in these reviews.</p>}
 
         {/* ── Amber Zone Section ── */}
         <div className="space-y-2.5 pt-2">
