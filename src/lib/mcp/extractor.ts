@@ -187,6 +187,71 @@ export function extractCashAllocationOptions(fh: FinancialHealth): CashStrategyO
     ];
   }
 
+  if (slug === 'daniel-emily-johnson') {
+    return [
+      {
+        id: 'life-coverage',
+        label: 'Add $1.16M Life Cover for Kids',
+        amount: 1166000,
+        urgency: 'critical',
+        benefitSummary: 'Raises 0/20 protection score by closing the mortality gap for Oliver (11) & Sophia (8)',
+        annualDollarBenefit: 0,
+        grounding: {
+          sourceFile: 'financial-health.json',
+          jsonPath: 'score.top_moves[0]: Add $1,166,000 of life cover',
+          label: 'Life Coverage Shortfall',
+          rawValue: 1166000,
+          description: 'Daniel and Emily currently have $0 in term life protection with two school-age dependents.',
+        },
+      },
+      {
+        id: 'umbrella-cover',
+        label: 'Add $1M Umbrella Liability Shield',
+        amount: 1000000,
+        urgency: 'critical',
+        benefitSummary: 'Shields Denver home equity ($560k) and assets against tort claims for ~$25/mo',
+        annualDollarBenefit: 0,
+        grounding: {
+          sourceFile: 'financial-health.json',
+          jsonPath: 'score.top_moves[1]: Add $1M umbrella cover',
+          label: 'Umbrella Liability Policy',
+          rawValue: 1000000,
+          description: 'Zero excess liability protection creates catastrophic risk against accumulated equity.',
+        },
+      },
+      {
+        id: 'college-529',
+        label: 'Fund 529 College for Oliver & Sophia',
+        amount: 8400,
+        urgency: 'moderate',
+        benefitSummary: 'Starts tax-free tuition savings towards estimated $68,000 in-state college goals',
+        annualDollarBenefit: 1200,
+        grounding: {
+          sourceFile: 'financial-health.json',
+          jsonPath: 'goals.goalsSummary: College funding for Oliver & Sophia',
+          label: '529 Education Fund',
+          rawValue: 8400,
+          description: 'Tax-free educational compound growth under IRC §529.',
+        },
+      },
+      {
+        id: 'savings-boost',
+        label: 'Raise Annual Savings by $12k',
+        amount: 12000,
+        urgency: 'moderate',
+        benefitSummary: 'Preserves target early retirement at age 62 instead of pushing to age 65',
+        annualDollarBenefit: 0,
+        grounding: {
+          sourceFile: 'financial-health.json',
+          jsonPath: 'score.top_moves[2]: Raise annual savings to preserve retirement at 62',
+          label: 'Annual Retirement Savings',
+          rawValue: 12000,
+          description: 'Increases net wealth accumulation to sustain early retirement.',
+        },
+      },
+    ];
+  }
+
   // Fallback using top_moves
   return (fh.score.top_moves || []).map((move, idx) => ({
     id: `strategy-${idx}`,
