@@ -88,7 +88,7 @@ try {
   ws.addEventListener('message', e=>{const m=JSON.parse(e.data);if(m.id){const p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);}}if(m.method==='Runtime.exceptionThrown')exceptions.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text);});
   await call('Page.enable');await call('Runtime.enable');
   await call('Page.addScriptToEvaluateOnNewDocument', { source: `
-    window.__speechCalls=[];window.__questions=[];window.__micRequests=0;
+    window.__speechCalls=[];window.__questions=[];window.__micRequests=0;window.__voiceSockets=[];
     Object.defineProperty(navigator.mediaDevices,'getUserMedia',{configurable:true,value:async()=>{window.__micRequests++;throw new DOMException('Denied for UI test','NotAllowedError')}});
     window.__speechOverlap=0;
     const speech = {
@@ -121,8 +121,9 @@ try {
 
     class TestSocket extends EventTarget {
       static CONNECTING=0;static OPEN=1;static CLOSING=2;static CLOSED=3;
-      constructor(){super();this.readyState=0;this.serial=0;this.reply=null;setTimeout(()=>{if(this.readyState===3)return;this.readyState=1;this.onopen?.({});if(location.search.includes('ui-relay=offline'))this.onmessage?.({data:JSON.stringify({type:'error',error:{message:'Simulated relay unavailable'}})});},10)}
+      constructor(){super();window.__voiceSockets.push(this);this.readyState=0;this.serial=0;this.reply=null;setTimeout(()=>{if(this.readyState===3)return;this.readyState=1;this.onopen?.({});if(location.search.includes('ui-relay=offline'))this.onmessage?.({data:JSON.stringify({type:'error',error:{message:'Simulated relay unavailable'}})});},10)}
       send(raw){const e=JSON.parse(raw);if(e.type==='conversation.item.create')window.__questions.push(e.item?.content?.[0]?.text);if(e.type==='response.cancel'){const id=this.reply;setTimeout(()=>this.onmessage?.({data:JSON.stringify({type:'response.done',response:{id,status:'cancelled'}})}),5);}if(e.type==='response.create'){const id='ui-response-'+(++this.serial);this.reply=id;this.onmessage?.({data:JSON.stringify({type:'response.created',response:{id}})});setTimeout(()=>{if(this.readyState!==1)return;this.onmessage?.({data:JSON.stringify({type:'response.output_audio_transcript.delta',response_id:id,delta:'Your question has reached the assistant.'})});this.onmessage?.({data:JSON.stringify({type:'response.done',response:{id,status:'completed'}})});},700)}}
+      expire(){this.onmessage?.({data:JSON.stringify({type:'error',error:{message:'AI socket closed due to inactivity'}})});this.close()}
       close(){this.readyState=3;this.onclose?.({code:1000,reason:'Test closed'})}
     } window.WebSocket=TestSocket;
   `});
@@ -360,12 +361,37 @@ try {
   results.push({label:'checkpoint-progress-complete-stable',pass:checked.progress===100 && (await state()).phase==='checkpoint'});
   await click('I have a question');
   await evaluate(`(()=>{const input=document.querySelector('input[placeholder="Ask about this chapter"]');const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;setter.call(input,'Can you explain this section?');input.dispatchEvent(new Event('input',{bubbles:true}))})()`);await pause(120);
-  await click('Ask');await pause(150);
-  results.push({label:'question-reaches-existing-assistant-path',pass:await evaluate(`window.__questions.includes('Can you explain this section?')`)});
+  await click('Ask');
+  const questionDeadline=Date.now()+2500;
+  let questionReceived=false;
+  while (Date.now()<questionDeadline && !questionReceived) {
+    questionReceived=await evaluate(`window.__questions.includes('Can you explain this section?')`);
+    if (!questionReceived) await pause(50);
+  }
+  results.push({label:'question-reaches-existing-assistant-path',pass:questionReceived});
   await click('Continue');await pause(250);
   const nextStarted=await state();await pause(900);const nextAfterReply=await state();
   results.push({label:'late-reply-does-not-block-next-chapter',pass:nextAfterReply.chapter===nextStarted.chapter && nextAfterReply.progress>nextStarted.progress});
   results.push({label:'continue-starts-next-chapter',pass:(await state()).chapter===1 && (await state()).phase==='playing'});
+  await navigate('/case/timothy-melanie-weah/stories');
+  await skipIntro();
+  results.push({label:'sherpi-does-not-connect-during-passive-viewing',pass:await evaluate('window.__voiceSockets.length===0')});
+  await clickAria('Ask Sherpi');
+  const askIdleTest = async (question) => {
+    await evaluate(`(() => {
+      const input=document.querySelector('[aria-label="Ask a question about your plan"]');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(question)});
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+    })()`);
+    await click('Ask');
+    await pause(950);
+  };
+  await askIdleTest('What is my financial health score?');
+  const firstSocket = await evaluate('window.__voiceSockets.length');
+  await evaluate('window.__voiceSockets.at(-1)?.expire()');
+  const quietExpiry = await evaluate(`!document.querySelector('section[aria-label="Ask Sherpi"]')?.textContent.includes('inactivity')`);
+  await askIdleTest('Can you explain my score?');
+  results.push({label:'sherpi-reconnects-after-idle-expiry-without-a-warning',pass:quietExpiry && await evaluate(`window.__voiceSockets.length===${firstSocket + 1} && window.__questions.at(-1)?.includes('Can you explain my score?') && document.querySelector('section[aria-label="Ask Sherpi"]')?.textContent.includes('Your question has reached the assistant.')`)});
   await navigate('/case/timothy-melanie-weah');
   await evaluate(`([...document.querySelectorAll('button')].find(b=>b.textContent.includes('Express'))).click()`);await pause(100);await click('Explore your plan');await pause(300);
   await skipIntro();

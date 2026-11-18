@@ -60,3 +60,12 @@ assert.equal(duplicateFinal.finish('follow-up'), true);
 timeout.failWaiting();
 assert.equal(timeout.isCurrent(waiting), false);
 assert.equal(timeout.isBlocked(), true);
+
+const recycled = createResponseGate();
+const previousToken = recycled.start();
+assert.equal(recycled.markSent(previousToken), true);
+recycled.cancel();
+recycled.reset();
+const freshToken = recycled.start();
+assert.equal(recycled.isCurrent(previousToken), false);
+assert.equal(recycled.markSent(freshToken), true);

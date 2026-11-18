@@ -69,6 +69,8 @@ const b64 = (buf: ArrayBuffer): string => {
   return btoa(s);
 };
 
+const VOICE_IDLE_MS = 15_000;
+
 export function useVoiceSession(caseId: string): VoiceSessionResult {
   const trackVoiceAsk = useAppStore((state) => state.trackVoiceAsk);
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
@@ -84,6 +86,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const [audioLevel, setAudioLevel] = useState<number>(0);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const idleSocketRef = useRef<{ timer: number; expires: number } | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
@@ -112,6 +115,32 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
   const lastCompletedQuestionRef = useRef<string | null>(null);
   const responseTimeoutTimerRef = useRef<number | null>(null);
 
+  const clearIdleRelease = useCallback(() => {
+    if (!idleSocketRef.current) return;
+    window.clearTimeout(idleSocketRef.current.timer);
+    idleSocketRef.current = null;
+  }, []);
+
+  const releaseSocket = useCallback((socket = wsRef.current) => {
+    if (!socket || wsRef.current !== socket) return;
+    clearIdleRelease();
+    wsRef.current = null;
+    reopenAfterItemRef.current = false;
+    responseGateRef.current.reset();
+    socket.close();
+    setIsConnected(false);
+  }, [clearIdleRelease]);
+
+  const scheduleIdleRelease = useCallback(() => {
+    const socket = wsRef.current;
+    clearIdleRelease();
+    if (!socket) return;
+    idleSocketRef.current = {
+      expires: Date.now() + VOICE_IDLE_MS,
+      timer: window.setTimeout(() => releaseSocket(socket), VOICE_IDLE_MS),
+    };
+  }, [clearIdleRelease, releaseSocket]);
+
   const clearWaitingSend = useCallback(() => {
     waitingSendRef.current = null;
     if (waitingTimerRef.current !== null) window.clearTimeout(waitingTimerRef.current);
@@ -125,15 +154,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     waitingTimerRef.current = window.setTimeout(() => {
       clearWaitingSend();
       responseGateRef.current.failWaiting();
-      const socket = wsRef.current;
-      wsRef.current = null;
-      responseGateRef.current = createResponseGate();
-      socket?.close();
-      setIsConnected(false);
+      releaseSocket();
       setVoiceState('idle');
       setErrorNotice('The previous response was interrupted. Please ask again.');
     }, 5000);
-  }, [clearWaitingSend]);
+  }, [clearWaitingSend, releaseSocket]);
 
   // ── Offline Grounded Fallback Answer ────────────────────────────────────────
   const executeFallback = useCallback(
@@ -150,6 +175,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         wsRef.current.send(JSON.stringify({ type: 'response.cancel' }));
       }
       inFlightQuestionRef.current = null;
+      scheduleIdleRelease();
       const fallback = getOfflineAnswer(caseId, question);
 
       if (fallback.isGuardrail) {
@@ -190,7 +216,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         setVoiceState('idle');
       }
     },
-    [caseId]
+    [caseId, scheduleIdleRelease]
   );
 
   // ── Safety timeout helper ───────────────────────────────────────────────────
@@ -208,6 +234,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
             setVoiceState('idle');
             setErrorNotice('Voice transcription unavailable. Please type your question.');
             setShowSuggestions(true);
+            scheduleIdleRelease();
           }
           pendingCommitRef.current = null;
           pendingAudioRef.current.clear();
@@ -217,7 +244,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         }
       }, 8000);
     },
-    [executeFallback]
+    [executeFallback, scheduleIdleRelease]
   );
 
   // ── Stop playback helper ────────────────────────────────────────────────────
@@ -237,14 +264,9 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
   const stopPlayback = useCallback(() => {
     clearWaitingSend();
-    if (reopenAfterItemRef.current) {
-      // If the proxy never closed the response, a new turn can stall on that connection.
-      reopenAfterItemRef.current = false;
-      const finishedSocket = wsRef.current;
-      wsRef.current = null;
-      responseGateRef.current = createResponseGate();
-      finishedSocket?.close();
-      setIsConnected(false);
+    // A background tab may delay the timer. Check the deadline before reusing the socket.
+    if (reopenAfterItemRef.current || (idleSocketRef.current && idleSocketRef.current.expires <= Date.now())) {
+      releaseSocket();
     }
     const discardInput = isPressingRef.current || pendingCommitRef.current?.hasAudio;
     isPressingRef.current = false;
@@ -277,8 +299,9 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       fallbackSpeechRef.current = null;
       try { window.speechSynthesis.cancel(); } catch { /* Speech synthesis cleanup */ }
     }
+    scheduleIdleRelease();
     setVoiceState('idle');
-  }, [clearWaitingSend]);
+  }, [clearWaitingSend, releaseSocket, scheduleIdleRelease]);
 
   // ── Audio playback of 24kHz PCM16 chunks ───────────────────────────────────
   const playChunk = useCallback((base64: string, ctx: AudioContext) => {
@@ -318,6 +341,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
   // ── WebSocket connection to real AI relay ───────────────────────────────────
   const connectWs = useCallback(() => {
+    clearIdleRelease();
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
       return wsRef.current;
     }
@@ -385,6 +409,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
           lastCompletedQuestionRef.current = inFlightQuestionRef.current;
         }
         inFlightQuestionRef.current = null;
+        scheduleIdleRelease();
         if (playSourcesRef.current.length === 0 && !isPressingRef.current) setVoiceState('idle');
       }
       if (wasBlocked && !gate.isBlocked()) {
@@ -471,6 +496,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
         }
 
         if (t === 'error') {
+          const gate = responseGateRef.current;
+          if (!gate.isCurrent(gate.current()) && !gate.isBlocked()) {
+            releaseSocket(ws);
+            return;
+          }
           console.warn('[AI Voice Error event]', ev.error);
           setIsConnected(false);
           const errorMsg = ev.error?.message || 'AI Voice service error';
@@ -490,6 +520,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
     ws.onerror = (e) => {
       if (wsRef.current !== ws) return;
+      const gate = responseGateRef.current;
+      if (!gate.isCurrent(gate.current()) && !gate.isBlocked()) {
+        releaseSocket(ws);
+        return;
+      }
       console.warn('[AI Voice WS error]', e);
       setIsConnected(false);
       if (pendingCommitRef.current) {
@@ -506,10 +541,11 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     ws.onclose = (ev) => {
       if (wsRef.current !== ws) return;
       console.log('[AI Voice WS closed]', ev.code, ev.reason);
+      clearIdleRelease();
       setIsConnected(false);
       wsRef.current = null;
       reopenAfterItemRef.current = false;
-      if (responseGateRef.current.isBlocked()) responseGateRef.current = createResponseGate();
+      if (responseGateRef.current.isBlocked()) responseGateRef.current.reset();
       if (pendingCommitRef.current) {
         pendingCommitRef.current = null;
         setVoiceState('idle');
@@ -522,26 +558,20 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     };
 
     return ws;
-  }, [caseId, clearWaitingSend, executeFallback, playChunk, startResponseTimeout, trackVoiceAsk]);
+  }, [caseId, clearIdleRelease, clearWaitingSend, executeFallback, playChunk, releaseSocket, scheduleIdleRelease, startResponseTimeout, trackVoiceAsk]);
 
-  // Connect on mount or caseId change
-  useEffect(() => {
-    connectWs();
-    return () => {
-      lastCompletedQuestionRef.current = null;
-      stopPlayback();
-      if (wsRef.current) {
-        try { wsRef.current.close(); } catch { /* Cleanup */ }
-        wsRef.current = null;
-      }
-      if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach((t) => t.stop());
-        micStreamRef.current = null;
-      }
-      sourceNodeRef.current = null;
-      micNodeRef.current = null;
-    };
-  }, [caseId, connectWs, stopPlayback]);
+  // A chapter recap can remain open as long as the customer needs.
+  useEffect(() => () => {
+    lastCompletedQuestionRef.current = null;
+    stopPlayback();
+    releaseSocket();
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach((track) => track.stop());
+      micStreamRef.current = null;
+    }
+    sourceNodeRef.current = null;
+    micNodeRef.current = null;
+  }, [caseId, releaseSocket, stopPlayback]);
 
   // ── Ensure microphone is active ─────────────────────────────────────────────
   const ensureMic = useCallback(async (): Promise<boolean> => {
@@ -634,9 +664,10 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     connectWs();
     if (!await ensureMic() && responseGateRef.current.isCurrent(token)) {
       isPressingRef.current = false;
+      releaseSocket();
       setVoiceState('idle');
     }
-  }, [connectWs, ensureMic, stopPlayback]);
+  }, [connectWs, ensureMic, releaseSocket, stopPlayback]);
 
   // ── Stop Listening (Release to Send) ────────────────────────────────────────
   const stopListening = useCallback(() => {
@@ -650,41 +681,32 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
     sendAfterCancel(() => {
       if (!responseGateRef.current.isCurrent(token)) return;
 
+      if (!hasAudio) {
+        responseGateRef.current.cancel();
+        scheduleIdleRelease();
+        setVoiceState('idle');
+        return;
+      }
+
       const ws = wsRef.current;
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        if (hasAudio) {
-          ws.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
-          if (responseGateRef.current.markSent(token)) {
-            ws.send(JSON.stringify({ type: 'response.create' }));
-          }
-          setVoiceState('speaking');
-          startResponseTimeout(token, 'Voice relay response timed out · Answered from verified plan figures');
-        } else {
-          // No audio was captured (quick release or silent mic)
-          setVoiceState('idle');
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
+        if (responseGateRef.current.markSent(token)) {
+          ws.send(JSON.stringify({ type: 'response.create' }));
         }
-      } else if (ws && ws.readyState === WebSocket.CONNECTING) {
-        // WebSocket is still handshaking — queue commit for onopen without false "offline" abort
+        setVoiceState('speaking');
+        startResponseTimeout(token, 'Voice relay response timed out · Answered from verified plan figures');
+      } else if (ws?.readyState === WebSocket.CONNECTING) {
         pendingCommitRef.current = { token, hasAudio };
-        if (hasAudio) {
-          setVoiceState('speaking');
-          startResponseTimeout(token, 'Voice relay connection timed out · Answered from verified plan figures');
-        } else {
-          setVoiceState('idle');
-        }
+        setVoiceState('speaking');
+        startResponseTimeout(token, 'Voice relay connection timed out · Answered from verified plan figures');
       } else {
-        // Socket is closed or unavailable — provide immediate graceful fallback if audio was spoken
-        if (hasAudio) {
-          setVoiceState('idle');
-          setErrorNotice('Voice relay offline. Please type your question.');
-          setShowSuggestions(true);
-        } else {
-          setVoiceState('idle');
-          setShowSuggestions(true);
-        }
+        setVoiceState('idle');
+        setErrorNotice('Voice relay offline. Please type your question.');
+        setShowSuggestions(true);
       }
     });
-  }, [sendAfterCancel, startResponseTimeout]);
+  }, [scheduleIdleRelease, sendAfterCancel, startResponseTimeout]);
 
   // ── Push to Ask (Direct Question via Text or Suggestion Chip) ───────────────
   const pushToAsk = useCallback(
@@ -719,7 +741,7 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
       connectWs();
 
       let attempts = 0;
-      const MAX_ATTEMPTS = 5; // 5 * 250ms = 1.25s max connection attempt window
+      const MAX_ATTEMPTS = 32; // Allow up to eight seconds for a fresh connection.
       let pollTimer: number | null = null;
 
       const sendPayload = () => {
@@ -770,12 +792,8 @@ export function useVoiceSession(caseId: string): VoiceSessionResult {
 
   const disconnect = useCallback(() => {
     stopPlayback();
-    if (wsRef.current) {
-      try { wsRef.current.close(); } catch { /* Socket close cleanup */ }
-      wsRef.current = null;
-    }
-    setIsConnected(false);
-  }, [stopPlayback]);
+    releaseSocket();
+  }, [releaseSocket, stopPlayback]);
 
   return {
     voiceState,

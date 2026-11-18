@@ -9,6 +9,16 @@ export function createResponseGate() {
   const canceledIds = new Set<string>();
   const completedIds = new Set<string>();
   return {
+    reset() {
+      generation += 1;
+      accepting = false;
+      sent = false;
+      activeId = undefined;
+      waitingForCancel = false;
+      canceledPendingId = undefined;
+      canceledIds.clear();
+      completedIds.clear();
+    },
     start() { generation += 1; accepting = true; sent = false; activeId = undefined; return generation; },
     current() { return generation; },
     isBlocked() { return waitingForCancel; },
