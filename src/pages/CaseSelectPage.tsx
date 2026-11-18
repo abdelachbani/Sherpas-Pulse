@@ -127,7 +127,7 @@ function CaseCard({ caseData }: { caseData: CaseData }) {
 // ─── Page ────────────────────────────────────────────────────────────────────
 export default function CaseSelectPage() {
   return (
-    <div className="min-h-screen bg-[#f4f5f6] pb-12 text-[#141419]">
+    <div className="min-h-dvh bg-[#f4f5f6] pb-12 text-[#141419]">
       <main className="mx-auto max-w-7xl px-5 pt-10 sm:px-8 sm:pt-14 lg:px-12">
         <div className="mb-8 max-w-2xl sm:mb-10">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#4565d6]">Household sessions</p>

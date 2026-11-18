@@ -11,7 +11,7 @@
  *  - Persistent Bottom Switcher between 'Client Action Plan' and 'Advisor Telemetry Mode'
  */
 
-import { useState, useEffect, useId } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   Activity,
@@ -19,7 +19,6 @@ import {
   Copy,
   Check,
   HelpCircle,
-  Clock,
   Sparkles,
   ShieldCheck,
   Users,

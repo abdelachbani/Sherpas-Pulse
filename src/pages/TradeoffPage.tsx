@@ -16,24 +16,18 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   SlidersHorizontal,
   Home,
   Clock,
   GraduationCap,
   Palmtree,
-  Sparkles,
   ChevronRight,
-  ShieldCheck,
   ArrowLeft,
   Calendar,
   Star,
-  CheckCircle2,
-  TrendingUp,
   User,
-  ArrowRight,
-  RotateCcw,
 } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
@@ -541,7 +535,7 @@ function TradeoffPageContent() {
             <span>Interactive What-If Simulator</span>
           </div>
           <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-            Test trade-offs between competing life priorities. Adjust importance weights to simulate living map outcomes.
+            Weigh competing goals to see their impact on your living map.
           </p>
         </div>
       </div>
@@ -742,19 +736,19 @@ function TradeoffPageContent() {
                 onClick={() => applyPreset('favorA')}
                 className="px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-slate-300 transition-colors"
               >
-                Favor Option A (71/29)
+                Option A (71/29)
               </button>
               <button
                 onClick={() => applyPreset('balanced')}
                 className="px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-slate-300 transition-colors"
               >
-                Balanced 50/50
+                Balanced (50/50)
               </button>
               <button
                 onClick={() => applyPreset('favorB')}
                 className="px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-slate-300 transition-colors"
               >
-                Favor Option B (29/71)
+                Option B (29/71)
               </button>
             </div>
           </div>

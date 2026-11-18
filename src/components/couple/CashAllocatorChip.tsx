@@ -5,15 +5,15 @@
  * Shows title, target dollar amount, benefit summary from MCP, and drag handle.
  */
 
-import { GripVertical, ShieldCheck, ArrowUp, ArrowDown, Info } from 'lucide-react';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 import type { CashStrategyOption } from '../../types';
 import { FinancialText } from '../shared/FinancialText';
 
 interface Props {
   strategy: CashStrategyOption;
   priorityIndex: number;
-  allocatedAmount: number;
-  totalAvailable: number;
+  allocatedAmount?: number;
+  totalAvailable?: number;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   onInspect?: () => void;
@@ -24,11 +24,8 @@ interface Props {
 export function CashAllocatorChip({
   strategy,
   priorityIndex,
-  allocatedAmount,
-  totalAvailable,
   onMoveUp,
   onMoveDown,
-  onInspect,
   isFirst,
   isLast,
 }: Props) {

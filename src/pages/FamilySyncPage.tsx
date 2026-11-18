@@ -192,7 +192,7 @@ function FamilySyncPageContent() {
               {liveBothReviewed
                 ? 'These results reflect the priorities saved in this session.'
                 : isSimulated
-                ? 'Sample priorities loaded for this household. Both partners can submit their live priorities to update this consensus.'
+                ? 'Sample consensus loaded. Save live priorities on both phones to compare in real time.'
                 : 'Each partner can save their order in the priorities screen.'}
             </p>
           </div>

@@ -1,12 +1,11 @@
 import { useEffect, useId, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { Activity, User, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Activity, User } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { CASES } from '../lib/mcp/cases';
 import { extractWhatIfScenarios } from '../lib/mcp/extractor';
 import { buildAdvisorQuestions, formatSessionHandoff } from '../lib/sessionHandoff';
 import { getTelemetrySummary as summarizeTelemetry, serialiseTelemetry } from '../lib/telemetry';
-import { simplifyFinancialText } from '../lib/financialGlossary';
 import { FinancialText } from '../components/shared/FinancialText';
 import { MultiTouchCadenceSection } from '../components/shared/MultiTouchCadenceSection';
 
@@ -25,7 +24,6 @@ function ActionContent() {
   const setCase = useAppStore((s) => s.setCase);
   const resetStore = useAppStore((s) => s.reset);
   const allocations = useAppStore((s) => s.coupleAllocations);
-  const languageMode = useAppStore((s) => s.languageMode);
   const events = useAppStore((s) => s.telemetryEvents);
   const matchingCase = currentCase?.id === caseId;
   const sessionEvents = matchingCase ? events : [];
@@ -34,8 +32,6 @@ function ActionContent() {
   const activeCase = (currentCase?.id === caseId ? currentCase : CASES.find((c) => c.id === caseId))!;
   const [done, setDone] = useState<number[]>([]);
   const [tab, setTab] = useState<'plan' | 'advisor'>('plan');
-  const [channel, setChannel] = useState<'whatsapp' | 'email'>('whatsapp');
-  const [copied, setCopied] = useState(false);
   const [telemetryCopied, setTelemetryCopied] = useState(false);
   const [telemetryCopyError, setTelemetryCopyError] = useState<string | null>(null);
   useEffect(() => { if (caseId && currentCase?.id !== caseId) setCase(caseId); }, [caseId, currentCase, setCase]);
@@ -45,7 +41,6 @@ function ActionContent() {
   const moves = activeCase.financialHealth.score.top_moves;
   const advisorQuestions = buildAdvisorQuestions(sessionEvents, moves.map((move) => move.title));
   const handoff = formatSessionHandoff(activeCase.id, sessionEvents, matchingCase ? allocations : { primary: null, secondary: null }, extractWhatIfScenarios(activeCase.financialHealth, activeCase.investmentAnalysis));
-  const message = `${channel === 'email' ? `Subject: Plan priorities for ${names}\n\n` : ''}Here are the recommendations I would like to discuss:\n\n${moves.map((move, index) => `${index + 1}. ${move.title}: ${move.action}`).join('\n')}${handoff ? `\n\n${handoff}` : ''}\n\nLet's review the next steps together.`;
   const copyTelemetry = async () => {
     setTelemetryCopied(false);
     setTelemetryCopyError(null);

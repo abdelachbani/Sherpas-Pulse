@@ -21,7 +21,6 @@ export function AllocationSummary({ totalCash, surplusCash, allocatedAmount }: P
   const percentUsed = Math.min(100, Math.round((allocatedAmount / surplusCash) * 100));
 
   const isWithinSurplus = allocatedAmount <= surplusCash;
-  const isOverSurplus = allocatedAmount > surplusCash;
 
   const tankColor = isWithinSurplus
     ? 'bg-blue-500'
